@@ -20,7 +20,7 @@ import {
   MoreVertical
 } from 'lucide-react';
 
-const APP_LOGO_SRC = '/lift.png';
+const APP_LOGO_SRC = '/lift-32.png';
 
 const App: React.FC = () => {
   const [exercises, setExercises] = useState<Exercise[]>([]);

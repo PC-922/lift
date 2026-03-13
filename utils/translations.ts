@@ -96,7 +96,9 @@ export const translations = {
       selectExercises: 'Selecciona ejercicios',
       noRoutines: 'Sin rutinas',
       noRoutinesDesc: 'Toca el + para crear tu primera rutina',
-      noExercisesAvailable: 'No hay ejercicios disponibles'
+      noExercisesAvailable: 'No hay ejercicios disponibles',
+      sets: 'Series',
+      dropset: 'Dropset'
     },
     time: {
       today: 'Hoy',
@@ -208,7 +210,9 @@ export const translations = {
       selectExercises: 'Select exercises',
       noRoutines: 'No routines',
       noRoutinesDesc: 'Tap + to create your first routine',
-      noExercisesAvailable: 'No exercises available'
+      noExercisesAvailable: 'No exercises available',
+      sets: 'Sets',
+      dropset: 'Dropset'
     },
     time: {
       today: 'Today',

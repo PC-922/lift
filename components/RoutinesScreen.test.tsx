@@ -23,8 +23,16 @@ const exercises: Exercise[] = [
 ];
 
 const routines: Routine[] = [
-  { id: 'r1', name: 'Push Day', exerciseIds: ['ex1'] },
-  { id: 'r2', name: 'Leg Day', exerciseIds: ['ex2'] },
+  {
+    id: 'r1',
+    name: 'Push Day',
+    exercises: [{ exerciseId: 'ex1', sets: 3, reps: 10, dropset: false }],
+  },
+  {
+    id: 'r2',
+    name: 'Leg Day',
+    exercises: [{ exerciseId: 'ex2', sets: 4, reps: 12, dropset: true }],
+  },
 ];
 
 const defaultProps = {
@@ -56,7 +64,6 @@ describe('RoutinesScreen', () => {
 
   it('shows each routine exercise count', () => {
     render(<RoutinesScreen {...defaultProps} />);
-    // Push Day has 1 exercise, Leg Day has 1 exercise
     const counts = screen.getAllByText(`1 ${t.labels.exercises}`);
     expect(counts).toHaveLength(2);
   });
@@ -74,24 +81,23 @@ describe('RoutinesScreen', () => {
     const onSaveRoutine = vi.fn();
     render(<RoutinesScreen {...defaultProps} onSaveRoutine={onSaveRoutine} />);
 
-    // Open create modal
     fireEvent.click(screen.getByRole('button', { name: t.labels.newRoutine }));
 
-    // Fill name
     const nameInput = await screen.findByPlaceholderText(t.labels.routineName);
     fireEvent.change(nameInput, { target: { value: 'My Routine' } });
 
-    // Select Bench Press
     fireEvent.click(screen.getByText('Bench Press'));
 
-    // Save
     fireEvent.click(screen.getByRole('button', { name: t.actions.save }));
 
     await waitFor(() => {
       expect(onSaveRoutine).toHaveBeenCalledOnce();
       const saved = onSaveRoutine.mock.calls[0][0] as Routine;
       expect(saved.name).toBe('My Routine');
-      expect(saved.exerciseIds).toContain('ex1');
+      expect(saved.exercises[0].exerciseId).toBe('ex1');
+      expect(saved.exercises[0].sets).toBe(3);
+      expect(saved.exercises[0].reps).toBe(10);
+      expect(saved.exercises[0].dropset).toBe(false);
     });
   });
 
@@ -102,16 +108,15 @@ describe('RoutinesScreen', () => {
     fireEvent.click(screen.getByRole('button', { name: t.labels.newRoutine }));
     await screen.findByText(t.labels.newRoutine, { selector: 'h2' });
 
-    // Save button should be disabled (no name filled)
     const saveBtn = screen.getByRole('button', { name: t.actions.save });
     expect((saveBtn as HTMLButtonElement).disabled).toBe(true);
     fireEvent.click(saveBtn);
     expect(onSaveRoutine).not.toHaveBeenCalled();
   });
 
-  // --- Edit modal ---
+  // --- Edit modal (via swipe action button) ---
 
-  it('opens edit modal pre-filled with routine data', async () => {
+  it('opens edit modal pre-filled with routine data when edit button is clicked', async () => {
     render(<RoutinesScreen {...defaultProps} />);
 
     const editButtons = screen.getAllByRole('button', { name: t.actions.edit });
@@ -140,7 +145,7 @@ describe('RoutinesScreen', () => {
     });
   });
 
-  // --- Delete ---
+  // --- Delete (via swipe action button) ---
 
   it('calls onDeleteRoutine after confirmation', async () => {
     const onDeleteRoutine = vi.fn();
@@ -168,17 +173,28 @@ describe('RoutinesScreen', () => {
 
   // --- Detail view ---
 
-  it('navigates to detail view when a routine is clicked', async () => {
+  it('navigates to detail view when a routine card is clicked', async () => {
     render(<RoutinesScreen {...defaultProps} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Push Day' }));
+    fireEvent.click(screen.getByText('Push Day'));
     expect(await screen.findByText('Bench Press')).toBeTruthy();
+  });
+
+  it('shows prescription info (sets x reps) in detail view', async () => {
+    render(<RoutinesScreen {...defaultProps} />);
+    fireEvent.click(screen.getByText('Push Day'));
+    expect(await screen.findByText('3×10')).toBeTruthy();
+  });
+
+  it('shows dropset badge when dropset is enabled', async () => {
+    render(<RoutinesScreen {...defaultProps} />);
+    fireEvent.click(screen.getByText('Leg Day'));
+    expect(await screen.findByText(t.labels.dropset)).toBeTruthy();
   });
 
   it('prefills log form with latest log values', async () => {
     render(<RoutinesScreen {...defaultProps} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Push Day' }));
+    fireEvent.click(screen.getByText('Push Day'));
 
-    // Latest log for Bench Press: weight 70, reps 10
     const weightInput = await screen.findByDisplayValue('70');
     expect(weightInput).toBeTruthy();
     const repsInput = screen.getByDisplayValue('10');
@@ -189,7 +205,7 @@ describe('RoutinesScreen', () => {
     const onLogExercise = vi.fn();
     render(<RoutinesScreen {...defaultProps} onLogExercise={onLogExercise} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Push Day' }));
+    fireEvent.click(screen.getByText('Push Day'));
 
     const weightInput = await screen.findByDisplayValue('70');
     fireEvent.change(weightInput, { target: { value: '75' } });
@@ -204,7 +220,7 @@ describe('RoutinesScreen', () => {
 
   it('returns to routine list from detail view', async () => {
     render(<RoutinesScreen {...defaultProps} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Push Day' }));
+    fireEvent.click(screen.getByText('Push Day'));
     await screen.findByText('Bench Press');
 
     fireEvent.click(screen.getByText(`← ${t.labels.routines}`));

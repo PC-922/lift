@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, ChevronRight, Pencil, Trash2, Check, X } from 'lucide-react';
-import { Exercise, Routine } from '../types';
+import { Plus, Check, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { Exercise, Routine, RoutineExercise } from '../types';
 import { t, translations } from '../utils/translations';
 import { getLatestLog } from '../utils/progression';
+import { RoutineCard } from './RoutineCard';
 
 interface Props {
   routines: Routine[];
@@ -19,6 +20,9 @@ interface LogFormState {
   reps: string;
 }
 
+const DEFAULT_SETS = 3;
+const DEFAULT_REPS = 10;
+
 export const RoutinesScreen: React.FC<Props> = ({
   routines,
   exercises,
@@ -31,7 +35,7 @@ export const RoutinesScreen: React.FC<Props> = ({
   const [editingRoutine, setEditingRoutine] = useState<Routine | null>(null);
 
   const [formName, setFormName] = useState('');
-  const [formSelectedIds, setFormSelectedIds] = useState<string[]>([]);
+  const [formExercises, setFormExercises] = useState<RoutineExercise[]>([]);
 
   const [logForms, setLogForms] = useState<Record<string, LogFormState>>({});
 
@@ -48,22 +52,26 @@ export const RoutinesScreen: React.FC<Props> = ({
 
   const activeRoutineExercises = useMemo(() => {
     if (!activeRoutine) return [];
-    return activeRoutine.exerciseIds
-      .map((id) => exercises.find((e) => e.id === id))
-      .filter((e): e is Exercise => e !== undefined);
+    return activeRoutine.exercises
+      .map((re) => ({
+        routineExercise: re,
+        exercise: exercises.find((e) => e.id === re.exerciseId),
+      }))
+      .filter((item): item is { routineExercise: RoutineExercise; exercise: Exercise } =>
+        item.exercise !== undefined
+      );
   }, [activeRoutine, exercises]);
 
   const openCreate = () => {
     setFormName('');
-    setFormSelectedIds([]);
+    setFormExercises([]);
     setEditingRoutine(null);
     setModalMode('create');
   };
 
-  const openEdit = (routine: Routine, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const openEdit = (routine: Routine) => {
     setFormName(routine.name);
-    setFormSelectedIds([...routine.exerciseIds]);
+    setFormExercises([...routine.exercises]);
     setEditingRoutine(routine);
     setModalMode('edit');
   };
@@ -73,9 +81,33 @@ export const RoutinesScreen: React.FC<Props> = ({
     setEditingRoutine(null);
   };
 
-  const toggleExercise = (id: string) => {
-    setFormSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+  const toggleExercise = (exerciseId: string) => {
+    setFormExercises((prev) => {
+      const exists = prev.find((re) => re.exerciseId === exerciseId);
+      if (exists) {
+        return prev.filter((re) => re.exerciseId !== exerciseId);
+      }
+      return [...prev, { exerciseId, sets: DEFAULT_SETS, reps: DEFAULT_REPS, dropset: false }];
+    });
+  };
+
+  const updateFormExerciseField = (
+    exerciseId: string,
+    field: 'sets' | 'reps',
+    value: string
+  ) => {
+    const parsed = parseInt(value, 10);
+    const num = Number.isNaN(parsed) || parsed < 1 ? 1 : parsed;
+    setFormExercises((prev) =>
+      prev.map((re) => (re.exerciseId === exerciseId ? { ...re, [field]: num } : re))
+    );
+  };
+
+  const toggleDropset = (exerciseId: string) => {
+    setFormExercises((prev) =>
+      prev.map((re) =>
+        re.exerciseId === exerciseId ? { ...re, dropset: !re.dropset } : re
+      )
     );
   };
 
@@ -85,14 +117,13 @@ export const RoutinesScreen: React.FC<Props> = ({
     const routine: Routine = {
       id: editingRoutine?.id ?? Date.now().toString(),
       name,
-      exerciseIds: formSelectedIds,
+      exercises: formExercises,
     };
     onSaveRoutine(routine);
     closeModal();
   };
 
-  const handleDelete = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleDelete = (id: string) => {
     if (!window.confirm(t.prompts.confirmDelete)) return;
     onDeleteRoutine(id);
     if (activeRoutineId === id) setActiveRoutineId(null);
@@ -144,12 +175,12 @@ export const RoutinesScreen: React.FC<Props> = ({
           </div>
         ) : (
           <div className="space-y-3">
-            {activeRoutineExercises.map((exercise) => {
+            {activeRoutineExercises.map(({ routineExercise, exercise }) => {
               const form = getLogForm(exercise.id);
               const latest = getLatestLog(exercise.logs);
               return (
                 <div key={exercise.id} className="bg-ios-card rounded-2xl p-4">
-                  <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-start justify-between mb-2">
                     <div>
                       <h3 className="text-base font-semibold text-ios-text">{exercise.name}</h3>
                       <p className="text-xs text-ios-gray uppercase tracking-wide mt-0.5">
@@ -163,6 +194,18 @@ export const RoutinesScreen: React.FC<Props> = ({
                       </div>
                     )}
                   </div>
+
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-xs font-semibold text-ios-blue bg-ios-blue/10 px-2 py-0.5 rounded-full">
+                      {routineExercise.sets}×{routineExercise.reps}
+                    </span>
+                    {routineExercise.dropset && (
+                      <span className="text-xs font-semibold text-orange-500 bg-orange-500/10 px-2 py-0.5 rounded-full">
+                        {t.labels.dropset}
+                      </span>
+                    )}
+                  </div>
+
                   <div className="grid grid-cols-3 gap-2">
                     <div>
                       <label className="block text-xs font-medium text-ios-gray mb-1">
@@ -208,7 +251,8 @@ export const RoutinesScreen: React.FC<Props> = ({
     );
   }
 
-  return (    <div className="space-y-6">
+  return (
+    <div className="space-y-6">
       <div className="text-center mb-8">
         <h1 className="text-2xl font-bold text-ios-text">{t.labels.routines}</h1>
         <p className="text-sm text-ios-gray mt-2">{t.labels.routinesDesc}</p>
@@ -222,42 +266,13 @@ export const RoutinesScreen: React.FC<Props> = ({
       ) : (
         <div className="space-y-3">
           {routines.map((routine) => (
-            <div
+            <RoutineCard
               key={routine.id}
-              className="relative bg-ios-card rounded-2xl p-4"
-            >
-              {/* Tap area to open detail — covers full card except action buttons */}
-              <button
-                onClick={() => setActiveRoutineId(routine.id)}
-                className="absolute inset-0 w-full h-full rounded-2xl active:opacity-70 transition-opacity"
-                aria-label={routine.name}
-              />
-              <div className="flex items-center justify-between relative pointer-events-none">
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-lg font-semibold text-ios-text truncate">{routine.name}</h3>
-                  <p className="text-xs text-ios-gray mt-1">
-                    {routine.exerciseIds.length} {t.labels.exercises}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 ml-3 pointer-events-auto">
-                  <button
-                    onClick={(e) => openEdit(routine, e)}
-                    className="p-2 rounded-lg text-ios-gray active:opacity-70"
-                    aria-label={t.actions.edit}
-                  >
-                    <Pencil size={16} />
-                  </button>
-                  <button
-                    onClick={(e) => handleDelete(routine.id, e)}
-                    className="p-2 rounded-lg text-red-500 active:opacity-70"
-                    aria-label={t.actions.delete}
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                  <ChevronRight size={18} className="text-ios-gray" />
-                </div>
-              </div>
-            </div>
+              routine={routine}
+              onClick={() => setActiveRoutineId(routine.id)}
+              onEdit={() => openEdit(routine)}
+              onDelete={() => handleDelete(routine.id)}
+            />
           ))}
         </div>
       )}
@@ -312,25 +327,83 @@ export const RoutinesScreen: React.FC<Props> = ({
                     .slice()
                     .sort((a, b) => a.name.localeCompare(b.name))
                     .map((exercise) => {
-                      const selected = formSelectedIds.includes(exercise.id);
+                      const routineEx = formExercises.find((re) => re.exerciseId === exercise.id);
+                      const selected = routineEx !== undefined;
                       return (
-                        <button
-                          key={exercise.id}
-                          onClick={() => toggleExercise(exercise.id)}
-                          className={`w-full flex items-center justify-between p-3 rounded-xl transition-colors active:opacity-70 ${
-                            selected
-                              ? 'bg-ios-blue/10 border border-ios-blue/40'
-                              : 'bg-ios-bg border border-transparent'
-                          }`}
-                        >
-                          <div className="text-left">
-                            <p className="text-sm font-semibold text-ios-text">{exercise.name}</p>
-                            <p className="text-xs text-ios-gray mt-0.5">
-                              {getTranslatedGroupName(exercise.muscleGroup)}
-                            </p>
-                          </div>
-                          {selected && <Check size={18} className="text-ios-blue flex-shrink-0" />}
-                        </button>
+                        <div key={exercise.id}>
+                          <button
+                            onClick={() => toggleExercise(exercise.id)}
+                            className={`w-full flex items-center justify-between p-3 rounded-xl transition-colors active:opacity-70 ${
+                              selected
+                                ? 'bg-ios-blue/10 border border-ios-blue/40'
+                                : 'bg-ios-bg border border-transparent'
+                            }`}
+                          >
+                            <div className="text-left">
+                              <p className="text-sm font-semibold text-ios-text">{exercise.name}</p>
+                              <p className="text-xs text-ios-gray mt-0.5">
+                                {getTranslatedGroupName(exercise.muscleGroup)}
+                              </p>
+                            </div>
+                            {selected ? (
+                              <ChevronUp size={18} className="text-ios-blue flex-shrink-0" />
+                            ) : (
+                              <Check size={18} className="text-ios-gray/30 flex-shrink-0" />
+                            )}
+                          </button>
+
+                          {selected && routineEx && (
+                            <div className="mt-1 mb-1 px-3 py-3 bg-ios-bg rounded-xl border border-ios-blue/20">
+                              <div className="grid grid-cols-3 gap-3 items-end">
+                                <div>
+                                  <label className="block text-xs font-medium text-ios-gray mb-1">
+                                    {t.labels.sets}
+                                  </label>
+                                  <input
+                                    type="number"
+                                    inputMode="numeric"
+                                    value={routineEx.sets}
+                                    onChange={(e) =>
+                                      updateFormExerciseField(exercise.id, 'sets', e.target.value)
+                                    }
+                                    className="w-full bg-ios-card text-ios-text p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-ios-blue text-sm text-center"
+                                    min={1}
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-medium text-ios-gray mb-1">
+                                    {t.labels.reps}
+                                  </label>
+                                  <input
+                                    type="number"
+                                    inputMode="numeric"
+                                    value={routineEx.reps}
+                                    onChange={(e) =>
+                                      updateFormExerciseField(exercise.id, 'reps', e.target.value)
+                                    }
+                                    className="w-full bg-ios-card text-ios-text p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-ios-blue text-sm text-center"
+                                    min={1}
+                                  />
+                                </div>
+                                <div className="flex flex-col items-center">
+                                  <label className="block text-xs font-medium text-ios-gray mb-1">
+                                    {t.labels.dropset}
+                                  </label>
+                                  <button
+                                    onClick={() => toggleDropset(exercise.id)}
+                                    className={`w-full py-2 rounded-lg text-xs font-semibold transition-colors active:opacity-70 ${
+                                      routineEx.dropset
+                                        ? 'bg-orange-500 text-white'
+                                        : 'bg-ios-card text-ios-gray border border-ios-separator'
+                                    }`}
+                                  >
+                                    {routineEx.dropset ? '✓' : '—'}
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       );
                     })}
                 </div>

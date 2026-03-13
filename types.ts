@@ -12,10 +12,17 @@ export interface Exercise {
   note?: string;
 }
 
+export interface RoutineExercise {
+  exerciseId: string;
+  sets: number;
+  reps: number;
+  dropset: boolean;
+}
+
 export interface Routine {
   id: string;
   name: string;
-  exerciseIds: string[];
+  exercises: RoutineExercise[];
 }
 
 export type GroupSortField = 'progress' | 'weight';

@@ -1,4 +1,4 @@
-import { Exercise, ExerciseLog, GroupSortPreference, Routine, StorageManagerInterface } from '../types';
+import { Exercise, ExerciseLog, GroupSortPreference, Routine, RoutineExercise, StorageManagerInterface } from '../types';
 import { DEFAULT_GROUP_SORT_PREFERENCE } from '../utils/exerciseSorting';
 
 const STORAGE_KEY = 'lift_data_v1';
@@ -228,7 +228,18 @@ class LocalStorageManager implements StorageManagerInterface {
 
   getRoutines(): Routine[] {
     const data = localStorage.getItem(ROUTINES_KEY);
-    return data ? JSON.parse(data) : [];
+    if (!data) return [];
+    const parsed = JSON.parse(data) as Array<Routine & { exerciseIds?: string[] }>;
+    return parsed.map((r) => {
+      if (r.exercises) return r as Routine;
+      const migrated: RoutineExercise[] = (r.exerciseIds ?? []).map((id) => ({
+        exerciseId: id,
+        sets: 3,
+        reps: 10,
+        dropset: false,
+      }));
+      return { id: r.id, name: r.name, exercises: migrated };
+    });
   }
 
   saveRoutine(routine: Routine): void {
