@@ -162,7 +162,7 @@ export const HistoryScreen: React.FC<Props> = ({ exercises, onUpdateLog, onDelet
               <div className="flex gap-2 mb-4">
                 <button
                   onClick={handleDeleteAllLogsExceptLatest}
-                  className="flex-1 py-2 px-3 rounded-xl text-xs font-semibold bg-ios-bg text-orange-500 border border-orange-500/30 active:opacity-70"
+                  className="flex-1 py-2 px-3 rounded-xl text-xs font-semibold bg-red-500/10 text-red-500 border border-red-500/30 active:opacity-70"
                 >
                   {t.actions.deleteAllExceptLatest}
                 </button>

@@ -26,12 +26,12 @@ const routines: Routine[] = [
   {
     id: 'r1',
     name: 'Push Day',
-    exercises: [{ exerciseId: 'ex1', sets: 3, reps: '10', dropset: false }],
+    exercises: [{ exerciseId: 'ex1', sets: 3, reps: '10', dropset: false, toFailure: false }],
   },
   {
     id: 'r2',
     name: 'Leg Day',
-    exercises: [{ exerciseId: 'ex2', sets: 4, reps: '12', dropset: true }],
+    exercises: [{ exerciseId: 'ex2', sets: 4, reps: '12', dropset: true, toFailure: false }],
   },
 ];
 
@@ -98,6 +98,7 @@ describe('RoutinesScreen', () => {
       expect(saved.exercises[0].sets).toBe(3);
       expect(saved.exercises[0].reps).toBe('10');
       expect(saved.exercises[0].dropset).toBe(false);
+      expect(saved.exercises[0].toFailure).toBe(false);
     });
   });
 
@@ -225,5 +226,72 @@ describe('RoutinesScreen', () => {
 
     fireEvent.click(screen.getByText(`← ${t.labels.routines}`));
     expect(await screen.findByText('Leg Day')).toBeTruthy();
+  });
+
+  // --- Badge prescription ---
+
+  it('shows only sets when reps is empty (no × character)', async () => {
+    const routinesWithNoReps: Routine[] = [
+      {
+        id: 'r3',
+        name: 'No Reps Day',
+        exercises: [{ exerciseId: 'ex1', sets: 4, reps: '', dropset: false, toFailure: false }],
+      },
+    ];
+    render(<RoutinesScreen {...defaultProps} routines={routinesWithNoReps} />);
+    fireEvent.click(screen.getByText('No Reps Day'));
+    expect(await screen.findByText('4')).toBeTruthy();
+    expect(screen.queryByText('4×')).toBeNull();
+  });
+
+  it('shows toFailure badge in detail view', async () => {
+    const routinesWithFailure: Routine[] = [
+      {
+        id: 'r4',
+        name: 'Failure Day',
+        exercises: [{ exerciseId: 'ex1', sets: 3, reps: '', dropset: false, toFailure: true }],
+      },
+    ];
+    render(<RoutinesScreen {...defaultProps} routines={routinesWithFailure} />);
+    fireEvent.click(screen.getByText('Failure Day'));
+    expect(await screen.findByText(t.labels.toFailure)).toBeTruthy();
+  });
+
+  it('toggling toFailure in create modal disables reps field', async () => {
+    render(<RoutinesScreen {...defaultProps} />);
+    fireEvent.click(screen.getByRole('button', { name: t.labels.newRoutine }));
+    await screen.findByText(t.labels.newRoutine, { selector: 'h2' });
+
+    fireEvent.click(screen.getByText('Bench Press'));
+
+    const repsInput = screen.getByPlaceholderText('10') as HTMLInputElement;
+    expect(repsInput.disabled).toBe(false);
+
+    const toFailureBtn = screen.getByLabelText
+      ? screen.getAllByRole('button').find((b) => b.textContent === '—' || b.textContent === '✓')
+      : null;
+
+    const toFailureButtons = screen.getAllByRole('button').filter(
+      (b) => b.closest('[class*="grid-cols-4"]') !== null
+    );
+    const toFailureToggle = toFailureButtons[toFailureButtons.length - 1];
+    fireEvent.click(toFailureToggle);
+
+    expect((screen.getByPlaceholderText('10') as HTMLInputElement).disabled).toBe(true);
+  });
+
+  it('sets field allows empty value during editing and clamps to 1 on blur', async () => {
+    render(<RoutinesScreen {...defaultProps} />);
+    fireEvent.click(screen.getByRole('button', { name: t.labels.newRoutine }));
+    await screen.findByText(t.labels.newRoutine, { selector: 'h2' });
+
+    fireEvent.click(screen.getByText('Bench Press'));
+
+    const setsInput = screen.getByDisplayValue('3') as HTMLInputElement;
+    fireEvent.change(setsInput, { target: { value: '' } });
+    expect(setsInput.value).toBe('');
+
+    fireEvent.blur(setsInput);
+    expect(setsInput.value).toBe('1');
   });
 });

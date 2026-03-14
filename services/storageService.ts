@@ -292,6 +292,7 @@ class LocalStorageManager implements StorageManagerInterface {
         const migrated = r.exercises.map((re) => ({
           ...re,
           reps: typeof re.reps === 'number' ? String(re.reps) : re.reps,
+          toFailure: re.toFailure ?? false,
         }));
         return { ...r, exercises: migrated } as Routine;
       }
@@ -300,6 +301,7 @@ class LocalStorageManager implements StorageManagerInterface {
         sets: 3,
         reps: '10',
         dropset: false,
+        toFailure: false,
       }));
       return { id: r.id, name: r.name, exercises: migrated };
     });

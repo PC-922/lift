@@ -17,6 +17,7 @@ export interface RoutineExercise {
   sets: number;
   reps: string;
   dropset: boolean;
+  toFailure: boolean;
 }
 
 export interface Routine {

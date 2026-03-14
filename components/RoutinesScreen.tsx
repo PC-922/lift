@@ -87,7 +87,7 @@ export const RoutinesScreen: React.FC<Props> = ({
       if (exists) {
         return prev.filter((re) => re.exerciseId !== exerciseId);
       }
-      return [...prev, { exerciseId, sets: DEFAULT_SETS, reps: DEFAULT_REPS, dropset: false }];
+      return [...prev, { exerciseId, sets: DEFAULT_SETS, reps: DEFAULT_REPS, dropset: false, toFailure: false }];
     });
   };
 
@@ -101,12 +101,18 @@ export const RoutinesScreen: React.FC<Props> = ({
         prev.map((re) => (re.exerciseId === exerciseId ? { ...re, reps: value } : re))
       );
     } else {
-      const parsed = parseInt(value, 10);
-      const num = Number.isNaN(parsed) || parsed < 1 ? 1 : parsed;
       setFormExercises((prev) =>
-        prev.map((re) => (re.exerciseId === exerciseId ? { ...re, [field]: num } : re))
+        prev.map((re) => (re.exerciseId === exerciseId ? { ...re, sets: value as unknown as number } : re))
       );
     }
+  };
+
+  const commitSetsField = (exerciseId: string, value: string) => {
+    const parsed = parseInt(value, 10);
+    const num = Number.isNaN(parsed) || parsed < 1 ? 1 : parsed;
+    setFormExercises((prev) =>
+      prev.map((re) => (re.exerciseId === exerciseId ? { ...re, sets: num } : re))
+    );
   };
 
   const toggleDropset = (exerciseId: string) => {
@@ -114,6 +120,16 @@ export const RoutinesScreen: React.FC<Props> = ({
       prev.map((re) =>
         re.exerciseId === exerciseId ? { ...re, dropset: !re.dropset } : re
       )
+    );
+  };
+
+  const toggleToFailure = (exerciseId: string) => {
+    setFormExercises((prev) =>
+      prev.map((re) => {
+        if (re.exerciseId !== exerciseId) return re;
+        const next = !re.toFailure;
+        return { ...re, toFailure: next, reps: next ? '' : DEFAULT_REPS };
+      })
     );
   };
 
@@ -203,8 +219,15 @@ export const RoutinesScreen: React.FC<Props> = ({
 
                   <div className="flex items-center gap-2 mb-3">
                     <span className="text-xs font-semibold text-ios-blue bg-ios-blue/10 px-2 py-0.5 rounded-full">
-                      {routineExercise.sets}×{routineExercise.reps}
+                      {routineExercise.reps
+                        ? `${routineExercise.sets}×${routineExercise.reps}`
+                        : `${routineExercise.sets}`}
                     </span>
+                    {routineExercise.toFailure && (
+                      <span className="text-xs font-semibold text-red-500 bg-red-500/10 px-2 py-0.5 rounded-full">
+                        {t.labels.toFailure}
+                      </span>
+                    )}
                     {routineExercise.dropset && (
                       <span className="text-xs font-semibold text-orange-500 bg-orange-500/10 px-2 py-0.5 rounded-full">
                         {t.labels.dropset}
@@ -285,11 +308,11 @@ export const RoutinesScreen: React.FC<Props> = ({
 
       <button
         onClick={openCreate}
-        className="fixed bottom-24 right-6 w-14 h-14 bg-ios-blue text-white rounded-full shadow-lg flex items-center justify-center active:opacity-80 z-20"
+        className="fixed right-6 w-14 h-14 bg-ios-blue rounded-full shadow-lg shadow-blue-500/30 flex items-center justify-center text-white active:scale-95 transition-transform z-40"
         style={{ bottom: 'calc(env(safe-area-inset-bottom) + 5rem)' }}
         aria-label={t.labels.newRoutine}
       >
-        <Plus size={28} />
+        <Plus size={28} strokeWidth={2.5} />
       </button>
 
       {modalMode && (
@@ -360,20 +383,20 @@ export const RoutinesScreen: React.FC<Props> = ({
 
                           {selected && routineEx && (
                             <div className="mt-1 mb-1 px-3 py-3 bg-ios-bg rounded-xl border border-ios-blue/20">
-                              <div className="grid grid-cols-3 gap-3 items-end">
+                              <div className="grid grid-cols-4 gap-2 items-end">
                                 <div>
                                   <label className="block text-xs font-medium text-ios-gray mb-1">
                                     {t.labels.sets}
                                   </label>
                                   <input
-                                    type="number"
+                                    type="text"
                                     inputMode="numeric"
                                     value={routineEx.sets}
                                     onChange={(e) =>
                                       updateFormExerciseField(exercise.id, 'sets', e.target.value)
                                     }
+                                    onBlur={(e) => commitSetsField(exercise.id, e.target.value)}
                                     className="w-full bg-ios-card text-ios-text p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-ios-blue text-sm text-center"
-                                    min={1}
                                   />
                                 </div>
                                 <div>
@@ -382,12 +405,13 @@ export const RoutinesScreen: React.FC<Props> = ({
                                   </label>
                                   <input
                                     type="text"
-                                    inputMode="numeric"
+                                    inputMode="text"
                                     value={routineEx.reps}
                                     onChange={(e) =>
                                       updateFormExerciseField(exercise.id, 'reps', e.target.value)
                                     }
-                                    className="w-full bg-ios-card text-ios-text p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-ios-blue text-sm text-center"
+                                    disabled={routineEx.toFailure}
+                                    className="w-full bg-ios-card text-ios-text p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-ios-blue text-sm text-center disabled:opacity-30"
                                     placeholder="10"
                                   />
                                 </div>
@@ -404,6 +428,21 @@ export const RoutinesScreen: React.FC<Props> = ({
                                     }`}
                                   >
                                     {routineEx.dropset ? '✓' : '—'}
+                                  </button>
+                                </div>
+                                <div className="flex flex-col items-center">
+                                  <label className="block text-xs font-medium text-ios-gray mb-1">
+                                    {t.labels.toFailure}
+                                  </label>
+                                  <button
+                                    onClick={() => toggleToFailure(exercise.id)}
+                                    className={`w-full py-2 rounded-lg text-xs font-semibold transition-colors active:opacity-70 ${
+                                      routineEx.toFailure
+                                        ? 'bg-red-500 text-white'
+                                        : 'bg-ios-card text-ios-gray border border-ios-separator'
+                                    }`}
+                                  >
+                                    {routineEx.toFailure ? '✓' : '—'}
                                   </button>
                                 </div>
                               </div>

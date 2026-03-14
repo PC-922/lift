@@ -136,7 +136,8 @@ export const translations = {
       noRoutinesDesc: 'Toca el + para crear tu primera rutina',
       noExercisesAvailable: 'No hay ejercicios disponibles',
       sets: 'Series',
-      dropset: 'Dropset'
+      dropset: 'Dropset',
+      toFailure: 'Al fallo'
     },
     time: {
       today: 'Hoy',
@@ -288,7 +289,8 @@ export const translations = {
       noRoutinesDesc: 'Tap + to create your first routine',
       noExercisesAvailable: 'No exercises available',
       sets: 'Sets',
-      dropset: 'Dropset'
+      dropset: 'Dropset',
+      toFailure: 'To failure'
     },
     time: {
       today: 'Today',
