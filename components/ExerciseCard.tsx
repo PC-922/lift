@@ -1,97 +1,60 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Exercise } from '../types';
-import { calculateProgression, getLatestLog } from '../utils/progression';
-import { Trash2, Pencil } from 'lucide-react';
+import { getLatestLog } from '../utils/progression';
 import { t } from '../utils/translations';
+import { ActionSheet } from './ActionSheet';
 
 interface Props {
   exercise: Exercise;
   onLog: (weight: number, reps: number) => void;
   onDelete: () => void;
   onRename: () => void;
+  onMove: () => void;
   onUpdateNote: (note: string) => void;
 }
 
-const SWIPE_ACTIVATION_THRESHOLD = 30;
+const LONG_PRESS_MS = 500;
 
-export const ExerciseCard: React.FC<Props> = ({ exercise, onLog, onDelete, onRename, onUpdateNote }) => {
+export const ExerciseCard: React.FC<Props> = ({ exercise, onLog, onDelete, onRename, onMove, onUpdateNote }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [showActions, setShowActions] = useState(false);
   const currentStatus = getLatestLog(exercise.logs);
-  const progression = calculateProgression(exercise.logs);
 
   const [weight, setWeight] = useState<string>('');
   const [reps, setReps] = useState<string>('');
   const [note, setNote] = useState<string>(exercise.note ?? '');
 
-  const [translateX, setTranslateX] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
-  const startX = useRef<number>(0);
-  const startY = useRef<number>(0);
-  const startTranslate = useRef<number>(0);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const didLongPress = useRef(false);
 
   useEffect(() => {
     setNote(exercise.note ?? '');
   }, [exercise.note]);
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    const tagName = (e.target as HTMLElement).tagName;
-    if (tagName === 'INPUT' || tagName === 'TEXTAREA') return;
-    
-    startX.current = e.touches[0].clientX;
-    startY.current = e.touches[0].clientY;
-    startTranslate.current = translateX;
-    setIsDragging(false);
-  };
+  const startLongPress = useCallback((e: React.TouchEvent | React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'BUTTON') return;
 
-  const handleTouchMove = (e: React.TouchEvent) => {
-    const currentX = e.touches[0].clientX;
-    const currentY = e.touches[0].clientY;
-    const diff = currentX - startX.current;
-    const diffY = currentY - startY.current;
+    didLongPress.current = false;
+    longPressTimer.current = setTimeout(() => {
+      didLongPress.current = true;
+      setShowActions(true);
+    }, LONG_PRESS_MS);
+  }, []);
 
-    if (!isDragging) {
-      if (Math.abs(diff) < SWIPE_ACTIVATION_THRESHOLD || Math.abs(diff) < Math.abs(diffY)) {
-        return;
-      }
-      setIsDragging(true);
+  const cancelLongPress = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
     }
-    
-    let newX = startTranslate.current + diff;
-    
-    if (newX < -80) newX = -80;
-    if (newX > 80) newX = 80;
+  }, []);
 
-    setTranslateX(newX);
-  };
-
-  const handleTouchEnd = () => {
-    if (!isDragging) return;
-    setIsDragging(false);
-    
-    if (translateX < -40) {
-      setTranslateX(-80);
-    } else if (translateX > 40) {
-      setTranslateX(80);
-    } else {
-      setTranslateX(0);
-    }
-  };
-
-  const handleDeleteClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (window.confirm(t.prompts.deleteExercise.replace('{name}', exercise.name))) {
-        onDelete();
-        setTranslateX(0);
-    } else {
-        setTranslateX(0); 
-    }
-  };
-
-  const handleRenameClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onRename();
-    setTranslateX(0);
-  };
+  const handlePress = useCallback((e?: React.TouchEvent | React.MouseEvent) => {
+    e?.preventDefault();
+    cancelLongPress();
+    if (didLongPress.current) return;
+    setIsExpanded((prev) => !prev);
+  }, [cancelLongPress]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -102,120 +65,98 @@ export const ExerciseCard: React.FC<Props> = ({ exercise, onLog, onDelete, onRen
     setIsExpanded(false);
   };
 
+  const actions = [
+    { label: t.actions.rename, onPress: onRename },
+    { label: t.actions.move, onPress: onMove },
+    { label: t.actions.delete, destructive: true, onPress: onDelete },
+  ];
+
   return (
-    <div className="relative mb-4 rounded-2xl bg-ios-bg overflow-hidden select-none">
-      
-      <div className="absolute inset-0 flex justify-between">
-         {/* Left Action (Rename) - Revealed when swiping RIGHT */}
-         <div className="bg-blue-500 w-[80px] flex items-center justify-center">
-            <button 
-                onClick={handleRenameClick}
-                className="w-full h-full flex items-center justify-center text-white active:bg-blue-600 transition-colors"
-                aria-label={t.actions.rename}
-            >
-                <Pencil size={24} />
-            </button>
-         </div>
-
-         {/* Right Action (Delete) - Revealed when swiping LEFT */}
-         <div className="bg-red-500 w-[80px] flex items-center justify-center">
-            <button 
-                onClick={handleDeleteClick}
-                className="w-full h-full flex items-center justify-center text-white active:bg-red-600 transition-colors"
-                aria-label={t.actions.delete}
-            >
-                <Trash2 size={24} />
-            </button>
-         </div>
-      </div>
-
-      <div 
-        className={`bg-ios-card relative z-10 p-4 transition-transform ${isDragging ? '' : 'duration-300 ease-out'} touch-pan-y`}
-        style={{ transform: `translateX(${translateX}px)` }}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-      >
-        <div 
-            className="flex justify-between items-center cursor-pointer"
-            onClick={() => {
-                if (translateX === 0) setIsExpanded(!isExpanded);
-                else setTranslateX(0);
-            }}
+    <>
+      <div className="relative mb-4 rounded-2xl bg-ios-card overflow-hidden select-none">
+        <div
+          className="p-4 cursor-pointer"
+          onTouchStart={startLongPress}
+          onTouchEnd={handlePress}
+          onTouchMove={cancelLongPress}
+          onMouseDown={startLongPress}
+          onMouseUp={handlePress}
+          onMouseLeave={cancelLongPress}
         >
-            <div className="flex-1">
-            <h3 className="text-lg font-semibold text-ios-text">{exercise.name}</h3>
-            <div className="flex items-center space-x-2 mt-1">
+          <div className="flex justify-between items-center">
+            <div className="flex-1 min-w-0">
+              <h3 className="text-lg font-semibold text-ios-text">{exercise.name}</h3>
+              <div className="flex items-center space-x-2 mt-1">
                 {currentStatus ? (
-                <span className="text-2xl font-bold tracking-tight text-ios-text">
+                  <span className="text-2xl font-bold tracking-tight text-ios-text">
                     {currentStatus.weight}<span className="text-sm font-normal text-ios-gray ml-0.5">kg</span>
                     <span className="text-gray-300 dark:text-gray-600 mx-2">/</span>
                     {currentStatus.reps}<span className="text-sm font-normal text-ios-gray ml-0.5">{t.labels.reps.toLowerCase()}</span>
-                </span>
+                  </span>
                 ) : (
-                <span className="text-ios-gray text-sm">{t.labels.noLogs}</span>
+                  <span className="text-ios-gray text-sm">{t.labels.noLogs}</span>
                 )}
+              </div>
             </div>
-            </div>
-            
-            {progression && (
-            <div className="flex flex-col items-end">
-                <span className="text-[10px] uppercase font-bold text-ios-gray tracking-wider mb-0.5">{t.labels.progress}</span>
-                <div className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-2 py-1 rounded-lg text-xs font-medium">
-                {progression}
-                </div>
-            </div>
-            )}
+          </div>
         </div>
 
         {isExpanded && (
-            <div className="mt-6 pt-4 border-t border-ios-separator animate-fadeIn" onTouchStart={(e) => e.stopPropagation()}>
-            <div className="mb-4">
-                <label className="block text-xs font-medium text-ios-gray mb-1 ml-1">{t.labels.note}</label>
-                <input
-                    type="text"
-                    value={note}
-                    onChange={(e) => setNote(e.target.value)}
-                    onBlur={() => onUpdateNote(note)}
-                    placeholder={t.labels.notePlaceholder}
-                    className="w-full bg-ios-bg text-ios-text text-base p-3 rounded-xl border-none outline-none focus:ring-2 focus:ring-ios-blue"
-                />
+          <div className="px-4 pb-4 border-t border-ios-separator animate-fadeIn">
+            <div className="mt-4 mb-4">
+              <label className="block text-xs font-medium text-ios-gray mb-1 ml-1">{t.labels.note}</label>
+              <input
+                type="text"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                onBlur={() => onUpdateNote(note)}
+                placeholder={t.labels.notePlaceholder}
+                className="w-full bg-ios-bg text-ios-text text-base p-3 rounded-xl border-none outline-none focus:ring-2 focus:ring-ios-blue"
+              />
             </div>
             <form onSubmit={handleSubmit} className="flex gap-3">
-                <div className="flex-1">
+              <div className="flex-1">
                 <label className="block text-xs font-medium text-ios-gray mb-1 ml-1">{t.labels.weight}</label>
                 <input
-                    type="number"
-                    inputMode="decimal"
-                    value={weight}
-                    onChange={(e) => setWeight(e.target.value)}
-                    placeholder={currentStatus?.weight.toString() || "0"}
-                    className="w-full bg-ios-bg text-ios-text text-lg p-3 rounded-xl border-none outline-none focus:ring-2 focus:ring-ios-blue"
+                  type="number"
+                  inputMode="decimal"
+                  value={weight}
+                  onChange={(e) => setWeight(e.target.value)}
+                  placeholder={currentStatus?.weight.toString() || "0"}
+                  className="w-full bg-ios-bg text-ios-text text-lg p-3 rounded-xl border-none outline-none focus:ring-2 focus:ring-ios-blue"
                 />
-                </div>
-                <div className="flex-1">
+              </div>
+              <div className="flex-1">
                 <label className="block text-xs font-medium text-ios-gray mb-1 ml-1">{t.labels.reps}</label>
                 <input
-                    type="number"
-                    inputMode="numeric"
-                    value={reps}
-                    onChange={(e) => setReps(e.target.value)}
-                    placeholder={currentStatus?.reps.toString() || "0"}
-                    className="w-full bg-ios-bg text-ios-text text-lg p-3 rounded-xl border-none outline-none focus:ring-2 focus:ring-ios-blue"
+                  type="number"
+                  inputMode="numeric"
+                  value={reps}
+                  onChange={(e) => setReps(e.target.value)}
+                  placeholder={currentStatus?.reps.toString() || "0"}
+                  className="w-full bg-ios-bg text-ios-text text-lg p-3 rounded-xl border-none outline-none focus:ring-2 focus:ring-ios-blue"
                 />
-                </div>
-                <div className="flex items-end">
+              </div>
+              <div className="flex items-end">
                 <button
-                    type="submit"
-                    className="bg-ios-blue text-white font-semibold h-[52px] px-6 rounded-xl active:opacity-80 transition-opacity"
+                  type="submit"
+                  className="bg-ios-blue text-white font-semibold h-[52px] px-6 rounded-xl active:opacity-80 transition-opacity"
                 >
-                    {t.actions.log}
+                  {t.actions.log}
                 </button>
-                </div>
+              </div>
             </form>
-            </div>
+          </div>
         )}
       </div>
-    </div>
+
+      {showActions && (
+        <ActionSheet
+          title={exercise.name}
+          actions={actions}
+          onClose={() => setShowActions(false)}
+        />
+      )}
+    </>
   );
 };

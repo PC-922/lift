@@ -237,6 +237,14 @@ describe('progression utilities', () => {
         weight: 50,
         reps: 10,
         progressionText: t.time.yesterday,
+        detail: {
+          type: 'weight',
+          timeSince: t.time.yesterday,
+          prevWeight: 45,
+          currWeight: 50,
+          prevReps: 10,
+          currReps: 10,
+        },
       });
     });
   });

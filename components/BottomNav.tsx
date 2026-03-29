@@ -7,9 +7,10 @@ export type ScreenType = 'home' | 'insights' | 'history' | 'routines' | 'setting
 interface Props {
   currentScreen: ScreenType;
   onScreenChange: (screen: ScreenType) => void;
+  onScreenReset: (screen: ScreenType) => void;
 }
 
-export const BottomNav: React.FC<Props> = ({ currentScreen, onScreenChange }) => {
+export const BottomNav: React.FC<Props> = ({ currentScreen, onScreenChange, onScreenReset }) => {
   const navItems: { id: ScreenType; label: string; icon: React.ReactNode }[] = [
     { id: 'home', label: t.labels.home || 'Home', icon: <Home size={22} /> },
     { id: 'insights', label: t.labels.insights || 'Insights', icon: <BarChart3 size={22} /> },
@@ -17,6 +18,14 @@ export const BottomNav: React.FC<Props> = ({ currentScreen, onScreenChange }) =>
     { id: 'routines', label: t.labels.routines || 'Routines', icon: <ListChecks size={22} /> },
     { id: 'settings', label: t.labels.settings || 'Settings', icon: <Settings size={22} /> },
   ];
+
+  const handleTap = (screen: ScreenType) => {
+    if (screen === currentScreen) {
+      onScreenReset(screen);
+    } else {
+      onScreenChange(screen);
+    }
+  };
 
   return (
     <nav
@@ -31,7 +40,7 @@ export const BottomNav: React.FC<Props> = ({ currentScreen, onScreenChange }) =>
         {navItems.map((item) => (
           <button
             key={item.id}
-            onClick={() => onScreenChange(item.id)}
+            onClick={() => handleTap(item.id)}
             className={`flex-1 flex flex-col items-center justify-center py-2.5 gap-1 transition-colors active:opacity-70 ${
               currentScreen === item.id
                 ? 'text-ios-blue'

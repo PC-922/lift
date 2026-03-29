@@ -1,9 +1,11 @@
-import React, { useState, useMemo } from 'react';
-import { Plus, Check, X, ChevronDown, ChevronUp } from 'lucide-react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { Plus, Check, ChevronUp, Pencil, X } from 'lucide-react';
 import { Exercise, Routine, RoutineExercise } from '../types';
 import { t, translations } from '../utils/translations';
 import { getLatestLog } from '../utils/progression';
 import { RoutineCard } from './RoutineCard';
+import { ActionSheet } from './ActionSheet';
+import ConfirmModal from './ConfirmModal';
 
 interface Props {
   routines: Routine[];
@@ -11,6 +13,7 @@ interface Props {
   onSaveRoutine: (routine: Routine) => void;
   onDeleteRoutine: (id: string) => void;
   onLogExercise: (exerciseId: string, weight: number, reps: number) => void;
+  resetSignal?: number;
 }
 
 type ModalMode = 'create' | 'edit';
@@ -20,8 +23,17 @@ interface LogFormState {
   reps: string;
 }
 
+interface EditRoutineExerciseState {
+  exerciseId: string;
+  sets: number | string;
+  reps: string;
+  dropset: boolean;
+  toFailure: boolean;
+}
+
 const DEFAULT_SETS = 3;
 const DEFAULT_REPS = '10';
+const LONG_PRESS_MS = 500;
 
 export const RoutinesScreen: React.FC<Props> = ({
   routines,
@@ -29,6 +41,7 @@ export const RoutinesScreen: React.FC<Props> = ({
   onSaveRoutine,
   onDeleteRoutine,
   onLogExercise,
+  resetSignal,
 }) => {
   const [activeRoutineId, setActiveRoutineId] = useState<string | null>(null);
   const [modalMode, setModalMode] = useState<ModalMode | null>(null);
@@ -38,6 +51,18 @@ export const RoutinesScreen: React.FC<Props> = ({
   const [formExercises, setFormExercises] = useState<RoutineExercise[]>([]);
 
   const [logForms, setLogForms] = useState<Record<string, LogFormState>>({});
+
+  const [actionSheetExerciseId, setActionSheetExerciseId] = useState<string | null>(null);
+  const [editingRoutineExercise, setEditingRoutineExercise] = useState<EditRoutineExerciseState | null>(null);
+  const [confirmDeleteRoutineId, setConfirmDeleteRoutineId] = useState<string | null>(null);
+  const [confirmRemoveExerciseId, setConfirmRemoveExerciseId] = useState<string | null>(null);
+
+  const longPressTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
+  useEffect(() => {
+    setActiveRoutineId(null);
+    setModalMode(null);
+  }, [resetSignal]);
 
   const getTranslatedGroupName = (group: string) => {
     return (translations.es.muscleGroups as Record<string, string>)[group]
@@ -91,11 +116,7 @@ export const RoutinesScreen: React.FC<Props> = ({
     });
   };
 
-  const updateFormExerciseField = (
-    exerciseId: string,
-    field: 'sets' | 'reps',
-    value: string
-  ) => {
+  const updateFormExerciseField = (exerciseId: string, field: 'sets' | 'reps', value: string) => {
     if (field === 'reps') {
       setFormExercises((prev) =>
         prev.map((re) => (re.exerciseId === exerciseId ? { ...re, reps: value } : re))
@@ -146,9 +167,23 @@ export const RoutinesScreen: React.FC<Props> = ({
   };
 
   const handleDelete = (id: string) => {
-    if (!window.confirm(t.prompts.confirmDelete)) return;
-    onDeleteRoutine(id);
-    if (activeRoutineId === id) setActiveRoutineId(null);
+    setConfirmDeleteRoutineId(id);
+  };
+
+  const handleConfirmDeleteRoutine = () => {
+    if (!confirmDeleteRoutineId) return;
+    onDeleteRoutine(confirmDeleteRoutineId);
+    if (activeRoutineId === confirmDeleteRoutineId) setActiveRoutineId(null);
+    setConfirmDeleteRoutineId(null);
+  };
+
+  const handleDuplicate = (routine: Routine) => {
+    const duplicated: Routine = {
+      id: Date.now().toString(),
+      name: `${routine.name} (2)`,
+      exercises: [...routine.exercises],
+    };
+    onSaveRoutine(duplicated);
   };
 
   const getLogForm = (exerciseId: string): LogFormState => {
@@ -175,145 +210,215 @@ export const RoutinesScreen: React.FC<Props> = ({
     onLogExercise(exerciseId, weight, reps);
   };
 
-  if (activeRoutine) {
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between mb-2">
-          <button
-            onClick={() => setActiveRoutineId(null)}
-            className="text-ios-blue font-semibold text-sm active:opacity-70"
-          >
-            ← {t.labels.routines}
-          </button>
-          <h1 className="text-xl font-bold text-ios-text truncate max-w-[60%] text-center">
-            {activeRoutine.name}
-          </h1>
-          <div className="w-16" />
-        </div>
+  const startLongPress = (exerciseId: string) => {
+    longPressTimers.current[exerciseId] = setTimeout(() => {
+      setActionSheetExerciseId(exerciseId);
+    }, LONG_PRESS_MS);
+  };
 
-        {activeRoutineExercises.length === 0 ? (
-          <div className="text-center py-20 opacity-50">
-            <p className="text-ios-text font-medium">{t.labels.noExercises}</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {activeRoutineExercises.map(({ routineExercise, exercise }) => {
-              const form = getLogForm(exercise.id);
-              const latest = getLatestLog(exercise.logs);
-              return (
-                <div key={exercise.id} className="bg-ios-card rounded-2xl p-4">
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <h3 className="text-base font-semibold text-ios-text">{exercise.name}</h3>
-                      <p className="text-xs text-ios-gray uppercase tracking-wide mt-0.5">
-                        {getTranslatedGroupName(exercise.muscleGroup)}
-                      </p>
-                    </div>
-                    {latest && (
-                      <div className="text-right text-xs text-ios-gray">
-                        <p>{latest.weight} kg</p>
-                        <p>{latest.reps} reps</p>
-                      </div>
-                    )}
-                  </div>
+  const cancelLongPress = (exerciseId: string) => {
+    clearTimeout(longPressTimers.current[exerciseId]);
+  };
 
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-xs font-semibold text-ios-blue bg-ios-blue/10 px-2 py-0.5 rounded-full">
-                      {routineExercise.reps
-                        ? `${routineExercise.sets}×${routineExercise.reps}`
-                        : `${routineExercise.sets}`}
-                    </span>
-                    {routineExercise.toFailure && (
-                      <span className="text-xs font-semibold text-red-500 bg-red-500/10 px-2 py-0.5 rounded-full">
-                        {t.labels.toFailure}
-                      </span>
-                    )}
-                    {routineExercise.dropset && (
-                      <span className="text-xs font-semibold text-orange-500 bg-orange-500/10 px-2 py-0.5 rounded-full">
-                        {t.labels.dropset}
-                      </span>
-                    )}
-                  </div>
+  const openEditRoutineExercise = (exerciseId: string) => {
+    const re = activeRoutine?.exercises.find((r) => r.exerciseId === exerciseId);
+    if (!re) return;
+    setEditingRoutineExercise({ ...re, sets: re.sets, reps: re.reps });
+    setActionSheetExerciseId(null);
+  };
 
-                  <div className="grid grid-cols-3 gap-2">
-                    <div>
-                      <label className="block text-xs font-medium text-ios-gray mb-1">
-                        {t.labels.weightShort}
-                      </label>
-                      <input
-                        type="number"
-                        inputMode="decimal"
-                        value={form.weight}
-                        onChange={(e) => updateLogForm(exercise.id, 'weight', e.target.value)}
-                        className="w-full bg-ios-bg text-ios-text p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-ios-blue text-sm"
-                        placeholder="0"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-ios-gray mb-1">
-                        {t.labels.reps}
-                      </label>
-                      <input
-                        type="number"
-                        inputMode="numeric"
-                        value={form.reps}
-                        onChange={(e) => updateLogForm(exercise.id, 'reps', e.target.value)}
-                        className="w-full bg-ios-bg text-ios-text p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-ios-blue text-sm"
-                        placeholder="0"
-                      />
-                    </div>
-                    <div className="flex items-end">
-                      <button
-                        onClick={() => handleLog(exercise.id)}
-                        className="w-full py-2 rounded-lg bg-ios-blue text-white text-sm font-semibold active:opacity-80"
-                      >
-                        {t.actions.log}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    );
-  }
+  const handleSaveRoutineExercise = () => {
+    if (!editingRoutineExercise || !activeRoutine) return;
+    const { exerciseId } = editingRoutineExercise;
+    const parsed = parseInt(String(editingRoutineExercise.sets), 10);
+    const sets = Number.isNaN(parsed) || parsed < 1 ? 1 : parsed;
+    const updated: Routine = {
+      ...activeRoutine,
+      exercises: activeRoutine.exercises.map((re) =>
+        re.exerciseId === exerciseId
+          ? { ...re, sets, reps: editingRoutineExercise.reps, dropset: editingRoutineExercise.dropset, toFailure: editingRoutineExercise.toFailure }
+          : re
+      ),
+    };
+    onSaveRoutine(updated);
+    setEditingRoutineExercise(null);
+  };
+
+  const handleRemoveExerciseFromRoutine = (exerciseId: string) => {
+    if (!activeRoutine) return;
+    const updated: Routine = {
+      ...activeRoutine,
+      exercises: activeRoutine.exercises.filter((re) => re.exerciseId !== exerciseId),
+    };
+    onSaveRoutine(updated);
+    setConfirmRemoveExerciseId(null);
+  };
+
+  const actionSheetExerciseName = actionSheetExerciseId
+    ? exercises.find((e) => e.id === actionSheetExerciseId)?.name ?? ''
+    : '';
 
   return (
     <div className="space-y-6">
-      <div className="text-center mb-8">
-        <h1 className="text-2xl font-bold text-ios-text">{t.labels.routines}</h1>
-        <p className="text-sm text-ios-gray mt-2">{t.labels.routinesDesc}</p>
-      </div>
+      {activeRoutine ? (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between mb-2">
+            <button
+              onClick={() => setActiveRoutineId(null)}
+              className="text-ios-blue font-semibold text-sm active:opacity-70"
+            >
+              ← {t.labels.routines}
+            </button>
+            <h1 className="text-xl font-bold text-ios-text truncate max-w-[60%] text-center">
+              {activeRoutine.name}
+            </h1>
+            <button
+              onClick={() => openEdit(activeRoutine)}
+              className="text-ios-blue active:opacity-70 p-1"
+              aria-label={t.actions.edit}
+            >
+              <Pencil size={18} />
+            </button>
+          </div>
 
-      {routines.length === 0 ? (
-        <div className="text-center py-20 opacity-50">
-          <p className="text-ios-text font-medium">{t.labels.noRoutines}</p>
-          <p className="text-sm text-ios-gray mt-2">{t.labels.noRoutinesDesc}</p>
+          {activeRoutineExercises.length === 0 ? (
+            <div className="text-center py-20 opacity-50">
+              <p className="text-ios-text font-medium">{t.labels.noExercises}</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {activeRoutineExercises.map(({ routineExercise, exercise }) => {
+                const form = getLogForm(exercise.id);
+                const latest = getLatestLog(exercise.logs);
+                return (
+                  <div
+                    key={exercise.id}
+                    className="bg-ios-card rounded-2xl p-4 select-none"
+                    onMouseDown={() => startLongPress(exercise.id)}
+                    onMouseUp={() => cancelLongPress(exercise.id)}
+                    onMouseLeave={() => cancelLongPress(exercise.id)}
+                    onTouchStart={() => startLongPress(exercise.id)}
+                    onTouchEnd={() => cancelLongPress(exercise.id)}
+                    onTouchCancel={() => cancelLongPress(exercise.id)}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <h3 className="text-base font-semibold text-ios-text">{exercise.name}</h3>
+                        <p className="text-xs text-ios-gray uppercase tracking-wide mt-0.5">
+                          {getTranslatedGroupName(exercise.muscleGroup)}
+                        </p>
+                      </div>
+                      {latest && (
+                        <div className="text-right text-xs text-ios-gray">
+                          <p>{latest.weight} kg</p>
+                          <p>{latest.reps} reps</p>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-xs font-semibold text-ios-blue bg-ios-blue/10 px-2 py-0.5 rounded-full">
+                        {routineExercise.reps
+                          ? `${routineExercise.sets}×${routineExercise.reps}`
+                          : `${routineExercise.sets}`}
+                      </span>
+                      {routineExercise.toFailure && (
+                        <span className="text-xs font-semibold text-red-500 bg-red-500/10 px-2 py-0.5 rounded-full">
+                          {t.labels.toFailure}
+                        </span>
+                      )}
+                      {routineExercise.dropset && (
+                        <span className="text-xs font-semibold text-orange-500 bg-orange-500/10 px-2 py-0.5 rounded-full">
+                          {t.labels.dropset}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="block text-xs font-medium text-ios-gray mb-1">
+                          {t.labels.weightShort}
+                        </label>
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          value={form.weight}
+                          onChange={(e) => updateLogForm(exercise.id, 'weight', e.target.value)}
+                          onMouseDown={(e) => e.stopPropagation()}
+                          onTouchStart={(e) => e.stopPropagation()}
+                          className="w-full bg-ios-bg text-ios-text p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-ios-blue text-sm"
+                          placeholder="0"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-ios-gray mb-1">
+                          {t.labels.reps}
+                        </label>
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          value={form.reps}
+                          onChange={(e) => updateLogForm(exercise.id, 'reps', e.target.value)}
+                          onMouseDown={(e) => e.stopPropagation()}
+                          onTouchStart={(e) => e.stopPropagation()}
+                          className="w-full bg-ios-bg text-ios-text p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-ios-blue text-sm"
+                          placeholder="0"
+                        />
+                      </div>
+                      <div className="flex items-end">
+                        <button
+                          onClick={() => handleLog(exercise.id)}
+                          onMouseDown={(e) => e.stopPropagation()}
+                          onTouchStart={(e) => e.stopPropagation()}
+                          className="w-full py-2 rounded-lg bg-ios-blue text-white text-sm font-semibold active:opacity-80"
+                        >
+                          {t.actions.log}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       ) : (
-        <div className="space-y-3">
-          {routines.map((routine) => (
-            <RoutineCard
-              key={routine.id}
-              routine={routine}
-              onClick={() => setActiveRoutineId(routine.id)}
-              onEdit={() => openEdit(routine)}
-              onDelete={() => handleDelete(routine.id)}
-            />
-          ))}
+        <div className="space-y-6">
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-bold text-ios-text">{t.labels.routines}</h1>
+            <p className="text-sm text-ios-gray mt-2">{t.labels.routinesDesc}</p>
+          </div>
+
+          {routines.length === 0 ? (
+            <div className="text-center py-20 opacity-50">
+              <p className="text-ios-text font-medium">{t.labels.noRoutines}</p>
+              <p className="text-sm text-ios-gray mt-2">{t.labels.noRoutinesDesc}</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {routines.map((routine) => (
+                <RoutineCard
+                  key={routine.id}
+                  routine={routine}
+                  onClick={() => setActiveRoutineId(routine.id)}
+                  onEdit={() => openEdit(routine)}
+                  onDelete={() => handleDelete(routine.id)}
+                  onDuplicate={() => handleDuplicate(routine)}
+                />
+              ))}
+            </div>
+          )}
+
+          <button
+            onClick={openCreate}
+            className="fixed right-6 w-14 h-14 bg-ios-blue rounded-full shadow-lg shadow-blue-500/30 flex items-center justify-center text-white active:scale-95 transition-transform z-40"
+            style={{ bottom: 'calc(env(safe-area-inset-bottom) + 5rem)' }}
+            aria-label={t.labels.newRoutine}
+          >
+            <Plus size={28} strokeWidth={2.5} />
+          </button>
         </div>
       )}
-
-      <button
-        onClick={openCreate}
-        className="fixed right-6 w-14 h-14 bg-ios-blue rounded-full shadow-lg shadow-blue-500/30 flex items-center justify-center text-white active:scale-95 transition-transform z-40"
-        style={{ bottom: 'calc(env(safe-area-inset-bottom) + 5rem)' }}
-        aria-label={t.labels.newRoutine}
-      >
-        <Plus size={28} strokeWidth={2.5} />
-      </button>
 
       {modalMode && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm">
@@ -464,6 +569,138 @@ export const RoutinesScreen: React.FC<Props> = ({
             </button>
           </div>
         </div>
+      )}
+
+      {editingRoutineExercise && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm">
+          <div
+            className="bg-ios-card w-full max-w-md rounded-t-3xl p-6 shadow-2xl"
+            style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 1.5rem)' }}
+          >
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-xl font-bold text-ios-text">{t.labels.editExerciseInRoutine}</h2>
+              <button onClick={() => setEditingRoutineExercise(null)} className="text-ios-gray active:opacity-70">
+                <X size={22} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-4 gap-3 mb-5">
+              <div>
+                <label className="block text-xs font-medium text-ios-gray mb-1">{t.labels.sets}</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={editingRoutineExercise.sets}
+                  onChange={(e) =>
+                    setEditingRoutineExercise((prev) => prev ? { ...prev, sets: e.target.value } : prev)
+                  }
+                  onBlur={(e) => {
+                    const parsed = parseInt(e.target.value, 10);
+                    const num = Number.isNaN(parsed) || parsed < 1 ? 1 : parsed;
+                    setEditingRoutineExercise((prev) => prev ? { ...prev, sets: num } : prev);
+                  }}
+                  className="w-full bg-ios-bg text-ios-text p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-ios-blue text-sm text-center"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-ios-gray mb-1">{t.labels.reps}</label>
+                <input
+                  type="text"
+                  inputMode="text"
+                  value={editingRoutineExercise.reps}
+                  onChange={(e) =>
+                    setEditingRoutineExercise((prev) => prev ? { ...prev, reps: e.target.value } : prev)
+                  }
+                  disabled={editingRoutineExercise.toFailure}
+                  className="w-full bg-ios-bg text-ios-text p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-ios-blue text-sm text-center disabled:opacity-30"
+                  placeholder="10"
+                />
+              </div>
+              <div className="flex flex-col items-center">
+                <label className="block text-xs font-medium text-ios-gray mb-1">{t.labels.dropset}</label>
+                <button
+                  onClick={() =>
+                    setEditingRoutineExercise((prev) => prev ? { ...prev, dropset: !prev.dropset } : prev)
+                  }
+                  className={`w-full py-2 rounded-lg text-xs font-semibold transition-colors active:opacity-70 ${
+                    editingRoutineExercise.dropset
+                      ? 'bg-orange-500 text-white'
+                      : 'bg-ios-bg text-ios-gray border border-ios-separator'
+                  }`}
+                >
+                  {editingRoutineExercise.dropset ? '✓' : '—'}
+                </button>
+              </div>
+              <div className="flex flex-col items-center">
+                <label className="block text-xs font-medium text-ios-gray mb-1">{t.labels.toFailure}</label>
+                <button
+                  onClick={() =>
+                    setEditingRoutineExercise((prev) => {
+                      if (!prev) return prev;
+                      const next = !prev.toFailure;
+                      return { ...prev, toFailure: next, reps: next ? '' : DEFAULT_REPS };
+                    })
+                  }
+                  className={`w-full py-2 rounded-lg text-xs font-semibold transition-colors active:opacity-70 ${
+                    editingRoutineExercise.toFailure
+                      ? 'bg-red-500 text-white'
+                      : 'bg-ios-bg text-ios-gray border border-ios-separator'
+                  }`}
+                >
+                  {editingRoutineExercise.toFailure ? '✓' : '—'}
+                </button>
+              </div>
+            </div>
+
+            <button
+              onClick={handleSaveRoutineExercise}
+              className="w-full py-3 rounded-xl bg-ios-blue text-white font-semibold text-base active:opacity-80"
+            >
+              {t.actions.save}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {actionSheetExerciseId && (
+        <ActionSheet
+          title={actionSheetExerciseName}
+          items={[
+            {
+              label: t.labels.editExerciseInRoutine,
+              onPress: () => openEditRoutineExercise(actionSheetExerciseId),
+            },
+            {
+              label: t.labels.removeFromRoutine,
+              destructive: true,
+              onPress: () => {
+                setConfirmRemoveExerciseId(actionSheetExerciseId);
+                setActionSheetExerciseId(null);
+              },
+            },
+          ]}
+          onClose={() => setActionSheetExerciseId(null)}
+        />
+      )}
+
+      {confirmDeleteRoutineId && (
+        <ConfirmModal
+          title={t.prompts.confirmDelete}
+          confirmLabel={t.actions.delete}
+          destructive
+          onConfirm={handleConfirmDeleteRoutine}
+          onCancel={() => setConfirmDeleteRoutineId(null)}
+        />
+      )}
+
+      {confirmRemoveExerciseId && (
+        <ConfirmModal
+          title={t.labels.removeFromRoutine}
+          confirmLabel={t.actions.delete}
+          destructive
+          onConfirm={() => handleRemoveExerciseFromRoutine(confirmRemoveExerciseId)}
+          onCancel={() => setConfirmRemoveExerciseId(null)}
+        />
       )}
     </div>
   );

@@ -1,5 +1,6 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { storageManager } from './services/storageService';
+import { preferencesService } from './services/preferencesService';
 import { Exercise, ExerciseLog, GroupSortPreference, Routine } from './types';
 import { ExerciseCard } from './components/ExerciseCard';
 import { MuscleGroupCard } from './components/MuscleGroupCard';
@@ -8,6 +9,8 @@ import { InsightsScreen } from './components/InsightsScreen';
 import { HistoryScreen } from './components/HistoryScreen';
 import { RoutinesScreen } from './components/RoutinesScreen';
 import { BottomNav, ScreenType } from './components/BottomNav';
+import ConfirmModal from './components/ConfirmModal';
+import PromptModal from './components/PromptModal';
 import { t, translations } from './utils/translations';
 import { sortExercisesForGroup } from './utils/exerciseSorting';
 import { 
@@ -29,7 +32,9 @@ const App: React.FC = () => {
   const [groupSortPreference, setGroupSortPreference] = useState<GroupSortPreference>(
     () => storageManager.getGroupSortPreference()
   );
-  const [currentScreen, setCurrentScreen] = useState<ScreenType>('home');
+  const [currentScreen, setCurrentScreen] = useState<ScreenType>(
+    () => preferencesService.getDefaultScreen() ?? 'home'
+  );
   const [isAdding, setIsAdding] = useState(false);
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
   const [activeGroup, setActiveGroup] = useState<string | null>(null);
@@ -39,12 +44,25 @@ const App: React.FC = () => {
   const [editingExercise, setEditingExercise] = useState<Exercise | null>(null);
   const [editName, setEditName] = useState('');
   const [editGroup, setEditGroup] = useState('');
+  const [screenResetSignal, setScreenResetSignal] = useState(0);
+  const [movingExercise, setMovingExercise] = useState<Exercise | null>(null);
+  const [addingGroup, setAddingGroup] = useState(false);
+  const [renamingGroup, setRenamingGroup] = useState<string | null>(null);
+  const [deletingGroup, setDeletingGroup] = useState<string | null>(null);
 
-  const loadData = () => {
+  const loadData = useCallback(() => {
     setExercises(storageManager.getExercises());
     setMuscleGroups(storageManager.getMuscleGroups());
     setGroupSortPreference(storageManager.getGroupSortPreference());
     setRoutines(storageManager.getRoutines());
+  }, []);
+
+  const handleScreenReset = (screen: ScreenType) => {
+    if (screen === 'home') {
+      setActiveGroup(null);
+    } else {
+      setScreenResetSignal((n) => n + 1);
+    }
   };
 
   useEffect(() => {
@@ -52,14 +70,14 @@ const App: React.FC = () => {
     
     const checkStandalone = () => {
       const isStandaloneQuery = window.matchMedia('(display-mode: standalone)').matches;
-      const isIosStandalone = (window.navigator as any).standalone === true;
+      const isIosStandalone = (window.navigator as unknown as { standalone?: boolean }).standalone === true;
       setIsStandalone(isStandaloneQuery || isIosStandalone);
     };
     
     checkStandalone();
     window.addEventListener('resize', checkStandalone);
     return () => window.removeEventListener('resize', checkStandalone);
-  }, []);
+  }, [loadData]);
 
   useEffect(() => {
     if (currentScreen !== 'home') {
@@ -145,6 +163,17 @@ const App: React.FC = () => {
     setEditGroup(exercise.muscleGroup || 'Otro');
   };
 
+  const handleMoveTrigger = (exercise: Exercise) => {
+    setMovingExercise(exercise);
+  };
+
+  const handleMoveConfirm = (targetGroup: string) => {
+    if (!movingExercise) return;
+    storageManager.updateExerciseDetails(movingExercise.id, movingExercise.name, targetGroup);
+    setMovingExercise(null);
+    loadData();
+  };
+
   const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault();
     if (editingExercise && editName.trim()) {
@@ -155,28 +184,22 @@ const App: React.FC = () => {
   };
 
   const handleAddGroup = () => {
-    const name = window.prompt(t.prompts.newGroupName);
-    if (name && name.trim()) {
-      storageManager.addMuscleGroup(name.trim());
-      loadData();
-    }
+    setAddingGroup(true);
   };
 
   const handleDeleteGroup = (group: string) => {
-    storageManager.deleteMuscleGroup(group);
+    setDeletingGroup(group);
+  };
+
+  const handleConfirmDeleteGroup = () => {
+    if (!deletingGroup) return;
+    storageManager.deleteMuscleGroup(deletingGroup);
+    setDeletingGroup(null);
     loadData();
   };
 
   const handleRenameGroup = (group: string) => {
-    const newName = window.prompt(t.prompts.renameGroup, group);
-    if (newName && newName.trim() && newName !== group) {
-      storageManager.renameMuscleGroup(group, newName.trim());
-      
-      if (activeGroup === group) {
-         setActiveGroup(newName.trim());
-      }
-      loadData();
-    }
+    setRenamingGroup(group);
   };
 
   const handleExport = () => {
@@ -284,7 +307,10 @@ const App: React.FC = () => {
 
       <main className="animate-slideUp pb-24">
         {currentScreen === 'settings' ? (
-          <SettingsScreen onExport={handleExport} onImport={handleImportData} />
+          <SettingsScreen
+            onExport={handleExport}
+            onImport={handleImportData}
+          />
         ) : currentScreen === 'insights' ? (
           <InsightsScreen exercises={exercises} />
         ) : currentScreen === 'history' ? (
@@ -294,6 +320,7 @@ const App: React.FC = () => {
             onDeleteLog={handleDeleteLog}
             onDeleteAllLogs={handleDeleteAllLogs}
             onDeleteAllLogsExceptLatest={handleDeleteAllLogsExceptLatest}
+            resetSignal={screenResetSignal}
           />
         ) : currentScreen === 'routines' ? (
           <RoutinesScreen
@@ -302,6 +329,7 @@ const App: React.FC = () => {
             onSaveRoutine={handleSaveRoutine}
             onDeleteRoutine={handleDeleteRoutine}
             onLogExercise={handleLog}
+            resetSignal={screenResetSignal}
           />
         ) : activeGroup ? (
           <div className="space-y-4">
@@ -351,6 +379,7 @@ const App: React.FC = () => {
                   onLog={(w, r) => handleLog(ex.id, w, r)}
                   onDelete={() => handleDelete(ex.id)}
                   onRename={() => handleEditExerciseTrigger(ex)}
+                  onMove={() => handleMoveTrigger(ex)}
                   onUpdateNote={(note) => handleUpdateNote(ex.id, note)}
                 />
               ))
@@ -490,6 +519,35 @@ const App: React.FC = () => {
         </div>
       )}
 
+      {movingExercise && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-ios-card w-full max-w-md rounded-2xl p-6 shadow-2xl animate-scaleIn">
+            <h2 className="text-xl font-bold mb-2 text-ios-text">{t.actions.move}</h2>
+            <p className="text-sm text-ios-gray mb-4">{movingExercise.name}</p>
+            <div className="grid grid-cols-3 gap-2 mb-6 max-h-[40vh] overflow-y-auto">
+              {muscleGroups
+                .filter((g) => g !== movingExercise.muscleGroup)
+                .map((group) => (
+                  <button
+                    key={group}
+                    type="button"
+                    onClick={() => handleMoveConfirm(group)}
+                    className="py-2 px-1 rounded-lg text-sm font-medium transition-colors bg-ios-bg text-ios-text active:bg-ios-blue active:text-white truncate"
+                  >
+                    {getTranslatedGroupName(group)}
+                  </button>
+                ))}
+            </div>
+            <button
+              onClick={() => setMovingExercise(null)}
+              className="w-full py-3.5 rounded-xl font-semibold bg-ios-bg text-ios-text active:opacity-70"
+            >
+              {t.actions.cancel}
+            </button>
+          </div>
+        </div>
+      )}
+
       {isInstallModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-6">
           <div className="bg-ios-card w-full max-w-sm rounded-2xl p-6 shadow-2xl animate-scaleIn max-h-[80vh] overflow-y-auto">
@@ -573,7 +631,45 @@ const App: React.FC = () => {
         </button>
       )}
 
-      <BottomNav currentScreen={currentScreen} onScreenChange={setCurrentScreen} />
+      <BottomNav currentScreen={currentScreen} onScreenChange={setCurrentScreen} onScreenReset={handleScreenReset} />
+
+      {addingGroup && (
+        <PromptModal
+          title={t.prompts.newGroupName}
+          onConfirm={(name) => {
+            storageManager.addMuscleGroup(name);
+            setAddingGroup(false);
+            loadData();
+          }}
+          onCancel={() => setAddingGroup(false)}
+        />
+      )}
+
+      {renamingGroup && (
+        <PromptModal
+          title={t.prompts.renameGroup}
+          initialValue={renamingGroup}
+          onConfirm={(newName) => {
+            if (newName !== renamingGroup) {
+              storageManager.renameMuscleGroup(renamingGroup, newName);
+              if (activeGroup === renamingGroup) setActiveGroup(newName);
+              loadData();
+            }
+            setRenamingGroup(null);
+          }}
+          onCancel={() => setRenamingGroup(null)}
+        />
+      )}
+
+      {deletingGroup && (
+        <ConfirmModal
+          title={t.prompts.deleteGroup.replace('{name}', deletingGroup)}
+          confirmLabel={t.actions.delete}
+          destructive
+          onConfirm={handleConfirmDeleteGroup}
+          onCancel={() => setDeletingGroup(null)}
+        />
+      )}
     </div>
   );
 };

@@ -326,7 +326,8 @@ class LocalStorageManager implements StorageManagerInterface {
   exportData(): string {
     const backup = {
       exercises: this.loadData(),
-      groups: this.getMuscleGroups()
+      groups: this.getMuscleGroups(),
+      routines: this.getRoutines(),
     };
     return JSON.stringify(backup, null, 2);
   }
@@ -337,6 +338,7 @@ class LocalStorageManager implements StorageManagerInterface {
       
       let exercisesToImport: Exercise[] = [];
       let groupsToImport: string[] = [];
+      let routinesToImport: Routine[] = [];
 
       if (Array.isArray(parsed)) {
         exercisesToImport = parsed;
@@ -344,6 +346,9 @@ class LocalStorageManager implements StorageManagerInterface {
         exercisesToImport = parsed.exercises;
         if (Array.isArray(parsed.groups)) {
           groupsToImport = parsed.groups;
+        }
+        if (Array.isArray(parsed.routines)) {
+          routinesToImport = parsed.routines;
         }
       } else {
         return false;
@@ -363,6 +368,15 @@ class LocalStorageManager implements StorageManagerInterface {
         const currentGroups = this.getMuscleGroups();
         const combinedGroups = Array.from(new Set([...currentGroups, ...groupsToImport]));
         this.saveMuscleGroups(combinedGroups);
+      }
+
+      if (routinesToImport.length > 0) {
+        const currentRoutines = this.getRoutines();
+        const routineMap = new Map(currentRoutines.map(r => [r.id, r]));
+        routinesToImport.forEach((r: Routine) => {
+          routineMap.set(r.id, r);
+        });
+        localStorage.setItem(ROUTINES_KEY, JSON.stringify(Array.from(routineMap.values())));
       }
 
       return true;

@@ -20,6 +20,45 @@ export const getLastProgressionDate = (logs: ExerciseLog[]): string | null => {
   return null;
 };
 
+export type ProgressionType = 'weight' | 'reps' | 'both';
+
+export interface ProgressionDetail {
+  type: ProgressionType;
+  timeSince: string;
+  prevWeight: number;
+  currWeight: number;
+  prevReps: number;
+  currReps: number;
+}
+
+export const getProgressionDetail = (logs: ExerciseLog[]): ProgressionDetail | null => {
+  if (!logs || logs.length < 2) return null;
+
+  const sortedLogs = [...logs].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  for (let i = sortedLogs.length - 1; i > 0; i--) {
+    const current = sortedLogs[i];
+    const previous = sortedLogs[i - 1];
+
+    const weightUp = current.weight > previous.weight;
+    const repsUp = current.reps > previous.reps;
+
+    if (weightUp || repsUp) {
+      const type: ProgressionType = weightUp && repsUp ? 'both' : weightUp ? 'weight' : 'reps';
+      return {
+        type,
+        timeSince: calculateTimeSince(current.date),
+        prevWeight: previous.weight,
+        currWeight: current.weight,
+        prevReps: previous.reps,
+        currReps: current.reps,
+      };
+    }
+  }
+
+  return null;
+};
+
 export const getLatestLog = (logs: ExerciseLog[]): ExerciseLog | null => {
   if (!logs || logs.length === 0) return null;
   const sortedLogs = [...logs].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -34,6 +73,7 @@ export interface RecentProgression {
   weight: number;
   reps: number;
   progressionText: string;
+  detail: ProgressionDetail;
 }
 
 export const getRecentProgressions = (exercises: Exercise[], limit: number = 3): RecentProgression[] => {
@@ -48,6 +88,9 @@ export const getRecentProgressions = (exercises: Exercise[], limit: number = 3):
       const progressionText = calculateProgression(exercise.logs);
       if (!progressionText) return null;
 
+      const detail = getProgressionDetail(exercise.logs);
+      if (!detail) return null;
+
       return {
         exerciseId: exercise.id,
         exerciseName: exercise.name,
@@ -56,6 +99,7 @@ export const getRecentProgressions = (exercises: Exercise[], limit: number = 3):
         weight: latestLog.weight,
         reps: latestLog.reps,
         progressionText,
+        detail,
       };
     })
     .filter((item): item is RecentProgression => item !== null)

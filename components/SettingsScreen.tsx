@@ -1,14 +1,22 @@
 import React, { useState, useRef } from 'react';
 import { Download, Upload, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { t } from '../utils/translations';
+import { t, getLanguage } from '../utils/translations';
+import { preferencesService } from '../services/preferencesService';
+import type { ScreenType } from './BottomNav';
 
 interface Props {
   onExport: () => void;
   onImport: (content: string) => boolean;
 }
 
+const SCREEN_ORDER: ScreenType[] = ['home', 'insights', 'history', 'routines', 'settings'];
+
 export const SettingsScreen: React.FC<Props> = ({ onExport, onImport }) => {
   const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [currentLang, setCurrentLang] = useState<'es' | 'en'>(() => getLanguage());
+  const [currentDefaultScreen, setCurrentDefaultScreen] = useState<ScreenType | null>(
+    () => preferencesService.getDefaultScreen()
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImportClick = () => {
@@ -26,9 +34,7 @@ export const SettingsScreen: React.FC<Props> = ({ onExport, onImport }) => {
 
       if (success) {
         setImportStatus('success');
-        setTimeout(() => {
-          setImportStatus('idle');
-        }, 1500);
+        setTimeout(() => setImportStatus('idle'), 1500);
       } else {
         setImportStatus('error');
       }
@@ -37,14 +43,75 @@ export const SettingsScreen: React.FC<Props> = ({ onExport, onImport }) => {
     e.target.value = '';
   };
 
+  const handleSetLanguage = (lang: 'es' | 'en') => {
+    preferencesService.setLanguage(lang);
+    setCurrentLang(lang);
+    window.location.reload();
+  };
+
+  const handleSetDefaultScreen = (screen: ScreenType) => {
+    preferencesService.setDefaultScreen(screen);
+    setCurrentDefaultScreen(screen);
+  };
+
+  const screenLabel = (screen: ScreenType): string => {
+    const map: Record<ScreenType, string> = {
+      home: t.labels.home,
+      insights: t.labels.insights,
+      history: t.labels.history,
+      routines: t.labels.routines,
+      settings: t.labels.settings,
+    };
+    return map[screen];
+  };
+
   return (
     <div className="space-y-6">
       <div className="text-center mb-8">
         <h1 className="text-2xl font-bold text-ios-text">{t.labels.settings}</h1>
-        <p className="text-sm text-ios-gray mt-2">{t.labels.settingsDesc || 'Manage your data and backup'}</p>
+        <p className="text-sm text-ios-gray mt-2">{t.labels.settingsDesc}</p>
       </div>
 
       <div className="space-y-3">
+        <p className="text-xs font-semibold text-ios-gray uppercase tracking-wide ml-1">{t.labels.language}</p>
+        <div className="flex gap-2">
+          {(['es', 'en'] as const).map((lang) => (
+            <button
+              key={lang}
+              onClick={() => handleSetLanguage(lang)}
+              className={`flex-1 py-3 rounded-xl font-semibold text-sm transition-colors active:opacity-70 ${
+                currentLang === lang
+                  ? 'bg-ios-blue text-white'
+                  : 'bg-ios-card text-ios-text'
+              }`}
+            >
+              {lang === 'es' ? t.labels.languageES : t.labels.languageEN}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        <p className="text-xs font-semibold text-ios-gray uppercase tracking-wide ml-1">{t.labels.defaultScreen}</p>
+        <div className="flex flex-wrap gap-2">
+          {SCREEN_ORDER.map((screen) => (
+            <button
+              key={screen}
+              onClick={() => handleSetDefaultScreen(screen)}
+              className={`px-4 py-2.5 rounded-xl font-semibold text-sm transition-colors active:opacity-70 ${
+                currentDefaultScreen === screen
+                  ? 'bg-ios-blue text-white'
+                  : 'bg-ios-card text-ios-text'
+              }`}
+            >
+              {screenLabel(screen)}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        <p className="text-xs font-semibold text-ios-gray uppercase tracking-wide ml-1">Backup</p>
         <button
           onClick={onExport}
           className="w-full flex items-center justify-between p-4 bg-ios-card rounded-xl active:opacity-70 transition-opacity"
@@ -99,7 +166,7 @@ export const SettingsScreen: React.FC<Props> = ({ onExport, onImport }) => {
 
       <div className="pt-6 border-t border-ios-separator">
         <p className="text-xs text-ios-gray text-center leading-relaxed">
-          {t.labels.settingsInfo || 'Your data is stored locally on your device. Use backup to transfer your data to another device.'}
+          {t.labels.settingsInfo}
         </p>
       </div>
     </div>

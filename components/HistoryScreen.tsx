@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Exercise, ExerciseLog } from '../types';
 import { t, translations } from '../utils/translations';
+import ConfirmModal from './ConfirmModal';
 
 interface Props {
   exercises: Exercise[];
@@ -8,6 +9,7 @@ interface Props {
   onDeleteLog: (exerciseId: string, date: string) => void;
   onDeleteAllLogs: (exerciseId: string) => void;
   onDeleteAllLogsExceptLatest: (exerciseId: string) => void;
+  resetSignal?: number;
 }
 
 interface EditableLog {
@@ -17,9 +19,21 @@ interface EditableLog {
   reps: string;
 }
 
-export const HistoryScreen: React.FC<Props> = ({ exercises, onUpdateLog, onDeleteLog, onDeleteAllLogs, onDeleteAllLogsExceptLatest }) => {
+type ConfirmAction = 'deleteLog' | 'deleteAll' | 'deleteAllExceptLatest';
+
+interface PendingConfirm {
+  action: ConfirmAction;
+  logIndex?: number;
+}
+
+export const HistoryScreen: React.FC<Props> = ({ exercises, onUpdateLog, onDeleteLog, onDeleteAllLogs, onDeleteAllLogsExceptLatest, resetSignal }) => {
   const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(null);
   const [editableLogs, setEditableLogs] = useState<EditableLog[]>([]);
+  const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null);
+
+  useEffect(() => {
+    setSelectedExerciseId(null);
+  }, [resetSignal]);
 
   const sortedExercises = useMemo(
     () => [...exercises].sort((a, b) => a.name.localeCompare(b.name)),
@@ -52,7 +66,7 @@ export const HistoryScreen: React.FC<Props> = ({ exercises, onUpdateLog, onDelet
   }, [selectedExercise]);
 
   const getTranslatedGroupName = (group: string) => {
-    return (translations.es.muscleGroups as any)[group] ? (t.muscleGroups as any)[group] : group;
+    return (translations.es.muscleGroups as Record<string, string>)[group] ? (t.muscleGroups as Record<string, string>)[group] : group;
   };
 
   const handleLogChange = (index: number, field: keyof EditableLog, value: string) => {
@@ -83,23 +97,34 @@ export const HistoryScreen: React.FC<Props> = ({ exercises, onUpdateLog, onDelet
     );
   };
 
-  const handleDeleteLog = (index: number) => {
-    if (!selectedExercise) return;
-    const log = editableLogs[index];
-    if (!window.confirm(t.prompts.confirmDelete)) return;
-    onDeleteLog(selectedExercise.id, log.originalDate);
+  const handleConfirmAction = () => {
+    if (!selectedExercise || !pendingConfirm) return;
+    const { action, logIndex } = pendingConfirm;
+    if (action === 'deleteLog' && logIndex !== undefined) {
+      onDeleteLog(selectedExercise.id, editableLogs[logIndex].originalDate);
+    } else if (action === 'deleteAll') {
+      onDeleteAllLogs(selectedExercise.id);
+    } else if (action === 'deleteAllExceptLatest') {
+      onDeleteAllLogsExceptLatest(selectedExercise.id);
+    }
+    setPendingConfirm(null);
   };
 
-  const handleDeleteAllLogs = () => {
-    if (!selectedExercise) return;
-    if (!window.confirm(t.prompts.confirmDeleteAll)) return;
-    onDeleteAllLogs(selectedExercise.id);
-  };
-
-  const handleDeleteAllLogsExceptLatest = () => {
-    if (!selectedExercise) return;
-    if (!window.confirm(t.prompts.confirmDeleteAllExceptLatest)) return;
-    onDeleteAllLogsExceptLatest(selectedExercise.id);
+  const confirmConfig: Record<ConfirmAction, { title: string; message?: string; label: string }> = {
+    deleteLog: {
+      title: t.prompts.confirmDelete,
+      label: t.actions.delete,
+    },
+    deleteAll: {
+      title: t.actions.deleteAll,
+      message: t.prompts.confirmDeleteAll,
+      label: t.actions.deleteAll,
+    },
+    deleteAllExceptLatest: {
+      title: t.actions.deleteAllExceptLatest,
+      message: t.prompts.confirmDeleteAllExceptLatest,
+      label: t.actions.deleteAllExceptLatest,
+    },
   };
 
   return (
@@ -161,13 +186,13 @@ export const HistoryScreen: React.FC<Props> = ({ exercises, onUpdateLog, onDelet
             {editableLogs.length > 0 && (
               <div className="flex gap-2 mb-4">
                 <button
-                  onClick={handleDeleteAllLogsExceptLatest}
+                  onClick={() => setPendingConfirm({ action: 'deleteAllExceptLatest' })}
                   className="flex-1 py-2 px-3 rounded-xl text-xs font-semibold bg-red-500/10 text-red-500 border border-red-500/30 active:opacity-70"
                 >
                   {t.actions.deleteAllExceptLatest}
                 </button>
                 <button
-                  onClick={handleDeleteAllLogs}
+                  onClick={() => setPendingConfirm({ action: 'deleteAll' })}
                   className="flex-1 py-2 px-3 rounded-xl text-xs font-semibold bg-red-500/10 text-red-500 border border-red-500/30 active:opacity-70"
                 >
                   {t.actions.deleteAll}
@@ -188,8 +213,8 @@ export const HistoryScreen: React.FC<Props> = ({ exercises, onUpdateLog, onDelet
 
                   return (
                     <div key={log.originalDate} className="bg-ios-bg rounded-2xl p-4">
-                      <div className="grid grid-cols-3 gap-3">
-                        <div>
+                      <div className="flex flex-col gap-3">
+                        <div className="min-w-0">
                           <label
                             htmlFor={dateId}
                             className="block text-xs font-medium text-ios-gray mb-1"
@@ -201,40 +226,42 @@ export const HistoryScreen: React.FC<Props> = ({ exercises, onUpdateLog, onDelet
                             type="date"
                             value={log.date}
                             onChange={(e) => handleLogChange(index, 'date', e.target.value)}
-                            className="w-full bg-ios-card text-ios-text p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-ios-blue"
+                            className="w-auto bg-ios-card text-ios-text p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-ios-blue"
                           />
                         </div>
-                        <div>
-                          <label
-                            htmlFor={weightId}
-                            className="block text-xs font-medium text-ios-gray mb-1"
-                          >
-                            {t.labels.weightShort}
-                          </label>
-                          <input
-                            id={weightId}
-                            type="number"
-                            inputMode="decimal"
-                            value={log.weight}
-                            onChange={(e) => handleLogChange(index, 'weight', e.target.value)}
-                            className="w-full bg-ios-card text-ios-text p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-ios-blue"
-                          />
-                        </div>
-                        <div>
-                          <label
-                            htmlFor={repsId}
-                            className="block text-xs font-medium text-ios-gray mb-1"
-                          >
-                            {t.labels.reps}
-                          </label>
-                          <input
-                            id={repsId}
-                            type="number"
-                            inputMode="numeric"
-                            value={log.reps}
-                            onChange={(e) => handleLogChange(index, 'reps', e.target.value)}
-                            className="w-full bg-ios-card text-ios-text p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-ios-blue"
-                          />
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="min-w-0">
+                            <label
+                              htmlFor={weightId}
+                              className="block text-xs font-medium text-ios-gray mb-1"
+                            >
+                              {t.labels.weightShort}
+                            </label>
+                            <input
+                              id={weightId}
+                              type="number"
+                              inputMode="decimal"
+                              value={log.weight}
+                              onChange={(e) => handleLogChange(index, 'weight', e.target.value)}
+                              className="w-full bg-ios-card text-ios-text p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-ios-blue"
+                            />
+                          </div>
+                          <div className="min-w-0">
+                            <label
+                              htmlFor={repsId}
+                              className="block text-xs font-medium text-ios-gray mb-1"
+                            >
+                              {t.labels.reps}
+                            </label>
+                            <input
+                              id={repsId}
+                              type="number"
+                              inputMode="numeric"
+                              value={log.reps}
+                              onChange={(e) => handleLogChange(index, 'reps', e.target.value)}
+                              className="w-full bg-ios-card text-ios-text p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-ios-blue"
+                            />
+                          </div>
                         </div>
                       </div>
 
@@ -246,7 +273,7 @@ export const HistoryScreen: React.FC<Props> = ({ exercises, onUpdateLog, onDelet
                           {t.actions.save}
                         </button>
                         <button
-                          onClick={() => handleDeleteLog(index)}
+                          onClick={() => setPendingConfirm({ action: 'deleteLog', logIndex: index })}
                           className="flex-1 py-2 rounded-lg font-semibold bg-red-500 text-white active:opacity-80"
                         >
                           {t.actions.delete}
@@ -259,6 +286,17 @@ export const HistoryScreen: React.FC<Props> = ({ exercises, onUpdateLog, onDelet
             )}
           </div>
         </div>
+      )}
+
+      {pendingConfirm && (
+        <ConfirmModal
+          title={confirmConfig[pendingConfirm.action].title}
+          message={confirmConfig[pendingConfirm.action].message}
+          confirmLabel={confirmConfig[pendingConfirm.action].label}
+          destructive
+          onConfirm={handleConfirmAction}
+          onCancel={() => setPendingConfirm(null)}
+        />
       )}
     </div>
   );

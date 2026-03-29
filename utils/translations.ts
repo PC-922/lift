@@ -63,7 +63,9 @@ export const translations = {
       edit: 'Editar',
       install: 'Instálame',
       deleteAll: 'Borrar todos',
-      deleteAllExceptLatest: 'Borrar menos el último'
+      deleteAllExceptLatest: 'Borrar menos el último',
+      duplicate: 'Duplicar',
+      move: 'Mover a grupo',
     },
     prompts: {
       deleteExercise: '¿Eliminar "{name}"?',
@@ -105,6 +107,13 @@ export const translations = {
       importSuccess: 'Datos importados correctamente',
       importError: 'Error al leer el archivo',
       noLogs: 'Sin registros',
+      fileSyncTitle: 'Archivo de datos',
+      fileSyncDesc: 'Usa un archivo en iCloud Drive o local para sincronizar entre dispositivos',
+      fileSyncConnected: 'Conectado a',
+      fileSyncConnect: 'Elegir archivo',
+      fileSyncCreate: 'Crear archivo nuevo',
+      fileSyncDisconnect: 'Desconectar archivo',
+      fileSyncNoSupport: 'Tu navegador no soporta esta función',
       installGuide: 'Instalar App',
       installIosSafari: 'Safari (iPhone)',
       installIosChrome: 'Chrome (iPhone)',
@@ -113,7 +122,7 @@ export const translations = {
       stepAdd: 'Selecciona "Añadir a inicio"',
       stepMenu: 'Toca los tres puntos',
       stepInstall: 'Selecciona "Instalar aplicación"',
-      home: 'Inicio',
+      home: 'Ejercicios',
       insights: 'Insights',
       insightsDesc: 'Resumen de tu progreso',
       recentProgress: 'Tus progresos recientes',
@@ -137,7 +146,14 @@ export const translations = {
       noExercisesAvailable: 'No hay ejercicios disponibles',
       sets: 'Series',
       dropset: 'Dropset',
-      toFailure: 'Al fallo'
+      toFailure: 'Al fallo',
+      language: 'Idioma',
+      languageES: 'Español',
+      languageEN: 'English',
+      defaultScreen: 'Pantalla inicial',
+      removeFromRoutine: 'Quitar de rutina',
+      editExerciseInRoutine: 'Editar ejercicio',
+      continueLocalOnly: 'Continuar sin archivo',
     },
     time: {
       today: 'Hoy',
@@ -216,7 +232,9 @@ export const translations = {
       edit: 'Edit',
       install: 'Install Me',
       deleteAll: 'Delete all',
-      deleteAllExceptLatest: 'Keep only latest'
+      deleteAllExceptLatest: 'Keep only latest',
+      duplicate: 'Duplicate',
+      move: 'Move to group',
     },
     prompts: {
       deleteExercise: 'Delete "{name}"?',
@@ -258,6 +276,13 @@ export const translations = {
       importSuccess: 'Data imported successfully',
       importError: 'Error reading file',
       noLogs: 'No logs',
+      fileSyncTitle: 'Data file',
+      fileSyncDesc: 'Use a file in iCloud Drive or local storage to sync across devices',
+      fileSyncConnected: 'Connected to',
+      fileSyncConnect: 'Choose file',
+      fileSyncCreate: 'Create new file',
+      fileSyncDisconnect: 'Disconnect file',
+      fileSyncNoSupport: 'Your browser does not support this feature',
       installGuide: 'Install App',
       installIosSafari: 'Safari (iPhone)',
       installIosChrome: 'Chrome (iPhone)',
@@ -266,7 +291,7 @@ export const translations = {
       stepAdd: 'Select "Add to Home Screen"',
       stepMenu: 'Tap the three dots',
       stepInstall: 'Select "Install App"',
-      home: 'Home',
+      home: 'Exercises',
       insights: 'Insights',
       insightsDesc: 'Progress summary',
       recentProgress: 'Your recent progressions',
@@ -290,7 +315,14 @@ export const translations = {
       noExercisesAvailable: 'No exercises available',
       sets: 'Sets',
       dropset: 'Dropset',
-      toFailure: 'To failure'
+      toFailure: 'To failure',
+      language: 'Language',
+      languageES: 'Español',
+      languageEN: 'English',
+      defaultScreen: 'Default screen',
+      removeFromRoutine: 'Remove from routine',
+      editExerciseInRoutine: 'Edit exercise',
+      continueLocalOnly: 'Continue without file',
     },
     time: {
       today: 'Today',
@@ -308,6 +340,15 @@ export const translations = {
 };
 
 export const getLanguage = (): 'es' | 'en' => {
+  try {
+    const raw = localStorage.getItem('lift_prefs_v1');
+    if (raw) {
+      const prefs = JSON.parse(raw);
+      if (prefs.language === 'es' || prefs.language === 'en') return prefs.language;
+    }
+  } catch {
+    // ignore parse errors
+  }
   if (typeof navigator === 'undefined') return 'es';
   const lang = navigator.language.split('-')[0];
   return lang === 'es' ? 'es' : 'en';

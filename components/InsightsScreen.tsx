@@ -77,37 +77,34 @@ export const InsightsScreen: React.FC<Props> = ({ exercises }) => {
                             key={progression.exerciseId}
                             className="bg-ios-card rounded-2xl p-4 border-l-4 border-ios-blue"
                           >
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <h3 className="text-lg font-semibold text-ios-text">{progression.exerciseName}</h3>
-                                <p className="text-xs text-ios-gray mt-1 uppercase tracking-wide">
-                                  {(t.muscleGroups as any)[progression.muscleGroup] || progression.muscleGroup}
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <h3 className="text-base font-semibold text-ios-text truncate">{progression.exerciseName}</h3>
+                                <p className="text-xs text-ios-gray mt-0.5 uppercase tracking-wide">
+                                  {(t.muscleGroups as Record<string, string>)[progression.muscleGroup] || progression.muscleGroup}
                                 </p>
-                                <div className="mt-3 flex items-center gap-4">
-                                  <div>
-                                    <p className="text-xs text-ios-gray mb-1">{t.labels.maxWeight || 'Max weight'}</p>
-                                    <p className="text-xl font-bold text-ios-text">
-                                      {progression.weight}
-                                      <span className="text-sm font-normal text-ios-gray ml-1">kg</span>
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <p className="text-xs text-ios-gray mb-1">{t.labels.maxReps || 'Max reps'}</p>
-                                    <p className="text-xl font-bold text-ios-text">
-                                      {progression.reps}
-                                      <span className="text-sm font-normal text-ios-gray ml-1">
-                                        rep{progression.reps !== 1 ? 's' : ''}
-                                      </span>
-                                    </p>
-                                  </div>
-                                </div>
                               </div>
-
-                              <div className="flex flex-col items-end gap-2">
-                                <div className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap">
-                                  {progression.progressionText}
+                              <span className="text-xs text-ios-gray flex-shrink-0 mt-1">{progression.progressionText}</span>
+                            </div>
+                            <div className="mt-3 flex flex-col gap-1.5">
+                              {(progression.detail.type === 'weight' || progression.detail.type === 'both') && (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-ios-gray w-8">kg</span>
+                                  <div className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-2.5 py-1 rounded-lg text-sm font-semibold">
+                                    {progression.detail.prevWeight} → {progression.detail.currWeight}
+                                  </div>
+                                  <span className="text-blue-500 text-sm font-bold">↑</span>
                                 </div>
-                              </div>
+                              )}
+                              {(progression.detail.type === 'reps' || progression.detail.type === 'both') && (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-ios-gray w-8">reps</span>
+                                  <div className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-2.5 py-1 rounded-lg text-sm font-semibold">
+                                    {progression.detail.prevReps} → {progression.detail.currReps}
+                                  </div>
+                                  <span className="text-green-500 text-sm font-bold">↑</span>
+                                </div>
+                              )}
                             </div>
                           </div>
                         ))}

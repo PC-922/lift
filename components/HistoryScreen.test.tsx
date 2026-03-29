@@ -64,12 +64,14 @@ describe('HistoryScreen', () => {
 
   it('deletes a log entry with confirmation', async () => {
     const onDeleteLog = vi.fn();
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
 
     render(<HistoryScreen exercises={exercises} {...defaultProps} onDeleteLog={onDeleteLog} />);
     fireEvent.click(screen.getAllByTestId('history-exercise-item')[0]);
     const deleteButtons = await screen.findAllByRole('button', { name: t.actions.delete });
     fireEvent.click(deleteButtons[0]);
+
+    const confirmButton = await screen.findByTestId('confirm-modal-confirm');
+    fireEvent.click(confirmButton);
 
     await waitFor(() => {
       expect(onDeleteLog).toHaveBeenCalledWith('1', '2026-02-01');
@@ -78,13 +80,15 @@ describe('HistoryScreen', () => {
 
   it('deletes all logs with confirmation', async () => {
     const onDeleteAllLogs = vi.fn();
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
 
     render(<HistoryScreen exercises={exercises} {...defaultProps} onDeleteAllLogs={onDeleteAllLogs} />);
     fireEvent.click(screen.getAllByTestId('history-exercise-item')[0]);
 
     const deleteAllButton = await screen.findByRole('button', { name: t.actions.deleteAll });
     fireEvent.click(deleteAllButton);
+
+    const confirmButton = await screen.findByTestId('confirm-modal-confirm');
+    fireEvent.click(confirmButton);
 
     await waitFor(() => {
       expect(onDeleteAllLogs).toHaveBeenCalledWith('1');
@@ -93,13 +97,15 @@ describe('HistoryScreen', () => {
 
   it('deletes all logs except latest with confirmation', async () => {
     const onDeleteAllLogsExceptLatest = vi.fn();
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
 
     render(<HistoryScreen exercises={exercises} {...defaultProps} onDeleteAllLogsExceptLatest={onDeleteAllLogsExceptLatest} />);
     fireEvent.click(screen.getAllByTestId('history-exercise-item')[0]);
 
     const deleteExceptButton = await screen.findByRole('button', { name: t.actions.deleteAllExceptLatest });
     fireEvent.click(deleteExceptButton);
+
+    const confirmButton = await screen.findByTestId('confirm-modal-confirm');
+    fireEvent.click(confirmButton);
 
     await waitFor(() => {
       expect(onDeleteAllLogsExceptLatest).toHaveBeenCalledWith('1');
