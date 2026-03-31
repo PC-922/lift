@@ -665,7 +665,7 @@ export const RoutinesScreen: React.FC<Props> = ({
       {actionSheetExerciseId && (
         <ActionSheet
           title={actionSheetExerciseName}
-          items={[
+          actions={[
             {
               label: t.labels.editExerciseInRoutine,
               onPress: () => openEditRoutineExercise(actionSheetExerciseId),

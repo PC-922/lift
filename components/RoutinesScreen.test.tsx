@@ -332,4 +332,23 @@ describe('RoutinesScreen', () => {
     fireEvent.blur(setsInput);
     expect(setsInput.value).toBe('1');
   });
+
+  // --- Long press in detail view ---
+
+  it('opens action sheet when an exercise in detail view is long-pressed', async () => {
+    render(<RoutinesScreen {...defaultProps} />);
+    clickRoutineCard('Push Day');
+    await act(() => vi.runAllTimersAsync());
+
+    const exerciseCard = screen.getByText('Bench Press').closest('div[class*="bg-ios-card"]')!;
+    fireEvent.mouseDown(exerciseCard);
+    
+    act(() => { vi.advanceTimersByTime(600); });
+    await act(() => vi.runAllTimersAsync());
+
+    // This should not crash and should show the ActionSheet with correct title
+    expect(screen.getByText('Bench Press', { selector: 'p' })).toBeTruthy();
+    expect(screen.getByText(t.labels.editExerciseInRoutine)).toBeTruthy();
+    expect(screen.getByText(t.labels.removeFromRoutine)).toBeTruthy();
+  });
 });

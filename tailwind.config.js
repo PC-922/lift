@@ -18,6 +18,7 @@ export default {
           text: 'var(--ios-text)',
           blue: '#007AFF',
           gray: '#8E8E93',
+          red: '#FF3B30',
           separator: 'var(--ios-separator)',
         },
       },
