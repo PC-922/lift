@@ -1,5 +1,6 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { t } from '../utils/translations';
+import { Modal } from './Modal';
 
 export interface ActionSheetAction {
   label: string;
@@ -16,25 +17,8 @@ interface Props {
 }
 
 export const ActionSheet: React.FC<Props> = ({ title, subtitle, actions, onClose }) => {
-  const mountedAt = useRef(Date.now());
-
-  useEffect(() => {
-    mountedAt.current = Date.now();
-  }, []);
-
-  const handleBackdropClick = () => {
-    // Ignore interaction in the first 350ms to prevent the touchEnd that
-    // triggered the long-press from immediately closing the sheet.
-    if (Date.now() - mountedAt.current < 350) return;
-    onClose();
-  };
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm"
-      onClick={handleBackdropClick}
-      onTouchEnd={handleBackdropClick}
-    >
+    <Modal open onClose={onClose} position="bottom">
       <div
         className="w-full max-w-md mb-4 px-4 animate-slideUp"
         onClick={(e) => e.stopPropagation()}
@@ -71,6 +55,6 @@ export const ActionSheet: React.FC<Props> = ({ title, subtitle, actions, onClose
           {t.actions.cancel}
         </button>
       </div>
-    </div>
+    </Modal>
   );
 };

@@ -323,6 +323,17 @@ class LocalStorageManager implements StorageManagerInterface {
     localStorage.setItem(ROUTINES_KEY, JSON.stringify(routines));
   }
 
+  reorderRoutineExercise(routineId: string, fromIndex: number, toIndex: number): void {
+    const routines = this.getRoutines();
+    const routine = routines.find((r) => r.id === routineId);
+    if (!routine) return;
+    const exercises = [...routine.exercises];
+    const [moved] = exercises.splice(fromIndex, 1);
+    exercises.splice(toIndex, 0, moved);
+    routine.exercises = exercises;
+    localStorage.setItem(ROUTINES_KEY, JSON.stringify(routines));
+  }
+
   exportData(): string {
     const backup = {
       exercises: this.loadData(),

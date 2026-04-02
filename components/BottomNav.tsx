@@ -1,8 +1,8 @@
 import React from 'react';
-import { Home, BarChart3, Settings, History, ListChecks } from 'lucide-react';
+import { Home, BarChart3, Settings, ListChecks } from 'lucide-react';
 import { t } from '../utils/translations';
 
-export type ScreenType = 'home' | 'insights' | 'history' | 'routines' | 'settings';
+export type ScreenType = 'home' | 'insights' | 'routines' | 'settings';
 
 interface Props {
   currentScreen: ScreenType;
@@ -12,11 +12,10 @@ interface Props {
 
 export const BottomNav: React.FC<Props> = ({ currentScreen, onScreenChange, onScreenReset }) => {
   const navItems: { id: ScreenType; label: string; icon: React.ReactNode }[] = [
-    { id: 'home', label: t.labels.home || 'Home', icon: <Home size={22} /> },
-    { id: 'insights', label: t.labels.insights || 'Insights', icon: <BarChart3 size={22} /> },
-    { id: 'history', label: t.labels.history || 'History', icon: <History size={22} /> },
-    { id: 'routines', label: t.labels.routines || 'Routines', icon: <ListChecks size={22} /> },
-    { id: 'settings', label: t.labels.settings || 'Settings', icon: <Settings size={22} /> },
+    { id: 'home', label: t.labels.home, icon: <Home size={22} /> },
+    { id: 'insights', label: t.labels.insights, icon: <BarChart3 size={22} /> },
+    { id: 'routines', label: t.labels.routines, icon: <ListChecks size={22} /> },
+    { id: 'settings', label: t.labels.settings, icon: <Settings size={22} /> },
   ];
 
   const handleTap = (screen: ScreenType) => {

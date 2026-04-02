@@ -48,14 +48,6 @@ export const InsightsScreen: React.FC<Props> = ({ exercises }) => {
 
   return (
     <div className="space-y-6">
-      <div className="text-center mb-8">
-        <div className="flex items-center justify-center gap-2 mb-3">
-          <BarChart3 className="text-ios-blue" size={28} />
-          <h1 className="text-2xl font-bold text-ios-text">{t.labels.insights || 'Insights'}</h1>
-        </div>
-        <p className="text-sm text-ios-gray">{t.labels.insightsDesc || 'Progress summary'}</p>
-      </div>
-
       <div className="space-y-4">
         <div
           ref={carouselRef}

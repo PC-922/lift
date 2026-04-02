@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { t } from '../utils/translations';
+import { Modal } from './Modal';
 
 interface Props {
   title: string;
@@ -24,8 +25,8 @@ export default function PromptModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 pb-safe">
-      <div className="w-full max-w-md rounded-t-2xl bg-ios-card p-6 space-y-4">
+    <Modal open onClose={onCancel} position="bottom">
+      <div className="w-full max-w-md rounded-t-2xl bg-ios-card p-6 space-y-4" onClick={(e) => e.stopPropagation()} onTouchEnd={(e) => e.stopPropagation()}>
         <h2 className="text-lg font-semibold text-ios-text text-center">{title}</h2>
         <input
           autoFocus
@@ -55,6 +56,6 @@ export default function PromptModal({
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

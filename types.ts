@@ -14,6 +14,7 @@ export interface Exercise {
 
 export interface RoutineExercise {
   exerciseId: string;
+  alternativeExerciseId?: string;
   sets: number;
   reps: string;
   dropset: boolean;
@@ -52,4 +53,5 @@ export interface StorageManagerInterface {
   getRoutines(): Routine[];
   saveRoutine(routine: Routine): void;
   deleteRoutine(id: string): void;
+  reorderRoutineExercise(routineId: string, fromIndex: number, toIndex: number): void;
 }

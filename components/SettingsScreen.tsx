@@ -9,7 +9,7 @@ interface Props {
   onImport: (content: string) => boolean;
 }
 
-const SCREEN_ORDER: ScreenType[] = ['home', 'insights', 'history', 'routines', 'settings'];
+const SCREEN_ORDER: ScreenType[] = ['home', 'insights', 'routines', 'settings'];
 
 export const SettingsScreen: React.FC<Props> = ({ onExport, onImport }) => {
   const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -58,7 +58,6 @@ export const SettingsScreen: React.FC<Props> = ({ onExport, onImport }) => {
     const map: Record<ScreenType, string> = {
       home: t.labels.home,
       insights: t.labels.insights,
-      history: t.labels.history,
       routines: t.labels.routines,
       settings: t.labels.settings,
     };
@@ -67,10 +66,7 @@ export const SettingsScreen: React.FC<Props> = ({ onExport, onImport }) => {
 
   return (
     <div className="space-y-6">
-      <div className="text-center mb-8">
-        <h1 className="text-2xl font-bold text-ios-text">{t.labels.settings}</h1>
-        <p className="text-sm text-ios-gray mt-2">{t.labels.settingsDesc}</p>
-      </div>
+      <p className="text-sm text-ios-gray text-center -mt-2 mb-2">{t.labels.settingsDesc}</p>
 
       <div className="space-y-3">
         <p className="text-xs font-semibold text-ios-gray uppercase tracking-wide ml-1">{t.labels.language}</p>

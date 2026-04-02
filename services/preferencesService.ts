@@ -1,4 +1,4 @@
-import type { ScreenType } from '../types';
+import type { ScreenType } from '../components/BottomNav';
 
 const PREFS_KEY = 'lift_prefs_v1';
 

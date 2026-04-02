@@ -154,6 +154,20 @@ export const translations = {
       removeFromRoutine: 'Quitar de rutina',
       editExerciseInRoutine: 'Editar ejercicio',
       continueLocalOnly: 'Continuar sin archivo',
+      searchExercises: 'Buscar ejercicio...',
+      allGroups: 'Todos',
+      moveUp: 'Mover arriba',
+      moveDown: 'Mover abajo',
+      alternative: 'Alternativa',
+      setAlternative: 'Definir alternativa',
+      clearAlternative: 'Quitar alternativa',
+      swapToAlternative: 'Cambiar a alternativa',
+      swapToMain: 'Volver al principal',
+      newWeightRecord: '¡Nuevo récord de peso!',
+      firstLog: '¡Primer registro!',
+      loggedToday: 'Registrado',
+      noExercisesFound: 'No hay ejercicios que coincidan',
+      exerciseDetails: 'Detalle del ejercicio',
     },
     time: {
       today: 'Hoy',
@@ -323,6 +337,20 @@ export const translations = {
       removeFromRoutine: 'Remove from routine',
       editExerciseInRoutine: 'Edit exercise',
       continueLocalOnly: 'Continue without file',
+      searchExercises: 'Search exercise...',
+      allGroups: 'All',
+      moveUp: 'Move up',
+      moveDown: 'Move down',
+      alternative: 'Alternative',
+      setAlternative: 'Set alternative',
+      clearAlternative: 'Remove alternative',
+      swapToAlternative: 'Switch to alternative',
+      swapToMain: 'Switch to main',
+      newWeightRecord: 'New weight record!',
+      firstLog: 'First log!',
+      loggedToday: 'Logged',
+      noExercisesFound: 'No matching exercises',
+      exerciseDetails: 'Exercise detail',
     },
     time: {
       today: 'Today',
@@ -355,3 +383,14 @@ export const getLanguage = (): 'es' | 'en' => {
 };
 
 export const t = translations[getLanguage()];
+
+/**
+ * Translates a built-in muscle group key (always stored in Spanish) to the
+ * current display language. User-created groups have no translation entry and
+ * are returned as-is.
+ */
+export function getTranslatedGroupName(group: string): string {
+  return (translations.es.muscleGroups as Record<string, string>)[group]
+    ? (t.muscleGroups as Record<string, string>)[group]
+    : group;
+}

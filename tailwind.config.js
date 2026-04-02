@@ -4,6 +4,7 @@ export default {
     './index.html',
     './*.tsx',
     './components/**/*.tsx',
+    './hooks/**/*.tsx',
   ],
   darkMode: 'media',
   theme: {
