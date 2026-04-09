@@ -201,11 +201,8 @@ export const RoutinesScreen: React.FC<Props> = ({
     }));
   };
 
-  const handleLog = (exerciseId: string) => {
-    const isAlt = usingAlternative[exerciseId];
-    const re = activeRoutine?.exercises.find((r) => r.exerciseId === exerciseId);
-    const targetId = isAlt && re?.alternativeExerciseId ? re.alternativeExerciseId : exerciseId;
-    const form = getLogForm(exerciseId);
+  const handleLog = (targetId: string) => {
+    const form = getLogForm(targetId);
     const weight = parseFloat(form.weight);
     const reps = parseInt(form.reps, 10);
     if (Number.isNaN(weight) || Number.isNaN(reps)) return;
@@ -219,7 +216,7 @@ export const RoutinesScreen: React.FC<Props> = ({
     // Reset to empty so next render picks up the newly logged value via getLogForm fallback
     setLogForms((prev) => {
       const next = { ...prev };
-      delete next[exerciseId];
+      delete next[targetId];
       return next;
     });
 
@@ -312,7 +309,7 @@ export const RoutinesScreen: React.FC<Props> = ({
               {activeRoutineExercises.map(({ routineExercise, exercise, alternativeExercise }) => {
                 const isAlt = !!usingAlternative[exercise.id];
                 const displayExercise = isAlt && alternativeExercise ? alternativeExercise : exercise;
-                const form = getLogForm(exercise.id);
+                const form = getLogForm(displayExercise.id);
 
                 return (
                   <RoutineExerciseCard
@@ -322,8 +319,8 @@ export const RoutinesScreen: React.FC<Props> = ({
                     alternativeExercise={alternativeExercise}
                     isUsingAlternative={isAlt}
                     form={form}
-                    onUpdateForm={(field, value) => updateLogForm(exercise.id, field, value)}
-                    onLog={() => handleLog(exercise.id)}
+                    onUpdateForm={(field, value) => updateLogForm(displayExercise.id, field, value)}
+                    onLog={() => handleLog(displayExercise.id)}
                     onLongPress={() => setActionSheetExerciseId(exercise.id)}
                     onToggleAlternative={() =>
                       setUsingAlternative((prev) => ({ ...prev, [exercise.id]: !prev[exercise.id] }))
