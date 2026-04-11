@@ -5,7 +5,7 @@ import { preferencesService } from '../services/preferencesService';
 import type { ScreenType } from './BottomNav';
 import { Button } from './ui/Button';
 import { Badge } from './ui/Badge';
-import { Surface } from './ui/Surface';
+import { ListRow } from './ui/ListRow';
 
 interface Props {
   onExport: () => void;
@@ -83,25 +83,25 @@ export const SettingsScreen: React.FC<Props> = ({ onExport, onImport }) => {
 
       <div className="space-y-3">
         <p className="ml-1 text-xs font-semibold uppercase tracking-wide text-app-text-muted">Backup</p>
-        <button onClick={onExport} className="w-full rounded-2xl border border-app-border bg-app-surface p-4 text-left transition-colors active:bg-app-surface-muted">
-          <div className="flex items-center gap-3">
+        <ListRow padded={false}>
+          <button onClick={onExport} className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors active:bg-app-surface-muted sm:px-5 sm:py-5">
             <Badge variant="accent" className="rounded-xl px-3 py-3"><Download size={20} /></Badge>
             <div className="text-left">
               <div className="font-semibold text-app-text">{t.actions.export}</div>
               <div className="text-xs text-app-text-muted">{t.labels.exportDesc}</div>
             </div>
-          </div>
-        </button>
+          </button>
+        </ListRow>
 
-        <button onClick={handleImportClick} className="w-full rounded-2xl border border-app-border bg-app-surface p-4 text-left transition-colors active:bg-app-surface-muted">
-          <div className="flex items-center gap-3">
+        <ListRow padded={false}>
+          <button onClick={handleImportClick} className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors active:bg-app-surface-muted sm:px-5 sm:py-5">
             <Badge variant="success" className="rounded-xl px-3 py-3"><Upload size={20} /></Badge>
             <div className="text-left">
               <div className="font-semibold text-app-text">{t.actions.import}</div>
               <div className="text-xs text-app-text-muted">{t.labels.importDesc}</div>
             </div>
-          </div>
-        </button>
+          </button>
+        </ListRow>
 
         <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".json" className="hidden" />
 

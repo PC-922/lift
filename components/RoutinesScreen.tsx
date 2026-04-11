@@ -15,6 +15,7 @@ import { Badge } from './ui/Badge';
 import { Input } from './ui/Input';
 import { SearchInput } from './ui/SearchInput';
 import { Surface } from './ui/Surface';
+import { ListRow } from './ui/ListRow';
 import { cn } from '../utils/cn';
 
 interface Props {
@@ -415,10 +416,12 @@ export const RoutinesScreen: React.FC<Props> = ({
             <SearchInput value={alternativeSearch} onChange={(e) => setAlternativeSearch(e.target.value)} onClear={() => setAlternativeSearch('')} placeholder={t.labels.searchExercises} />
             <div className="mt-4 space-y-2">
               {filteredAlternativeExercises.filter((ex) => ex.id !== pickingAlternativeFor).map((ex) => (
-                <button key={ex.id} onClick={() => { if (pickingAlternativeFor) setAlternative(pickingAlternativeFor, ex.id); setPickingAlternativeFor(null); }} className="w-full rounded-2xl border border-app-border bg-app-surface p-4 text-left transition-colors active:bg-app-surface-muted">
-                  <p className="text-sm font-semibold text-app-text">{ex.name}</p>
-                  <p className="text-xs text-app-text-muted">{getTranslatedGroupName(ex.muscleGroup)}</p>
-                </button>
+                <ListRow key={ex.id} padded={false}>
+                  <button onClick={() => { if (pickingAlternativeFor) setAlternative(pickingAlternativeFor, ex.id); setPickingAlternativeFor(null); }} className="w-full px-4 py-4 text-left transition-colors active:bg-app-surface-muted sm:px-5 sm:py-5">
+                    <p className="text-sm font-semibold text-app-text">{ex.name}</p>
+                    <p className="text-xs text-app-text-muted">{getTranslatedGroupName(ex.muscleGroup)}</p>
+                  </button>
+                </ListRow>
               ))}
             </div>
           </div>
@@ -475,7 +478,7 @@ const RoutineExerciseCard: React.FC<RoutineExerciseCardProps> = ({
   const handlers = useLongPress({ onLongPress });
 
   return (
-    <Surface {...handlers} className="select-none">
+    <ListRow {...handlers} className="select-none">
       <div className="mb-2 flex items-start justify-between">
         <div className="min-w-0 flex-1">
           <h3 className="truncate text-base font-semibold text-app-text">{exercise.name}</h3>
@@ -507,6 +510,6 @@ const RoutineExerciseCard: React.FC<RoutineExerciseCardProps> = ({
           <Button onClick={onLog} className="w-full">{t.actions.log}</Button>
         </div>
       </div>
-    </Surface>
+    </ListRow>
   );
 };

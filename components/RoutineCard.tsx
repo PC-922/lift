@@ -3,7 +3,7 @@ import { ChevronRight } from 'lucide-react';
 import { Routine } from '../types';
 import { useTranslations } from '../utils/translations';
 import { ActionSheet } from './ActionSheet';
-import { Surface } from './ui/Surface';
+import { ListRow } from './ui/ListRow';
 
 interface Props {
   routine: Routine;
@@ -72,7 +72,7 @@ export const RoutineCard: React.FC<Props> = ({ routine, onClick, onEdit, onDelet
 
   return (
     <>
-      <Surface
+      <ListRow
         className="overflow-hidden select-none transition-colors active:bg-app-surface-muted"
         onTouchStart={startLongPress}
         onTouchEnd={handlePress}
@@ -81,7 +81,7 @@ export const RoutineCard: React.FC<Props> = ({ routine, onClick, onEdit, onDelet
         onMouseUp={handlePress}
         onMouseLeave={cancelLongPress}
       >
-        <div className="p-4 flex justify-between items-center">
+        <div className="flex items-center justify-between">
           <div className="flex-1 min-w-0">
             <h3 className="text-lg font-semibold text-app-text truncate">{routine.name}</h3>
             <p className="text-xs text-app-text-muted mt-1">
@@ -90,7 +90,7 @@ export const RoutineCard: React.FC<Props> = ({ routine, onClick, onEdit, onDelet
           </div>
           <ChevronRight size={18} className="text-app-text-muted ml-3 flex-shrink-0" />
         </div>
-      </Surface>
+      </ListRow>
 
       {showActions && (
         <ActionSheet
