@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { useTranslations } from '../utils/translations';
 import { Modal } from './Modal';
+import { Button } from './ui/Button';
+import { Input } from './ui/Input';
+import { Surface } from './ui/Surface';
 
 interface Props {
   title: string;
@@ -27,9 +30,9 @@ export default function PromptModal({
 
   return (
     <Modal open onClose={onCancel} position="bottom">
-      <div className="w-full max-w-md rounded-t-2xl bg-ios-card p-6 space-y-4" onClick={(e) => e.stopPropagation()} onTouchEnd={(e) => e.stopPropagation()}>
-        <h2 className="text-lg font-semibold text-ios-text text-center">{title}</h2>
-        <input
+      <Surface className="w-full max-w-md space-y-4 rounded-t-3xl p-6" onClick={(e) => e.stopPropagation()} onTouchEnd={(e) => e.stopPropagation()}>
+        <h2 className="text-lg font-semibold text-app-text text-center">{title}</h2>
+        <Input
           autoFocus
           type="text"
           value={value}
@@ -39,24 +42,20 @@ export default function PromptModal({
             if (e.key === 'Escape') onCancel();
           }}
           placeholder={placeholder}
-          className="w-full bg-ios-bg text-ios-text p-3 rounded-xl border-none outline-none focus:ring-2 focus:ring-ios-blue"
         />
         <div className="flex flex-col gap-2">
-          <button
+          <Button
             onClick={handleConfirm}
             disabled={!value.trim()}
-            className="w-full py-3 rounded-xl font-semibold text-white bg-ios-blue disabled:opacity-40"
+            className="w-full"
           >
             {t.actions.save}
-          </button>
-          <button
-            onClick={onCancel}
-            className="w-full py-3 rounded-xl font-semibold text-ios-blue bg-ios-bg"
-          >
+          </Button>
+          <Button onClick={onCancel} variant="secondary" className="w-full">
             {t.actions.cancel}
-          </button>
+          </Button>
         </div>
-      </div>
+      </Surface>
     </Modal>
   );
 }

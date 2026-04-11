@@ -6,6 +6,11 @@ import { getLatestLog } from '../utils/progression';
 import { useToast } from '../hooks/useToast';
 import ConfirmModal from './ConfirmModal';
 import { Modal } from './Modal';
+import { Button } from './ui/Button';
+import { Input } from './ui/Input';
+import { Surface } from './ui/Surface';
+import { Badge } from './ui/Badge';
+import { cn } from '../utils/cn';
 
 interface Props {
   exercise: Exercise;
@@ -163,13 +168,13 @@ export const ExerciseDetail: React.FC<Props> = ({
       <div className="flex items-center justify-between mb-6">
         <button
           onClick={onBack}
-          className="w-10 h-10 flex items-center justify-center -ml-2 text-ios-blue active:opacity-60"
+          className="-ml-2 flex h-10 w-10 items-center justify-center text-app-text active:opacity-60"
         >
           <ChevronLeft size={28} />
         </button>
         <button
           onClick={() => setConfirmAction({ action: 'deleteExercise' })}
-          className="w-10 h-10 flex items-center justify-center text-red-500 active:opacity-60"
+          className="flex h-10 w-10 items-center justify-center text-app-danger active:opacity-60"
         >
           <Trash2 size={20} />
         </button>
@@ -184,89 +189,83 @@ export const ExerciseDetail: React.FC<Props> = ({
             onChange={(e) => setNameValue(e.target.value)}
             onBlur={handleNameBlur}
             onKeyDown={(e) => { if (e.key === 'Enter') handleNameBlur(); if (e.key === 'Escape') setEditingName(false); }}
-            className="text-2xl font-bold text-ios-text bg-transparent border-b-2 border-ios-blue outline-none w-full pb-1"
+            className="w-full border-b-2 border-app-accent bg-transparent pb-1 text-2xl font-bold text-app-text outline-none"
           />
         ) : (
           <button
             className="flex items-center gap-2 group active:opacity-70"
             onClick={() => setEditingName(true)}
           >
-            <h1 className="text-2xl font-bold text-ios-text">{exercise.name}</h1>
-            <Pencil size={16} className="text-ios-gray opacity-60 group-hover:opacity-100" />
+            <h1 className="text-2xl font-bold text-app-text">{exercise.name}</h1>
+            <Pencil size={16} className="text-app-text-muted opacity-60 group-hover:opacity-100" />
           </button>
         )}
 
         <button
           onClick={() => setEditingGroup(true)}
-          className="mt-1 text-sm text-ios-blue active:opacity-70"
+          className="mt-1 text-sm text-app-text underline decoration-app-accent decoration-2 underline-offset-4 active:opacity-70"
         >
           {getTranslatedGroupName(exercise.muscleGroup)}
         </button>
       </div>
 
-      <div className="bg-ios-card rounded-2xl p-4 mb-4">
-        <label className="block text-xs font-medium text-ios-gray mb-1">{t.labels.note}</label>
-        <input
+      <Surface className="mb-4">
+        <label className="mb-1 block text-xs font-medium text-app-text-muted">{t.labels.note}</label>
+        <Input
           type="text"
           value={note}
           onChange={(e) => setNote(e.target.value)}
           onBlur={() => { if (note !== (exercise.note ?? '')) onUpdateNote(note); }}
           placeholder={t.labels.notePlaceholder}
-          className="w-full bg-ios-bg text-ios-text text-base p-3 rounded-xl border-none outline-none focus:ring-2 focus:ring-ios-blue"
         />
-      </div>
+      </Surface>
 
-      <div className="bg-ios-card rounded-2xl p-4 mb-6">
-        <p className="text-xs font-medium text-ios-gray uppercase tracking-wide mb-3">{t.labels.newExercise.replace('Nuevo ', '').replace('New ', '')}</p>
+      <Surface className="mb-6">
+        <p className="mb-3 text-xs font-medium uppercase tracking-wide text-app-text-muted">{t.labels.newExercise.replace('Nuevo ', '').replace('New ', '')}</p>
         <div className="flex gap-3">
           <div className="flex-1">
-            <label className="block text-xs font-medium text-ios-gray mb-1">{t.labels.weight}</label>
-            <input
+            <label className="mb-1 block text-xs font-medium text-app-text-muted">{t.labels.weight}</label>
+            <Input
               type="number"
               inputMode="decimal"
               value={weight}
               onChange={(e) => setWeight(e.target.value)}
               placeholder={latest?.weight.toString() ?? '0'}
-              className="w-full bg-ios-bg text-ios-text text-lg p-3 rounded-xl border-none outline-none focus:ring-2 focus:ring-ios-blue"
             />
           </div>
           <div className="flex-1">
-            <label className="block text-xs font-medium text-ios-gray mb-1">{t.labels.reps}</label>
-            <input
+            <label className="mb-1 block text-xs font-medium text-app-text-muted">{t.labels.reps}</label>
+            <Input
               type="number"
               inputMode="numeric"
               value={reps}
               onChange={(e) => setReps(e.target.value)}
               placeholder={latest?.reps.toString() ?? '0'}
-              className="w-full bg-ios-bg text-ios-text text-lg p-3 rounded-xl border-none outline-none focus:ring-2 focus:ring-ios-blue"
             />
           </div>
           <div className="flex items-end">
-            <button
-              onClick={handleLog}
-              className="bg-ios-blue text-white font-semibold h-[52px] px-5 rounded-xl active:opacity-80 transition-opacity"
-            >
+            <Button onClick={handleLog} className="h-12 px-5">
               {t.actions.log}
-            </button>
+            </Button>
           </div>
         </div>
-      </div>
+      </Surface>
 
       {editableLogs.length > 0 && (
         <div className="mb-2">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-xs font-medium text-ios-gray uppercase tracking-wide">{t.labels.history}</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-app-text-muted">{t.labels.history}</p>
             <div className="flex gap-2">
               <button
                 onClick={() => setConfirmAction({ action: 'deleteAllExceptLatest' })}
-                className="text-xs text-red-500 active:opacity-70"
+                className="text-xs text-app-danger active:opacity-70"
               >
                 {t.actions.deleteAllExceptLatest}
               </button>
-              <span className="text-ios-separator">|</span>
+              <span className="text-app-border">|</span>
               <button
                 onClick={() => setConfirmAction({ action: 'deleteAll' })}
-                className="text-xs text-red-500 active:opacity-70"
+                className="text-xs text-app-danger active:opacity-70"
               >
                 {t.actions.deleteAll}
               </button>
@@ -275,39 +274,39 @@ export const ExerciseDetail: React.FC<Props> = ({
 
           <div className="space-y-3">
             {editableLogs.map((log, index) => (
-              <div key={log.originalDate} className="bg-ios-card rounded-2xl p-4">
+              <Surface key={log.originalDate}>
                 <div className="flex flex-col gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-ios-gray mb-1">{t.labels.date}</label>
-                    <input
+                    <label className="mb-1 block text-xs font-medium text-app-text-muted">{t.labels.date}</label>
+                    <Input
                       type="date"
                       value={log.date}
                       onChange={(e) => handleLogChange(index, 'date', e.target.value)}
                       onBlur={() => handleLogBlur(index)}
-                      className="bg-ios-bg text-ios-text p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-ios-blue text-sm"
+                      compact
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-medium text-ios-gray mb-1">{t.labels.weightShort}</label>
-                      <input
+                      <label className="mb-1 block text-xs font-medium text-app-text-muted">{t.labels.weightShort}</label>
+                      <Input
                         type="number"
                         inputMode="decimal"
                         value={log.weight}
                         onChange={(e) => handleLogChange(index, 'weight', e.target.value)}
                         onBlur={() => handleLogBlur(index)}
-                        className="w-full bg-ios-bg text-ios-text p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-ios-blue"
+                        compact
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-ios-gray mb-1">{t.labels.reps}</label>
-                      <input
+                      <label className="mb-1 block text-xs font-medium text-app-text-muted">{t.labels.reps}</label>
+                      <Input
                         type="number"
                         inputMode="numeric"
                         value={log.reps}
                         onChange={(e) => handleLogChange(index, 'reps', e.target.value)}
                         onBlur={() => handleLogBlur(index)}
-                        className="w-full bg-ios-bg text-ios-text p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-ios-blue"
+                        compact
                       />
                     </div>
                   </div>
@@ -315,13 +314,13 @@ export const ExerciseDetail: React.FC<Props> = ({
                 <div className="mt-3 flex justify-end">
                   <button
                     onClick={() => setConfirmAction({ action: 'deleteLog', logIndex: index })}
-                    className="text-xs text-red-500 active:opacity-70 flex items-center gap-1"
+                    className="flex items-center gap-1 text-xs text-app-danger active:opacity-70"
                   >
                     <X size={12} />
                     {t.actions.delete}
                   </button>
                 </div>
-              </div>
+              </Surface>
             ))}
           </div>
         </div>
@@ -329,32 +328,30 @@ export const ExerciseDetail: React.FC<Props> = ({
 
       <Modal open={editingGroup} onClose={() => setEditingGroup(false)} position="center">
         <div
-          className="bg-ios-card w-full max-w-sm rounded-2xl p-6 shadow-2xl animate-scaleIn mx-4"
+          className="mx-4 w-full max-w-sm animate-scaleIn rounded-2xl border border-app-border bg-app-surface p-6"
           onClick={(e) => e.stopPropagation()}
           onTouchEnd={(e) => e.stopPropagation()}
         >
-          <h2 className="text-lg font-bold mb-4 text-ios-text">{t.labels.muscleGroup}</h2>
+          <h2 className="mb-4 text-lg font-bold text-app-text">{t.labels.muscleGroup}</h2>
           <div className="grid grid-cols-3 gap-2 mb-4 max-h-[50vh] overflow-y-auto">
             {muscleGroups.map((g) => (
               <button
                 key={g}
                 onClick={() => { onChangeGroup(g); setEditingGroup(false); }}
-                className={`py-2 px-1 rounded-lg text-sm font-medium transition-colors truncate ${
+                className={cn(
+                  'truncate rounded-lg border px-1 py-2 text-sm font-medium transition-colors',
                   g === exercise.muscleGroup
-                    ? 'bg-ios-blue text-white shadow-md'
-                    : 'bg-ios-bg text-ios-text active:bg-gray-200 dark:active:bg-gray-700'
-                }`}
+                    ? 'border-app-accent bg-app-accent text-app-accent-foreground'
+                    : 'border-app-border bg-app-surface text-app-text active:bg-app-surface-muted'
+                )}
               >
                 {getTranslatedGroupName(g)}
               </button>
             ))}
           </div>
-          <button
-            onClick={() => setEditingGroup(false)}
-            className="w-full py-3 rounded-xl font-semibold bg-ios-bg text-ios-text active:opacity-70"
-          >
+          <Button onClick={() => setEditingGroup(false)} variant="secondary" className="w-full">
             {t.actions.cancel}
-          </button>
+          </Button>
         </div>
       </Modal>
 

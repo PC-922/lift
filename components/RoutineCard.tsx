@@ -3,6 +3,7 @@ import { ChevronRight } from 'lucide-react';
 import { Routine } from '../types';
 import { useTranslations } from '../utils/translations';
 import { ActionSheet } from './ActionSheet';
+import { Surface } from './ui/Surface';
 
 interface Props {
   routine: Routine;
@@ -71,8 +72,8 @@ export const RoutineCard: React.FC<Props> = ({ routine, onClick, onEdit, onDelet
 
   return (
     <>
-      <div
-        className="rounded-2xl bg-ios-card overflow-hidden select-none active:bg-gray-50 dark:active:bg-gray-800 transition-colors"
+      <Surface
+        className="overflow-hidden select-none transition-colors active:bg-app-surface-muted"
         onTouchStart={startLongPress}
         onTouchEnd={handlePress}
         onTouchMove={handleTouchMove}
@@ -82,14 +83,14 @@ export const RoutineCard: React.FC<Props> = ({ routine, onClick, onEdit, onDelet
       >
         <div className="p-4 flex justify-between items-center">
           <div className="flex-1 min-w-0">
-            <h3 className="text-lg font-semibold text-ios-text truncate">{routine.name}</h3>
-            <p className="text-xs text-ios-gray mt-1">
+            <h3 className="text-lg font-semibold text-app-text truncate">{routine.name}</h3>
+            <p className="text-xs text-app-text-muted mt-1">
               {routine.exercises.length} {t.labels.exercises}
             </p>
           </div>
-          <ChevronRight size={18} className="text-ios-gray ml-3 flex-shrink-0" />
+          <ChevronRight size={18} className="text-app-text-muted ml-3 flex-shrink-0" />
         </div>
-      </div>
+      </Surface>
 
       {showActions && (
         <ActionSheet

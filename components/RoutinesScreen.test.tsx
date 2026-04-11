@@ -362,7 +362,7 @@ describe('RoutinesScreen', () => {
     fireEvent.mouseUp(card);
     await act(() => vi.runAllTimersAsync());
 
-    const exerciseCard = screen.getByText('Bench Press').closest('div[class*="bg-ios-card"]')!;
+    const exerciseCard = screen.getByText('Bench Press').closest('div[class*="rounded-2xl"]')!;
     fireEvent.mouseDown(exerciseCard);
     act(() => { vi.advanceTimersByTime(600); });
     await act(() => vi.runAllTimersAsync());

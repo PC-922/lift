@@ -4,6 +4,8 @@ import { getRecentProgressions } from '../utils/progression';
 import { getTopWeightExercises } from '../utils/insights';
 import { useTranslations, getTranslatedGroupName } from '../utils/translations';
 import { BarChart3 } from 'lucide-react';
+import { Badge } from './ui/Badge';
+import { Surface } from './ui/Surface';
 
 interface Props {
   exercises: Exercise[];
@@ -21,14 +23,13 @@ export const InsightsScreen: React.FC<Props> = ({ exercises }) => {
       { id: 'recent', title: t.labels.recentProgress, count: recentProgressions.length },
       { id: 'topWeight', title: t.labels.topWeightExercises, count: topWeightExercises.length },
     ],
-    [recentProgressions.length, topWeightExercises.length]
+    [recentProgressions.length, topWeightExercises.length, t.labels.recentProgress, t.labels.topWeightExercises]
   );
 
   const handleScroll = () => {
     const container = carouselRef.current;
     if (!container) return;
-    const index = Math.round(container.scrollLeft / container.clientWidth);
-    setActiveIndex(index);
+    setActiveIndex(Math.round(container.scrollLeft / container.clientWidth));
   };
 
   const handleIndicatorClick = (index: number) => {
@@ -38,27 +39,21 @@ export const InsightsScreen: React.FC<Props> = ({ exercises }) => {
   };
 
   const renderEmpty = () => (
-    <div className="text-center py-16 opacity-50">
-      <BarChart3 className="mx-auto text-ios-gray mb-4" size={48} />
-      <p className="text-ios-text font-medium">{t.labels.noInsights || 'No progressions yet'}</p>
-      <p className="text-sm text-ios-gray mt-2">
-        {t.labels.noInsightsDesc || 'Start logging exercises to see your progress'}
-      </p>
+    <div className="py-16 text-center opacity-60">
+      <BarChart3 className="mx-auto mb-4 text-app-text-muted" size={48} />
+      <p className="font-medium text-app-text">{t.labels.noInsights || 'No progressions yet'}</p>
+      <p className="mt-2 text-sm text-app-text-muted">{t.labels.noInsightsDesc || 'Start logging exercises to see your progress'}</p>
     </div>
   );
 
   return (
     <div className="space-y-6">
       <div className="space-y-4">
-        <div
-          ref={carouselRef}
-          onScroll={handleScroll}
-          className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth"
-        >
+        <div ref={carouselRef} onScroll={handleScroll} className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth">
           {slides.map((slide) => (
             <div key={slide.id} className="w-full shrink-0 snap-start px-1">
-              <div className="bg-ios-bg rounded-2xl p-4 min-h-[280px]">
-                <h2 className="text-lg font-semibold text-ios-text mb-4">{slide.title}</h2>
+              <Surface className="min-h-[280px]">
+                <h2 className="mb-4 text-lg font-semibold text-app-text">{slide.title}</h2>
                 {slide.id === 'recent' && (
                   <>
                     {recentProgressions.length === 0 ? (
@@ -66,49 +61,35 @@ export const InsightsScreen: React.FC<Props> = ({ exercises }) => {
                     ) : (
                       <div className="space-y-3">
                         {recentProgressions.map((progression) => (
-                          <div
-                            key={progression.exerciseId}
-                            className="bg-ios-card rounded-2xl p-4 border-l-4 border-ios-blue"
-                          >
+                          <div key={progression.exerciseId} className="rounded-2xl border border-app-border bg-app-surface p-4">
                             <div className="flex items-start justify-between gap-2">
-                              <div className="flex-1 min-w-0">
-                                <h3 className="text-base font-semibold text-ios-text truncate">{progression.exerciseName}</h3>
-                                <p className="text-xs text-ios-gray mt-0.5 uppercase tracking-wide">
-                                  {getTranslatedGroupName(progression.muscleGroup)}
-                                </p>
+                              <div className="min-w-0 flex-1">
+                                <h3 className="truncate text-base font-semibold text-app-text">{progression.exerciseName}</h3>
+                                <p className="mt-0.5 text-xs uppercase tracking-wide text-app-text-muted">{getTranslatedGroupName(progression.muscleGroup)}</p>
                               </div>
-                              <span className="text-xs text-ios-gray flex-shrink-0 mt-1">{progression.progressionText}</span>
+                              <span className="mt-1 flex-shrink-0 text-xs text-app-text-muted">{progression.progressionText}</span>
                             </div>
                             <div className="mt-3 flex flex-col gap-1.5">
-                              {/* Weight (Always Shown) */}
                               <div className="flex items-center gap-2">
-                                <span className="text-xs text-ios-gray w-10">kg</span>
+                                <span className="w-10 text-xs text-app-text-muted">kg</span>
                                 {progression.detail.currWeight > progression.detail.prevWeight ? (
-                                  <>
-                                    <div className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-2.5 py-1 rounded-lg text-sm font-semibold">
-                                      {progression.detail.prevWeight} → {progression.detail.currWeight}
-                                    </div>
-                                    <span className="text-blue-500 text-sm font-bold">↑</span>
-                                  </>
+                                  <Badge variant="accent" className="rounded-lg px-2.5 py-1 text-sm">
+                                    {progression.detail.prevWeight} → {progression.detail.currWeight}
+                                  </Badge>
                                 ) : (
-                                  <div className="bg-ios-bg text-ios-gray px-2.5 py-1 rounded-lg text-sm">
+                                  <div className="rounded-lg border border-app-border bg-app-surface-muted px-2.5 py-1 text-sm text-app-text-muted">
                                     {progression.detail.prevWeight} → {progression.detail.currWeight}
                                   </div>
                                 )}
                               </div>
-
-                              {/* Reps (Always Shown) */}
                               <div className="flex items-center gap-2">
-                                <span className="text-xs text-ios-gray w-10">reps</span>
+                                <span className="w-10 text-xs text-app-text-muted">reps</span>
                                 {progression.detail.currReps > progression.detail.prevReps ? (
-                                  <>
-                                    <div className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-2.5 py-1 rounded-lg text-sm font-semibold">
-                                      {progression.detail.prevReps} → {progression.detail.currReps}
-                                    </div>
-                                    <span className="text-green-500 text-sm font-bold">↑</span>
-                                  </>
+                                  <Badge variant="success" className="rounded-lg px-2.5 py-1 text-sm">
+                                    {progression.detail.prevReps} → {progression.detail.currReps}
+                                  </Badge>
                                 ) : (
-                                  <div className="bg-ios-bg text-ios-gray px-2.5 py-1 rounded-lg text-sm">
+                                  <div className="rounded-lg border border-app-border bg-app-surface-muted px-2.5 py-1 text-sm text-app-text-muted">
                                     {progression.detail.prevReps} → {progression.detail.currReps}
                                   </div>
                                 )}
@@ -127,40 +108,23 @@ export const InsightsScreen: React.FC<Props> = ({ exercises }) => {
                     ) : (
                       <div className="space-y-3">
                         {topWeightExercises.map((exercise) => (
-                          <div
-                            key={exercise.exerciseId}
-                            className="bg-ios-card rounded-2xl p-4 border-l-4 border-ios-blue"
-                          >
+                          <div key={exercise.exerciseId} className="rounded-2xl border border-app-border bg-app-surface p-4">
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
-                                <h3 className="text-lg font-semibold text-ios-text">{exercise.exerciseName}</h3>
-                                <p className="text-xs text-ios-gray mt-1 uppercase tracking-wide">
-                                  {getTranslatedGroupName(exercise.muscleGroup)}
-                                </p>
+                                <h3 className="text-lg font-semibold text-app-text">{exercise.exerciseName}</h3>
+                                <p className="mt-1 text-xs uppercase tracking-wide text-app-text-muted">{getTranslatedGroupName(exercise.muscleGroup)}</p>
                                 <div className="mt-3 flex items-center gap-4">
                                   <div>
-                                    <p className="text-xs text-ios-gray mb-1">{t.labels.weightShort}</p>
-                                    <p className="text-xl font-bold text-ios-text">
-                                      {exercise.weight}
-                                      <span className="text-sm font-normal text-ios-gray ml-1">kg</span>
-                                    </p>
+                                    <p className="mb-1 text-xs text-app-text-muted">{t.labels.weightShort}</p>
+                                    <p className="text-xl font-bold text-app-text">{exercise.weight}<span className="ml-1 text-sm font-normal text-app-text-muted">kg</span></p>
                                   </div>
                                   <div>
-                                    <p className="text-xs text-ios-gray mb-1">{t.labels.reps}</p>
-                                    <p className="text-xl font-bold text-ios-text">
-                                      {exercise.reps}
-                                      <span className="text-sm font-normal text-ios-gray ml-1">
-                                        rep{exercise.reps !== 1 ? 's' : ''}
-                                      </span>
-                                    </p>
+                                    <p className="mb-1 text-xs text-app-text-muted">{t.labels.reps}</p>
+                                    <p className="text-xl font-bold text-app-text">{exercise.reps}<span className="ml-1 text-sm font-normal text-app-text-muted">rep{exercise.reps !== 1 ? 's' : ''}</span></p>
                                   </div>
                                 </div>
                               </div>
-                              <div className="flex flex-col items-end gap-2">
-                                <div className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap">
-                                  {exercise.timeSince}
-                                </div>
-                              </div>
+                              <Badge variant="success" className="whitespace-nowrap px-3 py-1.5 text-xs">{exercise.timeSince}</Badge>
                             </div>
                           </div>
                         ))}
@@ -168,25 +132,21 @@ export const InsightsScreen: React.FC<Props> = ({ exercises }) => {
                     )}
                   </>
                 )}
-              </div>
+              </Surface>
             </div>
           ))}
         </div>
-
         <div className="flex justify-center gap-2">
           {slides.map((slide, index) => (
             <button
               key={slide.id}
               onClick={() => handleIndicatorClick(index)}
-              className={`h-2 w-2 rounded-full transition-colors ${
-                activeIndex === index ? 'bg-ios-blue' : 'bg-ios-separator'
-              }`}
+              className={`h-2 w-2 rounded-full transition-colors ${activeIndex === index ? 'bg-app-accent' : 'bg-app-border'}`}
               aria-label={`${slide.title} (${slide.count})`}
             />
           ))}
         </div>
       </div>
-
     </div>
   );
 };

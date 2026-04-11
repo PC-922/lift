@@ -3,6 +3,9 @@ import { Download, Upload, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useTranslations, useLanguage } from '../utils/translations';
 import { preferencesService } from '../services/preferencesService';
 import type { ScreenType } from './BottomNav';
+import { Button } from './ui/Button';
+import { Badge } from './ui/Badge';
+import { Surface } from './ui/Surface';
 
 interface Props {
   onExport: () => void;
@@ -15,9 +18,7 @@ export const SettingsScreen: React.FC<Props> = ({ onExport, onImport }) => {
   const t = useTranslations();
   const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const currentLang = useLanguage();
-  const [currentDefaultScreen, setCurrentDefaultScreen] = useState<ScreenType | null>(
-    () => preferencesService.getDefaultScreen()
-  );
+  const [currentDefaultScreen, setCurrentDefaultScreen] = useState<ScreenType | null>(() => preferencesService.getDefaultScreen());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImportClick = () => {
@@ -44,15 +45,6 @@ export const SettingsScreen: React.FC<Props> = ({ onExport, onImport }) => {
     e.target.value = '';
   };
 
-  const handleSetLanguage = (lang: 'es' | 'en') => {
-    preferencesService.setLanguage(lang);
-  };
-
-  const handleSetDefaultScreen = (screen: ScreenType) => {
-    preferencesService.setDefaultScreen(screen);
-    setCurrentDefaultScreen(screen);
-  };
-
   const screenLabel = (screen: ScreenType): string => {
     const map: Record<ScreenType, string> = {
       home: t.labels.home,
@@ -65,104 +57,70 @@ export const SettingsScreen: React.FC<Props> = ({ onExport, onImport }) => {
 
   return (
     <div className="space-y-6">
-      <p className="text-sm text-ios-gray text-center -mt-2 mb-2">{t.labels.settingsDesc}</p>
+      <p className="-mt-2 mb-2 text-center text-sm text-app-text-muted">{t.labels.settingsDesc}</p>
 
       <div className="space-y-3">
-        <p className="text-xs font-semibold text-ios-gray uppercase tracking-wide ml-1">{t.labels.language}</p>
+        <p className="ml-1 text-xs font-semibold uppercase tracking-wide text-app-text-muted">{t.labels.language}</p>
         <div className="flex gap-2">
           {(['es', 'en'] as const).map((lang) => (
-            <button
-              key={lang}
-              onClick={() => handleSetLanguage(lang)}
-              className={`flex-1 py-3 rounded-xl font-semibold text-sm transition-colors active:opacity-70 ${
-                currentLang === lang
-                  ? 'bg-ios-blue text-white'
-                  : 'bg-ios-card text-ios-text'
-              }`}
-            >
+            <Button key={lang} onClick={() => preferencesService.setLanguage(lang)} variant={currentLang === lang ? 'primary' : 'secondary'} className="flex-1">
               {lang === 'es' ? t.labels.languageES : t.labels.languageEN}
-            </button>
+            </Button>
           ))}
         </div>
       </div>
 
       <div className="space-y-3">
-        <p className="text-xs font-semibold text-ios-gray uppercase tracking-wide ml-1">{t.labels.defaultScreen}</p>
+        <p className="ml-1 text-xs font-semibold uppercase tracking-wide text-app-text-muted">{t.labels.defaultScreen}</p>
         <div className="flex flex-wrap gap-2">
           {SCREEN_ORDER.map((screen) => (
-            <button
-              key={screen}
-              onClick={() => handleSetDefaultScreen(screen)}
-              className={`px-4 py-2.5 rounded-xl font-semibold text-sm transition-colors active:opacity-70 ${
-                currentDefaultScreen === screen
-                  ? 'bg-ios-blue text-white'
-                  : 'bg-ios-card text-ios-text'
-              }`}
-            >
+            <Button key={screen} onClick={() => { preferencesService.setDefaultScreen(screen); setCurrentDefaultScreen(screen); }} variant={currentDefaultScreen === screen ? 'primary' : 'secondary'} size="sm">
               {screenLabel(screen)}
-            </button>
+            </Button>
           ))}
         </div>
       </div>
 
       <div className="space-y-3">
-        <p className="text-xs font-semibold text-ios-gray uppercase tracking-wide ml-1">Backup</p>
-        <button
-          onClick={onExport}
-          className="w-full flex items-center justify-between p-4 bg-ios-card rounded-xl active:opacity-70 transition-opacity"
-        >
+        <p className="ml-1 text-xs font-semibold uppercase tracking-wide text-app-text-muted">Backup</p>
+        <button onClick={onExport} className="w-full rounded-2xl border border-app-border bg-app-surface p-4 text-left transition-colors active:bg-app-surface-muted">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-ios-blue">
-              <Download size={20} />
-            </div>
+            <Badge variant="accent" className="rounded-xl px-3 py-3"><Download size={20} /></Badge>
             <div className="text-left">
-              <div className="font-semibold text-ios-text">{t.actions.export}</div>
-              <div className="text-xs text-ios-gray">{t.labels.exportDesc}</div>
+              <div className="font-semibold text-app-text">{t.actions.export}</div>
+              <div className="text-xs text-app-text-muted">{t.labels.exportDesc}</div>
             </div>
           </div>
         </button>
 
-        <button
-          onClick={handleImportClick}
-          className="w-full flex items-center justify-between p-4 bg-ios-card rounded-xl active:opacity-70 transition-opacity"
-        >
+        <button onClick={handleImportClick} className="w-full rounded-2xl border border-app-border bg-app-surface p-4 text-left transition-colors active:bg-app-surface-muted">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg text-green-600 dark:text-green-400">
-              <Upload size={20} />
-            </div>
+            <Badge variant="success" className="rounded-xl px-3 py-3"><Upload size={20} /></Badge>
             <div className="text-left">
-              <div className="font-semibold text-ios-text">{t.actions.import}</div>
-              <div className="text-xs text-ios-gray">{t.labels.importDesc}</div>
+              <div className="font-semibold text-app-text">{t.actions.import}</div>
+              <div className="text-xs text-app-text-muted">{t.labels.importDesc}</div>
             </div>
           </div>
         </button>
 
-        <input
-          type="file"
-          ref={fileInputRef}
-          onChange={handleFileChange}
-          accept=".json"
-          className="hidden"
-        />
+        <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".json" className="hidden" />
 
         {importStatus === 'success' && (
-          <div className="flex items-center gap-2 justify-center text-green-600 dark:text-green-400 pt-2 animate-fadeIn">
+          <div className="flex items-center justify-center gap-2 pt-2 text-app-success animate-fadeIn">
             <CheckCircle2 size={16} />
             <span className="text-sm font-medium">{t.labels.importSuccess}</span>
           </div>
         )}
         {importStatus === 'error' && (
-          <div className="flex items-center gap-2 justify-center text-red-500 pt-2 animate-fadeIn">
+          <div className="flex items-center justify-center gap-2 pt-2 text-app-danger animate-fadeIn">
             <AlertCircle size={16} />
             <span className="text-sm font-medium">{t.labels.importError}</span>
           </div>
         )}
       </div>
 
-      <div className="pt-6 border-t border-ios-separator">
-        <p className="text-xs text-ios-gray text-center leading-relaxed">
-          {t.labels.settingsInfo}
-        </p>
+      <div className="border-t border-app-border pt-6">
+        <p className="text-center text-xs leading-relaxed text-app-text-muted">{t.labels.settingsInfo}</p>
       </div>
     </div>
   );

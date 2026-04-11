@@ -3,41 +3,100 @@
 @tailwind utilities;
 
 :root {
-  --ios-bg: #F2F2F7;
-  --ios-card: #FFFFFF;
-  --ios-text: #000000;
-  --ios-separator: #C6C6C8;
+  color-scheme: light;
+  --color-bg: #f5f7f1;
+  --color-surface: #ffffff;
+  --color-surface-muted: #eef2e7;
+  --color-text: #111411;
+  --color-text-muted: #5f665b;
+  --color-border: #d7ddd0;
+  --color-accent: #cdff00;
+  --color-accent-foreground: #0b1100;
+  --color-danger: #d84b3c;
+  --color-success: #18834d;
+  --color-warning: #a46e00;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --ios-bg: #000000;
-    --ios-card: #1C1C1E;
-    --ios-text: #FFFFFF;
-    --ios-separator: #38383A;
+    color-scheme: dark;
+    --color-bg: #0b0d0a;
+    --color-surface: #131613;
+    --color-surface-muted: #1a1f18;
+    --color-text: #f3f5ed;
+    --color-text-muted: #a4aa9c;
+    --color-border: #2a3228;
+    --color-accent: #cdff00;
+    --color-accent-foreground: #0b1100;
+    --color-danger: #ff6b5e;
+    --color-success: #4cd38c;
+    --color-warning: #f2c14e;
   }
 }
 
+html {
+  background: var(--color-bg);
+  scrollbar-width: none;
+}
+
 body {
-  background-color: var(--ios-bg);
-  color: var(--ios-text);
+  margin: 0;
+  min-height: 100vh;
+  background-color: var(--color-bg);
+  color: var(--color-text);
   -webkit-tap-highlight-color: transparent;
   padding-top: env(safe-area-inset-top);
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
 }
 
-/* Hide scrollbar for cleaner look */
+* {
+  box-sizing: border-box;
+}
+
+::selection {
+  background: var(--color-accent);
+  color: var(--color-accent-foreground);
+}
+
 ::-webkit-scrollbar {
   width: 0px;
   background: transparent;
 }
 
 @keyframes slideDown {
-  from { transform: translateY(-20px); opacity: 0; }
+  from { transform: translateY(-12px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
 
 .animate-slideDown {
-  animation: slideDown 0.25s ease-out forwards;
+  animation: slideDown 0.22s ease-out forwards;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(12px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.animate-slideUp {
+  animation: slideUp 0.22s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from { transform: translateY(4px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.18s ease-out forwards;
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0.98); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.animate-scaleIn {
+  animation: scaleIn 0.18s ease-out forwards;
 }

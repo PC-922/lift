@@ -1,5 +1,7 @@
 import { useTranslations } from '../utils/translations';
 import { Modal } from './Modal';
+import { Button } from './ui/Button';
+import { Surface } from './ui/Surface';
 
 interface Props {
   title: string;
@@ -21,29 +23,25 @@ export default function ConfirmModal({
   const t = useTranslations();
   return (
     <Modal open onClose={onCancel} position="bottom">
-      <div className="w-full max-w-md rounded-t-2xl bg-ios-card p-6 space-y-4" onClick={(e) => e.stopPropagation()} onTouchEnd={(e) => e.stopPropagation()}>
-        <h2 className="text-lg font-semibold text-ios-text text-center">{title}</h2>
+      <Surface className="w-full max-w-md space-y-4 rounded-t-3xl p-6" onClick={(e) => e.stopPropagation()} onTouchEnd={(e) => e.stopPropagation()}>
+        <h2 className="text-lg font-semibold text-app-text text-center">{title}</h2>
         {message && (
-          <p className="text-sm text-ios-secondary text-center">{message}</p>
+          <p className="text-sm text-app-text-muted text-center">{message}</p>
         )}
         <div className="flex flex-col gap-2 pt-2">
-          <button
+          <Button
             onClick={onConfirm}
             data-testid="confirm-modal-confirm"
-            className={`w-full py-3 rounded-xl font-semibold text-white ${
-              destructive ? 'bg-ios-red' : 'bg-ios-blue'
-            }`}
+            variant={destructive ? 'destructive' : 'primary'}
+            className="w-full"
           >
             {confirmLabel ?? t.actions.delete}
-          </button>
-          <button
-            onClick={onCancel}
-            className="w-full py-3 rounded-xl font-semibold text-ios-blue bg-ios-bg"
-          >
+          </Button>
+          <Button onClick={onCancel} variant="secondary" className="w-full">
             {t.actions.cancel}
-          </button>
+          </Button>
         </div>
-      </div>
+      </Surface>
     </Modal>
   );
 }

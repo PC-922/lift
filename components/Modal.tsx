@@ -23,8 +23,6 @@ export const Modal: React.FC<Props> = ({ open, onClose, position = 'center', chi
   if (!open) return null;
 
   const handleBackdrop = (e: React.MouseEvent | React.TouchEvent) => {
-    // Ignore the first 350ms to prevent the touchEnd that opened the modal
-    // from immediately closing it (same touch event bubble).
     if (Date.now() - mountedAt.current < 350) return;
     if (e.target === e.currentTarget) onClose();
   };
@@ -35,7 +33,7 @@ export const Modal: React.FC<Props> = ({ open, onClose, position = 'center', chi
 
   return createPortal(
     <div
-      className={`fixed inset-0 z-50 flex ${alignClass} bg-black/40 backdrop-blur-sm`}
+      className={`fixed inset-0 z-50 flex ${alignClass} bg-black/55 backdrop-blur-[2px]`}
       onClick={handleBackdrop}
       onTouchEnd={handleBackdrop}
     >

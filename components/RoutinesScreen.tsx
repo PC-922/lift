@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Plus, Check, ChevronUp, Pencil, X, Search, ChevronDown, ArrowUp, ArrowDown, Shuffle } from 'lucide-react';
+import { Check, Pencil, X, Search, ArrowUp, ArrowDown, Shuffle, Plus } from 'lucide-react';
 import { Exercise, Routine, RoutineExercise } from '../types';
 import { useTranslations, getTranslatedGroupName } from '../utils/translations';
 import { getLatestLog } from '../utils/progression';
@@ -10,6 +10,12 @@ import { Modal } from './Modal';
 import { useLongPress } from '../hooks/useLongPress';
 import { useToast } from '../hooks/useToast';
 import { makeId } from '../services/storageService';
+import { Button } from './ui/Button';
+import { Badge } from './ui/Badge';
+import { Input } from './ui/Input';
+import { SearchInput } from './ui/SearchInput';
+import { Surface } from './ui/Surface';
+import { cn } from '../utils/cn';
 
 interface Props {
   routines: Routine[];
@@ -44,20 +50,14 @@ export const RoutinesScreen: React.FC<Props> = ({
   const [activeRoutineId, setActiveRoutineId] = useState<string | null>(null);
   const [modalMode, setModalMode] = useState<ModalMode | null>(null);
   const [editingRoutine, setEditingRoutine] = useState<Routine | null>(null);
-
   const [formName, setFormName] = useState('');
   const [formExercises, setFormExercises] = useState<RoutineExercise[]>([]);
   const [formSearch, setFormSearch] = useState('');
-
   const [logForms, setLogForms] = useState<Record<string, LogFormState>>({});
-  // Track which exercises are using their alternative
   const [usingAlternative, setUsingAlternative] = useState<Record<string, boolean>>({});
-
   const [actionSheetExerciseId, setActionSheetExerciseId] = useState<string | null>(null);
   const [confirmDeleteRoutineId, setConfirmDeleteRoutineId] = useState<string | null>(null);
   const [confirmRemoveExerciseId, setConfirmRemoveExerciseId] = useState<string | null>(null);
-
-  // Alternative picker: which slot is being configured
   const [pickingAlternativeFor, setPickingAlternativeFor] = useState<string | null>(null);
   const [alternativeSearch, setAlternativeSearch] = useState('');
 
@@ -68,15 +68,8 @@ export const RoutinesScreen: React.FC<Props> = ({
 
   const { showToast } = useToast();
 
-  const activeRoutine = useMemo(
-    () => routines.find((r) => r.id === activeRoutineId) ?? null,
-    [routines, activeRoutineId]
-  );
-
-  const exerciseById = useMemo(
-    () => new Map(exercises.map((exercise) => [exercise.id, exercise] as const)),
-    [exercises]
-  );
+  const activeRoutine = useMemo(() => routines.find((r) => r.id === activeRoutineId) ?? null, [routines, activeRoutineId]);
+  const exerciseById = useMemo(() => new Map(exercises.map((exercise) => [exercise.id, exercise] as const)), [exercises]);
 
   const activeRoutineExercises = useMemo(() => {
     if (!activeRoutine) return [];
@@ -84,15 +77,9 @@ export const RoutinesScreen: React.FC<Props> = ({
       .map((re) => ({
         routineExercise: re,
         exercise: exercises.find((e) => e.id === re.exerciseId),
-        alternativeExercise: re.alternativeExerciseId
-          ? exercises.find((e) => e.id === re.alternativeExerciseId)
-          : undefined,
+        alternativeExercise: re.alternativeExerciseId ? exercises.find((e) => e.id === re.alternativeExerciseId) : undefined,
       }))
-      .filter((item): item is {
-        routineExercise: RoutineExercise;
-        exercise: Exercise;
-        alternativeExercise: Exercise | undefined;
-      } => item.exercise !== undefined);
+      .filter((item): item is { routineExercise: RoutineExercise; exercise: Exercise; alternativeExercise: Exercise | undefined } => item.exercise !== undefined);
   }, [activeRoutine, exercises]);
 
   const openCreate = () => {
@@ -125,23 +112,17 @@ export const RoutinesScreen: React.FC<Props> = ({
   };
 
   const updateFormExerciseField = (exerciseId: string, field: 'sets' | 'reps', value: string) => {
-    setFormExercises((prev) =>
-      prev.map((re) => (re.exerciseId === exerciseId ? { ...re, [field]: value } : re))
-    );
+    setFormExercises((prev) => prev.map((re) => (re.exerciseId === exerciseId ? { ...re, [field]: value } : re)));
   };
 
   const commitSetsField = (exerciseId: string, value: string) => {
     const parsed = parseInt(value, 10);
     const num = Number.isNaN(parsed) || parsed < 1 ? 1 : parsed;
-    setFormExercises((prev) =>
-      prev.map((re) => (re.exerciseId === exerciseId ? { ...re, sets: num } : re))
-    );
+    setFormExercises((prev) => prev.map((re) => (re.exerciseId === exerciseId ? { ...re, sets: num } : re)));
   };
 
   const toggleDropset = (exerciseId: string) => {
-    setFormExercises((prev) =>
-      prev.map((re) => (re.exerciseId === exerciseId ? { ...re, dropset: !re.dropset } : re))
-    );
+    setFormExercises((prev) => prev.map((re) => (re.exerciseId === exerciseId ? { ...re, dropset: !re.dropset } : re)));
   };
 
   const toggleToFailure = (exerciseId: string) => {
@@ -155,23 +136,13 @@ export const RoutinesScreen: React.FC<Props> = ({
   };
 
   const setAlternative = (exerciseId: string, alternativeId: string | undefined) => {
-    setFormExercises((prev) =>
-      prev.map((re) =>
-        re.exerciseId === exerciseId
-          ? { ...re, alternativeExerciseId: alternativeId }
-          : re
-      )
-    );
+    setFormExercises((prev) => prev.map((re) => (re.exerciseId === exerciseId ? { ...re, alternativeExerciseId: alternativeId } : re)));
   };
 
   const handleSave = () => {
     const name = formName.trim();
     if (!name) return;
-    onSaveRoutine({
-      id: editingRoutine?.id ?? makeId('routine'),
-      name,
-      exercises: formExercises,
-    });
+    onSaveRoutine({ id: editingRoutine?.id ?? makeId('routine'), name, exercises: formExercises });
     closeModal();
   };
 
@@ -185,27 +156,20 @@ export const RoutinesScreen: React.FC<Props> = ({
   };
 
   const handleDuplicate = (routine: Routine) => {
-    onSaveRoutine({
-      id: makeId('routine'),
-      name: `${routine.name} (2)`,
-      exercises: [...routine.exercises],
-    });
+    onSaveRoutine({ id: makeId('routine'), name: `${routine.name} (2)`, exercises: [...routine.exercises] });
   };
 
-  const getLogForm = useCallback((exerciseId: string): LogFormState => {
-    if (logForms[exerciseId]) return logForms[exerciseId];
-    const latest = getLatestLog(exerciseById.get(exerciseId)?.logs ?? []);
-    return {
-      weight: latest?.weight.toString() ?? '',
-      reps: latest?.reps.toString() ?? '',
-    };
-  }, [logForms, exerciseById]);
+  const getLogForm = useCallback(
+    (exerciseId: string): LogFormState => {
+      if (logForms[exerciseId]) return logForms[exerciseId];
+      const latest = getLatestLog(exerciseById.get(exerciseId)?.logs ?? []);
+      return { weight: latest?.weight.toString() ?? '', reps: latest?.reps.toString() ?? '' };
+    },
+    [logForms, exerciseById]
+  );
 
   const updateLogForm = (exerciseId: string, field: keyof LogFormState, value: string) => {
-    setLogForms((prev) => ({
-      ...prev,
-      [exerciseId]: { ...getLogForm(exerciseId), [field]: value },
-    }));
+    setLogForms((prev) => ({ ...prev, [exerciseId]: { ...getLogForm(exerciseId), [field]: value } }));
   };
 
   const handleLog = (targetId: string) => {
@@ -220,7 +184,6 @@ export const RoutinesScreen: React.FC<Props> = ({
     const prevMax = latest?.weight ?? 0;
 
     onLogExercise(targetId, weight, reps);
-    // Reset to empty so next render picks up the newly logged value via getLogForm fallback
     setLogForms((prev) => {
       const next = { ...prev };
       delete next[targetId];
@@ -250,66 +213,40 @@ export const RoutinesScreen: React.FC<Props> = ({
 
   const handleRemoveExerciseFromRoutine = (exerciseId: string) => {
     if (!activeRoutine) return;
-    onSaveRoutine({
-      ...activeRoutine,
-      exercises: activeRoutine.exercises.filter((re) => re.exerciseId !== exerciseId),
-    });
+    onSaveRoutine({ ...activeRoutine, exercises: activeRoutine.exercises.filter((re) => re.exerciseId !== exerciseId) });
     setConfirmRemoveExerciseId(null);
   };
 
   const filteredFormExercises = useMemo(() => {
     const q = formSearch.toLowerCase();
-    return exercises
-      .slice()
-      .sort((a, b) => a.name.localeCompare(b.name))
-      .filter((ex) => !q || ex.name.toLowerCase().includes(q));
+    return exercises.slice().sort((a, b) => a.name.localeCompare(b.name)).filter((ex) => !q || ex.name.toLowerCase().includes(q));
   }, [exercises, formSearch]);
 
   const filteredAlternativeExercises = useMemo(() => {
     const q = alternativeSearch.toLowerCase();
-    return exercises
-      .slice()
-      .sort((a, b) => a.name.localeCompare(b.name))
-      .filter((ex) => !q || ex.name.toLowerCase().includes(q));
+    return exercises.slice().sort((a, b) => a.name.localeCompare(b.name)).filter((ex) => !q || ex.name.toLowerCase().includes(q));
   }, [exercises, alternativeSearch]);
 
-  const actionSheetExerciseIndex = actionSheetExerciseId
-    ? activeRoutine?.exercises.findIndex((re) => re.exerciseId === actionSheetExerciseId) ?? -1
-    : -1;
+  const actionSheetExerciseIndex = actionSheetExerciseId ? activeRoutine?.exercises.findIndex((re) => re.exerciseId === actionSheetExerciseId) ?? -1 : -1;
   const isFirst = actionSheetExerciseIndex === 0;
-  const isLast = activeRoutine
-    ? actionSheetExerciseIndex === activeRoutine.exercises.length - 1
-    : true;
-  const actionSheetExerciseName = actionSheetExerciseId
-    ? exerciseById.get(actionSheetExerciseId)?.name ?? ''
-    : '';
+  const isLast = activeRoutine ? actionSheetExerciseIndex === activeRoutine.exercises.length - 1 : true;
+  const actionSheetExerciseName = actionSheetExerciseId ? exerciseById.get(actionSheetExerciseId)?.name ?? '' : '';
 
   return (
     <div className="space-y-6">
       {activeRoutine ? (
         <div className="space-y-4">
-          <div className="flex items-center justify-between mb-2">
-            <button
-              onClick={() => setActiveRoutineId(null)}
-              className="text-ios-blue font-semibold text-sm active:opacity-70"
-            >
-              ← {t.labels.routines}
-            </button>
-            <h1 className="text-xl font-bold text-ios-text truncate max-w-[60%] text-center">
-              {activeRoutine.name}
-            </h1>
-            <button
-              onClick={() => openEdit(activeRoutine)}
-              className="text-ios-blue active:opacity-70 p-1"
-              aria-label={t.actions.edit}
-            >
+          <div className="mb-2 flex items-center justify-between">
+            <button onClick={() => setActiveRoutineId(null)} className="text-sm font-semibold text-app-text active:opacity-70">← {t.labels.routines}</button>
+            <h1 className="max-w-[60%] truncate text-center text-xl font-bold text-app-text">{activeRoutine.name}</h1>
+            <button onClick={() => openEdit(activeRoutine)} className="p-1 text-app-text active:opacity-70" aria-label={t.actions.edit}>
               <Pencil size={18} />
             </button>
           </div>
 
           {activeRoutineExercises.length === 0 ? (
-            <div className="text-center py-20 opacity-50">
-              <p className="text-ios-text font-medium">{t.labels.noExercises}</p>
+            <div className="py-20 text-center opacity-60">
+              <p className="font-medium text-app-text">{t.labels.noExercises}</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -329,9 +266,7 @@ export const RoutinesScreen: React.FC<Props> = ({
                     onUpdateForm={(field, value) => updateLogForm(displayExercise.id, field, value)}
                     onLog={() => handleLog(displayExercise.id)}
                     onLongPress={() => setActionSheetExerciseId(exercise.id)}
-                    onToggleAlternative={() =>
-                      setUsingAlternative((prev) => ({ ...prev, [exercise.id]: !prev[exercise.id] }))
-                    }
+                    onToggleAlternative={() => setUsingAlternative((prev) => ({ ...prev, [exercise.id]: !prev[exercise.id] }))}
                   />
                 );
               })}
@@ -340,98 +275,50 @@ export const RoutinesScreen: React.FC<Props> = ({
         </div>
       ) : (
         <div className="space-y-6">
-          <div className="text-center mb-8">
-            <p className="text-sm text-ios-gray mt-2">{t.labels.routinesDesc}</p>
+          <div className="mb-8 text-center">
+            <p className="mt-2 text-sm text-app-text-muted">{t.labels.routinesDesc}</p>
           </div>
 
+          <Button onClick={openCreate} className="w-full">
+            <Plus size={18} />
+            {t.labels.newRoutine}
+          </Button>
+
           {routines.length === 0 ? (
-            <div className="text-center py-20 opacity-50">
-              <p className="text-ios-text font-medium">{t.labels.noRoutines}</p>
-              <p className="text-sm text-ios-gray mt-2">{t.labels.noRoutinesDesc}</p>
+            <div className="py-20 text-center opacity-60">
+              <p className="font-medium text-app-text">{t.labels.noRoutines}</p>
+              <p className="mt-2 text-sm text-app-text-muted">{t.labels.noRoutinesDesc}</p>
             </div>
           ) : (
             <div className="space-y-3">
               {routines.map((routine) => (
-                <RoutineCard
-                  key={routine.id}
-                  routine={routine}
-                  onClick={() => setActiveRoutineId(routine.id)}
-                  onEdit={() => openEdit(routine)}
-                  onDelete={() => handleDelete(routine.id)}
-                  onDuplicate={() => handleDuplicate(routine)}
-                />
+                <RoutineCard key={routine.id} routine={routine} onClick={() => setActiveRoutineId(routine.id)} onEdit={() => openEdit(routine)} onDelete={() => handleDelete(routine.id)} onDuplicate={() => handleDuplicate(routine)} />
               ))}
             </div>
           )}
-
-          <button
-            onClick={openCreate}
-            className="fixed right-6 w-14 h-14 bg-ios-blue rounded-full shadow-lg shadow-blue-500/30 flex items-center justify-center text-white active:scale-95 transition-transform z-40"
-            style={{ bottom: 'calc(env(safe-area-inset-bottom) + 5rem)' }}
-            aria-label={t.labels.newRoutine}
-          >
-            <Plus size={28} strokeWidth={2.5} />
-          </button>
         </div>
       )}
 
       <Modal open={!!modalMode} onClose={closeModal} position="bottom">
-        <div
-          className="bg-ios-card w-full max-w-md rounded-t-3xl shadow-2xl flex flex-col"
-          style={{ maxHeight: '85vh', paddingBottom: 'calc(env(safe-area-inset-bottom) + 1.5rem)' }}
-          onClick={(e) => e.stopPropagation()}
-          onTouchEnd={(e) => e.stopPropagation()}
-        >
-          <div className="px-6 pt-6 pb-4 flex items-center justify-between flex-shrink-0">
-            <h2 className="text-xl font-bold text-ios-text">
-              {modalMode === 'create' ? t.labels.newRoutine : t.labels.editRoutine}
-            </h2>
-            <button onClick={closeModal} className="text-ios-gray active:opacity-70">
-              <X size={22} />
-            </button>
+        <div className="flex w-full max-w-md flex-col rounded-t-3xl border border-app-border bg-app-surface" style={{ maxHeight: '85vh', paddingBottom: 'calc(env(safe-area-inset-bottom) + 1.5rem)' }} onClick={(e) => e.stopPropagation()} onTouchEnd={(e) => e.stopPropagation()}>
+          <div className="flex flex-shrink-0 items-center justify-between px-6 pb-4 pt-6">
+            <h2 className="text-xl font-bold text-app-text">{modalMode === 'create' ? t.labels.newRoutine : t.labels.editRoutine}</h2>
+            <button onClick={closeModal} className="text-app-text-muted active:opacity-70"><X size={22} /></button>
           </div>
 
-          <div className="overflow-y-auto flex-1 px-6">
+          <div className="flex-1 overflow-y-auto px-6">
             <div className="mb-5">
-              <label className="block text-xs font-medium text-ios-gray mb-2 uppercase tracking-wide">
-                {t.labels.routineName}
-              </label>
-              <input
-                type="text"
-                value={formName}
-                onChange={(e) => setFormName(e.target.value)}
-                placeholder={t.labels.routineName}
-                className="w-full bg-ios-bg text-ios-text p-3 rounded-xl border-none outline-none focus:ring-2 focus:ring-ios-blue"
-                autoFocus
-              />
+              <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-app-text-muted">{t.labels.routineName}</label>
+              <Input type="text" value={formName} onChange={(e) => setFormName(e.target.value)} placeholder={t.labels.routineName} autoFocus />
             </div>
 
             <div className="mb-4">
-              <label className="block text-xs font-medium text-ios-gray mb-2 uppercase tracking-wide">
-                {t.labels.selectExercises}
-              </label>
+              <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-app-text-muted">{t.labels.selectExercises}</label>
 
-              <div className="relative mb-3">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ios-gray pointer-events-none" />
-                <input
-                  type="text"
-                  value={formSearch}
-                  onChange={(e) => setFormSearch(e.target.value)}
-                  placeholder={t.labels.searchExercises}
-                  className="w-full bg-ios-bg text-ios-text pl-8 pr-8 py-2.5 rounded-xl border-none outline-none focus:ring-2 focus:ring-ios-blue text-sm"
-                />
-                {formSearch && (
-                  <button
-                    onClick={() => setFormSearch('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-ios-gray active:opacity-70"
-                  >
-                    <X size={14} />
-                  </button>
-                )}
-              </div>
+              <SearchInput value={formSearch} onChange={(e) => setFormSearch(e.target.value)} onClear={() => setFormSearch('')} placeholder={t.labels.searchExercises} />
 
               {filteredFormExercises.length === 0 ? (
-                <p className="text-ios-gray text-sm text-center py-4">{t.labels.noExercisesFound}</p>
+                <p className="py-4 text-center text-sm text-app-text-muted">{t.labels.noExercisesFound}</p>
               ) : (
                 <div className="space-y-2 pb-2">
                   {filteredFormExercises.map((exercise) => {
@@ -441,100 +328,52 @@ export const RoutinesScreen: React.FC<Props> = ({
                       <div key={exercise.id}>
                         <button
                           onClick={() => toggleExercise(exercise.id)}
-                          className={`w-full flex items-center justify-between p-3 rounded-xl transition-colors active:opacity-70 ${
-                            selected
-                              ? 'bg-ios-blue/10 border border-ios-blue/40'
-                              : 'bg-ios-bg border border-transparent'
-                          }`}
+                          className={cn(
+                            'w-full rounded-xl border p-3 transition-colors active:opacity-70',
+                            selected ? 'border-app-accent bg-app-surface-muted' : 'border-app-border bg-app-surface'
+                          )}
                         >
                           <div className="text-left">
-                            <p className="text-sm font-semibold text-ios-text">{exercise.name}</p>
-                            <p className="text-xs text-ios-gray mt-0.5">
-                              {getTranslatedGroupName(exercise.muscleGroup)}
-                            </p>
+                            <p className="text-sm font-semibold text-app-text">{exercise.name}</p>
+                            <p className="mt-0.5 text-xs text-app-text-muted">{getTranslatedGroupName(exercise.muscleGroup)}</p>
                           </div>
-                          {selected ? (
-                            <ChevronUp size={18} className="text-ios-blue flex-shrink-0" />
-                          ) : (
-                            <Check size={18} className="text-ios-gray/30 flex-shrink-0" />
-                          )}
                         </button>
 
                         {selected && routineEx && (
-                          <div className="mt-1 mb-1 px-3 py-3 bg-ios-bg rounded-xl border border-ios-blue/20">
-                            <div className="grid grid-cols-4 gap-2 items-end mb-2">
+                          <div className="mt-1 mb-1 rounded-xl border border-app-border bg-app-surface-muted px-3 py-3">
+                            <div className="mb-2 grid grid-cols-4 items-end gap-2">
                               <div>
-                                <label className="block text-xs font-medium text-ios-gray mb-1">{t.labels.sets}</label>
-                                <input
-                                  type="text"
-                                  inputMode="numeric"
-                                  value={routineEx.sets}
-                                  onChange={(e) => updateFormExerciseField(exercise.id, 'sets', e.target.value)}
-                                  onBlur={(e) => commitSetsField(exercise.id, e.target.value)}
-                                  className="w-full bg-ios-card text-ios-text p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-ios-blue text-sm text-center"
-                                />
+                                <label className="mb-1 block text-xs font-medium text-app-text-muted">{t.labels.sets}</label>
+                                <Input compact type="text" inputMode="numeric" value={routineEx.sets} onChange={(e) => updateFormExerciseField(exercise.id, 'sets', e.target.value)} onBlur={(e) => commitSetsField(exercise.id, e.target.value)} className="text-center" />
                               </div>
                               <div>
-                                <label className="block text-xs font-medium text-ios-gray mb-1">{t.labels.reps}</label>
-                                <input
-                                  type="text"
-                                  inputMode="text"
-                                  value={routineEx.reps}
-                                  onChange={(e) => updateFormExerciseField(exercise.id, 'reps', e.target.value)}
-                                  disabled={routineEx.toFailure}
-                                  className="w-full bg-ios-card text-ios-text p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-ios-blue text-sm text-center disabled:opacity-30"
-                                  placeholder="10"
-                                />
+                                <label className="mb-1 block text-xs font-medium text-app-text-muted">{t.labels.reps}</label>
+                                <Input compact type="text" inputMode="text" value={routineEx.reps} onChange={(e) => updateFormExerciseField(exercise.id, 'reps', e.target.value)} disabled={routineEx.toFailure} className="text-center disabled:opacity-30" placeholder="10" />
                               </div>
                               <div className="flex flex-col items-center">
-                                <label className="block text-xs font-medium text-ios-gray mb-1">{t.labels.dropset}</label>
-                                <button
-                                  onClick={() => toggleDropset(exercise.id)}
-                                  className={`w-full py-2 rounded-lg text-xs font-semibold transition-colors active:opacity-70 ${
-                                    routineEx.dropset
-                                      ? 'bg-orange-500 text-white'
-                                      : 'bg-ios-card text-ios-gray border border-ios-separator'
-                                  }`}
-                                >
+                                <label className="mb-1 block text-xs font-medium text-app-text-muted">{t.labels.dropset}</label>
+                                <button onClick={() => toggleDropset(exercise.id)} className={cn('w-full rounded-lg border py-2 text-xs font-semibold transition-colors active:opacity-70', routineEx.dropset ? 'border-app-warning bg-app-warning text-app-text' : 'border-app-border bg-app-surface text-app-text-muted')}>
                                   {routineEx.dropset ? '✓' : '—'}
                                 </button>
                               </div>
                               <div className="flex flex-col items-center">
-                                <label className="block text-xs font-medium text-ios-gray mb-1">{t.labels.toFailure}</label>
-                                <button
-                                  onClick={() => toggleToFailure(exercise.id)}
-                                  className={`w-full py-2 rounded-lg text-xs font-semibold transition-colors active:opacity-70 ${
-                                    routineEx.toFailure
-                                      ? 'bg-red-500 text-white'
-                                      : 'bg-ios-card text-ios-gray border border-ios-separator'
-                                  }`}
-                                >
+                                <label className="mb-1 block text-xs font-medium text-app-text-muted">{t.labels.toFailure}</label>
+                                <button onClick={() => toggleToFailure(exercise.id)} className={cn('w-full rounded-lg border py-2 text-xs font-semibold transition-colors active:opacity-70', routineEx.toFailure ? 'border-app-danger bg-app-danger text-white' : 'border-app-border bg-app-surface text-app-text-muted')}>
                                   {routineEx.toFailure ? '✓' : '—'}
                                 </button>
                               </div>
                             </div>
 
                             <div className="mt-1">
-                                  {routineEx.alternativeExerciseId ? (
-                                <div className="flex items-center justify-between">
-                                  <p className="text-xs text-ios-gray">
-                                    {t.labels.alternative}:{' '}
-                                    <span className="font-semibold text-ios-text">
-                                      {exerciseById.get(routineEx.alternativeExerciseId)?.name ?? '—'}
-                                    </span>
+                              {routineEx.alternativeExerciseId ? (
+                                <div className="flex items-center justify-between gap-3">
+                                  <p className="text-xs text-app-text-muted">
+                                    {t.labels.alternative}: <span className="font-semibold text-app-text">{exerciseById.get(routineEx.alternativeExerciseId)?.name ?? '—'}</span>
                                   </p>
-                                  <button
-                                    onClick={() => setAlternative(exercise.id, undefined)}
-                                    className="text-xs text-red-500 active:opacity-70"
-                                  >
-                                    {t.labels.clearAlternative}
-                                  </button>
+                                  <button onClick={() => setAlternative(exercise.id, undefined)} className="text-xs text-app-danger active:opacity-70">{t.labels.clearAlternative}</button>
                                 </div>
                               ) : (
-                                <button
-                                  onClick={() => { setPickingAlternativeFor(exercise.id); setAlternativeSearch(''); }}
-                                  className="text-xs text-ios-blue active:opacity-70 flex items-center gap-1"
-                                >
+                                <button onClick={() => { setPickingAlternativeFor(exercise.id); setAlternativeSearch(''); }} className="flex items-center gap-1 text-xs text-app-text underline decoration-app-accent decoration-2 underline-offset-4 active:opacity-70">
                                   <Shuffle size={12} />
                                   {t.labels.setAlternative}
                                 </button>
@@ -550,61 +389,28 @@ export const RoutinesScreen: React.FC<Props> = ({
             </div>
           </div>
 
-          <div className="px-6 pt-3 flex-shrink-0 border-t border-ios-separator">
-            <button
-              onClick={handleSave}
-              disabled={!formName.trim()}
-              className="w-full py-3 rounded-xl bg-ios-blue text-white font-semibold text-base active:opacity-80 disabled:opacity-40"
-            >
-              {t.actions.save}
-            </button>
+          <div className="flex-shrink-0 border-t border-app-border px-6 pt-3">
+            <Button onClick={handleSave} disabled={!formName.trim()} className="w-full">{t.actions.save}</Button>
           </div>
         </div>
       </Modal>
 
       <Modal open={!!pickingAlternativeFor} onClose={() => setPickingAlternativeFor(null)} position="bottom">
-        <div
-          className="bg-ios-card w-full max-w-md rounded-t-3xl p-6 shadow-2xl"
-          style={{ maxHeight: '70vh', overflowY: 'auto', paddingBottom: 'calc(env(safe-area-inset-bottom) + 1.5rem)' }}
-          onClick={(e) => e.stopPropagation()}
-          onTouchEnd={(e) => e.stopPropagation()}
-        >
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-ios-text">{t.labels.setAlternative}</h2>
-            <button onClick={() => setPickingAlternativeFor(null)} className="text-ios-gray active:opacity-70">
-              <X size={22} />
-            </button>
+        <div className="w-full max-w-md rounded-t-3xl border border-app-border bg-app-surface p-6" style={{ maxHeight: '70vh', overflowY: 'auto', paddingBottom: 'calc(env(safe-area-inset-bottom) + 1.5rem)' }} onClick={(e) => e.stopPropagation()} onTouchEnd={(e) => e.stopPropagation()}>
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-bold text-app-text">{t.labels.setAlternative}</h2>
+            <button onClick={() => setPickingAlternativeFor(null)} className="text-app-text-muted active:opacity-70"><X size={22} /></button>
           </div>
-          <div className="relative mb-3">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ios-gray pointer-events-none" />
-            <input
-              type="text"
-              value={alternativeSearch}
-              onChange={(e) => setAlternativeSearch(e.target.value)}
-              placeholder={t.labels.searchExercises}
-              className="w-full bg-ios-bg text-ios-text pl-8 pr-4 py-2.5 rounded-xl border-none outline-none focus:ring-2 focus:ring-ios-blue text-sm"
-              autoFocus
-            />
-          </div>
+          <SearchInput value={alternativeSearch} onChange={(e) => setAlternativeSearch(e.target.value)} onClear={() => setAlternativeSearch('')} placeholder={t.labels.searchExercises} />
           <div className="space-y-2">
-            {filteredAlternativeExercises
-              .filter((ex) => ex.id !== pickingAlternativeFor)
-              .map((ex) => (
-                <button
-                  key={ex.id}
-                  onClick={() => {
-                    if (pickingAlternativeFor) setAlternative(pickingAlternativeFor, ex.id);
-                    setPickingAlternativeFor(null);
-                  }}
-                  className="w-full flex items-center justify-between p-3 rounded-xl bg-ios-bg active:bg-ios-blue/10 transition-colors text-left"
-                >
-                  <div>
-                    <p className="text-sm font-semibold text-ios-text">{ex.name}</p>
-                    <p className="text-xs text-ios-gray">{getTranslatedGroupName(ex.muscleGroup)}</p>
-                  </div>
-                  <Check size={16} className="text-ios-gray/30" />
-                </button>
-              ))}
+            {filteredAlternativeExercises.filter((ex) => ex.id !== pickingAlternativeFor).map((ex) => (
+              <button key={ex.id} onClick={() => { if (pickingAlternativeFor) setAlternative(pickingAlternativeFor, ex.id); setPickingAlternativeFor(null); }} className="w-full rounded-xl border border-app-border bg-app-surface p-3 text-left transition-colors active:bg-app-surface-muted">
+                <div>
+                  <p className="text-sm font-semibold text-app-text">{ex.name}</p>
+                  <p className="text-xs text-app-text-muted">{getTranslatedGroupName(ex.muscleGroup)}</p>
+                </div>
+              </button>
+            ))}
           </div>
         </div>
       </Modal>
@@ -615,37 +421,18 @@ export const RoutinesScreen: React.FC<Props> = ({
           actions={[
             ...(!isFirst ? [{ label: t.labels.moveUp, icon: <ArrowUp size={16} />, onPress: () => { handleMoveUp(actionSheetExerciseId); setActionSheetExerciseId(null); } }] : []),
             ...(!isLast ? [{ label: t.labels.moveDown, icon: <ArrowDown size={16} />, onPress: () => { handleMoveDown(actionSheetExerciseId); setActionSheetExerciseId(null); } }] : []),
-            {
-              label: t.labels.removeFromRoutine,
-              destructive: true,
-              onPress: () => {
-                setConfirmRemoveExerciseId(actionSheetExerciseId);
-                setActionSheetExerciseId(null);
-              },
-            },
+            { label: t.labels.removeFromRoutine, destructive: true, onPress: () => { setConfirmRemoveExerciseId(actionSheetExerciseId); setActionSheetExerciseId(null); } },
           ]}
           onClose={() => setActionSheetExerciseId(null)}
         />
       )}
 
       {confirmDeleteRoutineId && (
-        <ConfirmModal
-          title={t.prompts.confirmDelete}
-          confirmLabel={t.actions.delete}
-          destructive
-          onConfirm={handleConfirmDeleteRoutine}
-          onCancel={() => setConfirmDeleteRoutineId(null)}
-        />
+        <ConfirmModal title={t.prompts.confirmDelete} confirmLabel={t.actions.delete} destructive onConfirm={handleConfirmDeleteRoutine} onCancel={() => setConfirmDeleteRoutineId(null)} />
       )}
 
       {confirmRemoveExerciseId && (
-        <ConfirmModal
-          title={t.labels.removeFromRoutine}
-          confirmLabel={t.actions.delete}
-          destructive
-          onConfirm={() => handleRemoveExerciseFromRoutine(confirmRemoveExerciseId)}
-          onCancel={() => setConfirmRemoveExerciseId(null)}
-        />
+        <ConfirmModal title={t.labels.removeFromRoutine} confirmLabel={t.actions.delete} destructive onConfirm={() => handleRemoveExerciseFromRoutine(confirmRemoveExerciseId)} onCancel={() => setConfirmRemoveExerciseId(null)} />
       )}
     </div>
   );
@@ -678,86 +465,38 @@ const RoutineExerciseCard: React.FC<RoutineExerciseCardProps> = ({
   const handlers = useLongPress({ onLongPress });
 
   return (
-    <div
-      {...handlers}
-      className="bg-ios-card rounded-2xl p-4"
-    >
-      <div className="flex items-start justify-between mb-2">
-        <div className="flex-1 min-w-0">
-          <h3 className="text-base font-semibold text-ios-text truncate">{exercise.name}</h3>
-          <p className="text-xs text-ios-gray uppercase tracking-wide mt-0.5">
-            {getTranslatedGroupName(exercise.muscleGroup)}
-          </p>
+    <Surface {...handlers} className="select-none">
+      <div className="mb-2 flex items-start justify-between">
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate text-base font-semibold text-app-text">{exercise.name}</h3>
+          <p className="mt-0.5 text-xs uppercase tracking-wide text-app-text-muted">{getTranslatedGroupName(exercise.muscleGroup)}</p>
         </div>
         {alternativeExercise && (
-          <button
-            onClick={onToggleAlternative}
-            onMouseDown={(e) => e.stopPropagation()}
-            onTouchStart={(e) => e.stopPropagation()}
-            className="ml-2 flex-shrink-0 flex items-center gap-1 text-xs font-semibold text-ios-blue bg-ios-blue/10 px-2 py-1 rounded-full active:opacity-70"
-          >
-            <Shuffle size={11} />
-            {isUsingAlternative ? t.labels.swapToMain : t.labels.swapToAlternative}
+          <button onClick={onToggleAlternative} onMouseDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()} className="ml-2 flex-shrink-0 rounded-full border border-app-border bg-app-surface px-2 py-1 text-xs font-semibold text-app-text active:opacity-70">
+            <Shuffle size={11} className="inline-block" /> {isUsingAlternative ? t.labels.swapToMain : t.labels.swapToAlternative}
           </button>
         )}
       </div>
 
-      <div className="flex items-center gap-2 mb-3">
-        <span className="text-xs font-semibold text-ios-blue bg-ios-blue/10 px-2 py-0.5 rounded-full">
-          {routineExercise.reps
-            ? `${routineExercise.sets}×${routineExercise.reps}`
-            : `${routineExercise.sets}`}
-        </span>
-        {routineExercise.toFailure && (
-          <span className="text-xs font-semibold text-red-500 bg-red-500/10 px-2 py-0.5 rounded-full">
-            {t.labels.toFailure}
-          </span>
-        )}
-        {routineExercise.dropset && (
-          <span className="text-xs font-semibold text-orange-500 bg-orange-500/10 px-2 py-0.5 rounded-full">
-            {t.labels.dropset}
-          </span>
-        )}
+      <div className="mb-3 flex items-center gap-2">
+        <Badge variant="accent" className="px-2 py-0.5">{routineExercise.reps ? `${routineExercise.sets}×${routineExercise.reps}` : `${routineExercise.sets}`}</Badge>
+        {routineExercise.toFailure && <Badge variant="danger">{t.labels.toFailure}</Badge>}
+        {routineExercise.dropset && <Badge variant="warning">{t.labels.dropset}</Badge>}
       </div>
 
       <div className="grid grid-cols-3 gap-2">
         <div>
-          <label className="block text-xs font-medium text-ios-gray mb-1">{t.labels.weightShort}</label>
-          <input
-            type="number"
-            inputMode="decimal"
-            value={form.weight}
-            onChange={(e) => onUpdateForm('weight', e.target.value)}
-            onMouseDown={(e) => e.stopPropagation()}
-            onTouchStart={(e) => e.stopPropagation()}
-            placeholder="0"
-            className="w-full bg-ios-bg text-ios-text p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-ios-blue text-sm"
-          />
+          <label className="mb-1 block text-xs font-medium text-app-text-muted">{t.labels.weightShort}</label>
+          <Input type="number" inputMode="decimal" value={form.weight} onChange={(e) => onUpdateForm('weight', e.target.value)} onMouseDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()} placeholder="0" compact />
         </div>
         <div>
-          <label className="block text-xs font-medium text-ios-gray mb-1">{t.labels.reps}</label>
-          <input
-            type="number"
-            inputMode="numeric"
-            value={form.reps}
-            onChange={(e) => onUpdateForm('reps', e.target.value)}
-            onMouseDown={(e) => e.stopPropagation()}
-            onTouchStart={(e) => e.stopPropagation()}
-            placeholder="0"
-            className="w-full bg-ios-bg text-ios-text p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-ios-blue text-sm"
-          />
+          <label className="mb-1 block text-xs font-medium text-app-text-muted">{t.labels.reps}</label>
+          <Input type="number" inputMode="numeric" value={form.reps} onChange={(e) => onUpdateForm('reps', e.target.value)} onMouseDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()} placeholder="0" compact />
         </div>
         <div className="flex items-end">
-          <button
-            onClick={onLog}
-            onMouseDown={(e) => e.stopPropagation()}
-            onTouchStart={(e) => e.stopPropagation()}
-            className="w-full py-2 rounded-lg bg-ios-blue text-white text-sm font-semibold active:opacity-80"
-          >
-            {t.actions.log}
-          </button>
+          <Button onClick={onLog} className="w-full">{t.actions.log}</Button>
         </div>
       </div>
-    </div>
+    </Surface>
   );
 };

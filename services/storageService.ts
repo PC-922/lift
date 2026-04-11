@@ -49,7 +49,7 @@ function isRoutine(value: unknown): value is Routine {
     && typeof (value as Routine).id === 'string'
     && typeof (value as Routine).name === 'string'
     && Array.isArray((value as Routine).exercises)
-    && (value as Routine).exercises.every(isRoutineExercise);
+    && (value as Routine).exercises.every(isRoutineExerciseLike);
 }
 
 function makeId(prefix: string): string {
@@ -408,22 +408,23 @@ class LocalStorageManager implements StorageManagerInterface {
       if (Array.isArray(parsed)) {
         exercisesToImport = parsed.filter(isExercise);
       } else if (typeof parsed === 'object' && parsed !== null && 'exercises' in parsed && Array.isArray((parsed as { exercises: unknown }).exercises)) {
-        exercisesToImport = (parsed as { exercises: unknown[] }).exercises.filter(isExercise);
-        if (Array.isArray((parsed as { groups?: unknown }).groups)) {
-          groupsToImport = (parsed as { groups: unknown[] }).groups.filter((item): item is string => typeof item === 'string');
+        const data = parsed as { exercises: unknown[]; groups?: unknown; routines?: unknown };
+        exercisesToImport = data.exercises.filter(isExercise);
+        if (Array.isArray(data.groups)) {
+          groupsToImport = data.groups.filter((item): item is string => typeof item === 'string');
         }
-        if (Array.isArray((parsed as { routines?: unknown }).routines)) {
-        routinesToImport = (parsed as { routines: unknown[] }).routines.filter((routine): routine is Routine => {
+        if (Array.isArray(data.routines)) {
+          routinesToImport = data.routines.filter((routine): routine is Routine => {
           if (!isRoutine(routine)) return false;
           return routine.exercises.every((exercise) => typeof exercise.reps === 'string' || typeof exercise.reps === 'number');
-        }).map((routine) => ({
-          ...routine,
-          exercises: routine.exercises.map((exercise) => ({
-            ...exercise,
-            reps: typeof exercise.reps === 'number' ? String(exercise.reps) : exercise.reps,
-            toFailure: exercise.toFailure ?? false,
-          })),
-        }));
+          }).map((routine) => ({
+            ...routine,
+            exercises: routine.exercises.map((exercise) => ({
+              ...exercise,
+              reps: typeof exercise.reps === 'number' ? String(exercise.reps) : exercise.reps,
+              toFailure: exercise.toFailure ?? false,
+            })),
+          }));
         }
       } else {
         return false;

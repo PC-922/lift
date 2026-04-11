@@ -1,6 +1,8 @@
 import React from 'react';
 import { useTranslations } from '../utils/translations';
 import { Modal } from './Modal';
+import { Surface } from './ui/Surface';
+import { Button } from './ui/Button';
 
 export interface ActionSheetAction {
   label: string;
@@ -26,12 +28,10 @@ export const ActionSheet: React.FC<Props> = ({ title, subtitle, actions, onClose
         onTouchEnd={(e) => e.stopPropagation()}
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
-        <div className="bg-ios-card rounded-2xl overflow-hidden mb-2">
-          <div className="px-4 pt-4 pb-3 border-b border-ios-separator">
-            <p className="text-sm font-semibold text-ios-text text-center">{title}</p>
-            {subtitle && (
-              <p className="text-xs text-ios-gray text-center mt-0.5">{subtitle}</p>
-            )}
+        <Surface className="mb-2 overflow-hidden p-0">
+          <div className="px-4 py-3 border-b border-app-border text-center">
+            <p className="text-sm font-semibold text-app-text">{title}</p>
+            {subtitle && <p className="mt-0.5 text-xs text-app-text-muted">{subtitle}</p>}
           </div>
           {actions.map((action, index) => (
             <button
@@ -40,21 +40,18 @@ export const ActionSheet: React.FC<Props> = ({ title, subtitle, actions, onClose
                 action.onPress();
                 onClose();
               }}
-              className={`w-full px-4 py-4 text-base font-medium text-center active:bg-ios-bg transition-colors ${
-                action.destructive ? 'text-red-500' : 'text-ios-blue'
-              } ${index < actions.length - 1 ? 'border-b border-ios-separator' : ''}`}
+              className={`w-full border-b border-app-border px-4 py-4 text-center text-base font-medium transition-colors active:bg-app-surface-muted ${
+                action.destructive ? 'text-app-danger' : 'text-app-text'
+              } ${index === actions.length - 1 ? 'border-b-0' : ''}`}
             >
               {action.label}
             </button>
           ))}
-        </div>
+        </Surface>
 
-        <button
-          onClick={onClose}
-          className="w-full bg-ios-card rounded-2xl py-4 text-base font-semibold text-ios-blue active:bg-ios-bg transition-colors"
-        >
+        <Button variant="secondary" className="w-full" onClick={onClose}>
           {t.actions.cancel}
-        </button>
+        </Button>
       </div>
     </Modal>
   );
