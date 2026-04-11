@@ -2,7 +2,7 @@ import React, { useMemo, useRef, useState } from 'react';
 import { Exercise } from '../types';
 import { getRecentProgressions } from '../utils/progression';
 import { getTopWeightExercises } from '../utils/insights';
-import { t } from '../utils/translations';
+import { useTranslations, getTranslatedGroupName } from '../utils/translations';
 import { BarChart3 } from 'lucide-react';
 
 interface Props {
@@ -10,6 +10,7 @@ interface Props {
 }
 
 export const InsightsScreen: React.FC<Props> = ({ exercises }) => {
+  const t = useTranslations();
   const recentProgressions = getRecentProgressions(exercises, 3);
   const topWeightExercises = getTopWeightExercises(exercises, 3);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -73,7 +74,7 @@ export const InsightsScreen: React.FC<Props> = ({ exercises }) => {
                               <div className="flex-1 min-w-0">
                                 <h3 className="text-base font-semibold text-ios-text truncate">{progression.exerciseName}</h3>
                                 <p className="text-xs text-ios-gray mt-0.5 uppercase tracking-wide">
-                                  {(t.muscleGroups as Record<string, string>)[progression.muscleGroup] || progression.muscleGroup}
+                                  {getTranslatedGroupName(progression.muscleGroup)}
                                 </p>
                               </div>
                               <span className="text-xs text-ios-gray flex-shrink-0 mt-1">{progression.progressionText}</span>
@@ -134,7 +135,7 @@ export const InsightsScreen: React.FC<Props> = ({ exercises }) => {
                               <div className="flex-1">
                                 <h3 className="text-lg font-semibold text-ios-text">{exercise.exerciseName}</h3>
                                 <p className="text-xs text-ios-gray mt-1 uppercase tracking-wide">
-                                  {(t.muscleGroups as any)[exercise.muscleGroup] || exercise.muscleGroup}
+                                  {getTranslatedGroupName(exercise.muscleGroup)}
                                 </p>
                                 <div className="mt-3 flex items-center gap-4">
                                   <div>

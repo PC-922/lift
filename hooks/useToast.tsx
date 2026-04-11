@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
+import { makeId } from '../services/storageService';
 
 export type ToastType = 'achievement' | 'info';
 
@@ -20,7 +21,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   const showToast = useCallback((text: string, type: ToastType = 'achievement') => {
-    const id = Date.now().toString();
+    const id = makeId('toast');
     setToasts((prev) => [...prev, { id, text, type }]);
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));

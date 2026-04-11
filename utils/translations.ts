@@ -1,3 +1,6 @@
+import { useSyncExternalStore } from 'react';
+import { preferencesService } from '../services/preferencesService';
+
 export const translations = {
   es: {
     appTitle: 'LIFT',
@@ -369,17 +372,26 @@ export const translations = {
 
 export const getLanguage = (): 'es' | 'en' => {
   try {
-    const raw = localStorage.getItem('lift_prefs_v1');
-    if (raw) {
-      const prefs = JSON.parse(raw);
-      if (prefs.language === 'es' || prefs.language === 'en') return prefs.language;
-    }
+    const prefsLanguage = preferencesService.getLanguage();
+    if (prefsLanguage === 'es' || prefsLanguage === 'en') return prefsLanguage;
   } catch {
-    // ignore parse errors
   }
   if (typeof navigator === 'undefined') return 'es';
   const lang = navigator.language.split('-')[0];
   return lang === 'es' ? 'es' : 'en';
+};
+
+export const useLanguage = (): 'es' | 'en' => {
+  return useSyncExternalStore(
+    preferencesService.subscribe,
+    getLanguage,
+    getLanguage
+  );
+};
+
+export const useTranslations = () => {
+  const language = useLanguage();
+  return translations[language];
 };
 
 export const t = translations[getLanguage()];
@@ -390,7 +402,9 @@ export const t = translations[getLanguage()];
  * are returned as-is.
  */
 export function getTranslatedGroupName(group: string): string {
-  return (translations.es.muscleGroups as Record<string, string>)[group]
-    ? (t.muscleGroups as Record<string, string>)[group]
+  const language = getLanguage();
+  const translated = translations.es.muscleGroups as Record<string, string>;
+  return translated[group]
+    ? (translations[language].muscleGroups as Record<string, string>)[group]
     : group;
 }

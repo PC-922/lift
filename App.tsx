@@ -12,12 +12,14 @@ import ConfirmModal from './components/ConfirmModal';
 import PromptModal from './components/PromptModal';
 import { Modal } from './components/Modal';
 import { ToastProvider } from './hooks/useToast';
-import { t, getTranslatedGroupName } from './utils/translations';
+import { useTranslations, getTranslatedGroupName } from './utils/translations';
 import { Plus, Download, Share, PlusSquare, MoreVertical, Pencil } from 'lucide-react';
+import { makeId } from './services/storageService';
 
 const APP_LOGO_SRC = '/lift-32.png';
 
 const App: React.FC = () => {
+  const t = useTranslations();
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [muscleGroups, setMuscleGroups] = useState<string[]>([]);
   const [routines, setRoutines] = useState<Routine[]>([]);
@@ -85,7 +87,7 @@ const App: React.FC = () => {
     e.preventDefault();
     if (!newExerciseName.trim()) return;
     storageManager.saveExercise({
-      id: Date.now().toString(),
+      id: makeId('exercise'),
       name: newExerciseName.trim(),
       muscleGroup: newExerciseGroup,
       logs: [],
@@ -172,9 +174,9 @@ const App: React.FC = () => {
   };
 
   const refreshSelectedExercise = useCallback((id: string) => {
-    const updated = storageManager.getExercises().find((e) => e.id === id) ?? null;
+    const updated = exercises.find((e) => e.id === id) ?? null;
     setSelectedExercise(updated);
-  }, []);
+  }, [exercises]);
 
   const currentExercise = selectedExercise
     ? (exercises.find((e) => e.id === selectedExercise.id) ?? null)

@@ -7,6 +7,58 @@ const GROUPS_KEY = 'lift_groups_v1';
 const GROUP_SORT_KEY = 'lift_group_sort_v1';
 const ROUTINES_KEY = 'lift_routines_v1';
 
+function safeParse<T>(raw: string | null, fallback: T): T {
+  if (!raw) return fallback;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+function isExerciseLog(value: unknown): value is ExerciseLog {
+  return typeof value === 'object' && value !== null
+    && typeof (value as ExerciseLog).date === 'string'
+    && typeof (value as ExerciseLog).weight === 'number'
+    && typeof (value as ExerciseLog).reps === 'number';
+}
+
+function isExercise(value: unknown): value is Exercise {
+  return typeof value === 'object' && value !== null
+    && typeof (value as Exercise).id === 'string'
+    && typeof (value as Exercise).name === 'string'
+    && typeof (value as Exercise).muscleGroup === 'string'
+    && Array.isArray((value as Exercise).logs)
+    && (value as Exercise).logs.every(isExerciseLog);
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === 'string');
+}
+
+function isRoutineExerciseLike(value: unknown): value is RoutineExercise | (Omit<RoutineExercise, 'reps' | 'toFailure'> & { reps: string | number; toFailure?: boolean }) {
+  return typeof value === 'object' && value !== null
+    && typeof (value as RoutineExercise).exerciseId === 'string'
+    && typeof (value as RoutineExercise).sets === 'number'
+    && (typeof (value as RoutineExercise).reps === 'string' || typeof (value as RoutineExercise).reps === 'number')
+    && typeof (value as RoutineExercise).dropset === 'boolean';
+}
+
+function isRoutine(value: unknown): value is Routine {
+  return typeof value === 'object' && value !== null
+    && typeof (value as Routine).id === 'string'
+    && typeof (value as Routine).name === 'string'
+    && Array.isArray((value as Routine).exercises)
+    && (value as Routine).exercises.every(isRoutineExercise);
+}
+
+function makeId(prefix: string): string {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return `${prefix}_${crypto.randomUUID()}`;
+  }
+  return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
 const DEFAULT_GROUPS = [
   'Pecho',
   'Espalda',
@@ -70,8 +122,8 @@ function buildSeedExercises(): Exercise[] {
 
 class LocalStorageManager implements StorageManagerInterface {
   private loadData(): Exercise[] {
-    const data = localStorage.getItem(STORAGE_KEY);
-    return data ? JSON.parse(data) : [];
+    const parsed = safeParse<unknown>(localStorage.getItem(STORAGE_KEY), []);
+    return Array.isArray(parsed) ? parsed.filter(isExercise) : [];
   }
 
   private saveData(data: Exercise[]): void {
@@ -79,10 +131,10 @@ class LocalStorageManager implements StorageManagerInterface {
   }
 
   getExercises(): Exercise[] {
-    const data = localStorage.getItem(STORAGE_KEY);
-    if (data) {
-      const parsed: Exercise[] = JSON.parse(data);
-      if (parsed.length > 0) return parsed;
+    const data = this.loadData();
+    if (data.length > 0) return data;
+    if (localStorage.getItem(STORAGE_KEY)) {
+      this.saveData([]);
     }
     const seed = buildSeedExercises();
     this.saveData(seed);
@@ -206,9 +258,9 @@ class LocalStorageManager implements StorageManagerInterface {
   }
 
   getMuscleGroups(): string[] {
-    const data = localStorage.getItem(GROUPS_KEY);
-    if (data) {
-      return JSON.parse(data);
+    const parsed = safeParse<unknown>(localStorage.getItem(GROUPS_KEY), null);
+    if (isStringArray(parsed)) {
+      return parsed;
     } else {
       this.saveMuscleGroups(DEFAULT_GROUPS);
       return DEFAULT_GROUPS;
@@ -284,26 +336,28 @@ class LocalStorageManager implements StorageManagerInterface {
   }
 
   getRoutines(): Routine[] {
-    const data = localStorage.getItem(ROUTINES_KEY);
-    if (!data) return [];
-    const parsed = JSON.parse(data) as Array<Routine & { exerciseIds?: string[] }>;
-    return parsed.map((r) => {
-      if (r.exercises) {
-        const migrated = r.exercises.map((re) => ({
+    const parsed = safeParse<unknown>(localStorage.getItem(ROUTINES_KEY), []);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.flatMap((item) => {
+      const raw = item as { id?: unknown; name?: unknown; exercises?: unknown; exerciseIds?: unknown };
+      if (typeof raw.id !== 'string' || typeof raw.name !== 'string') return [];
+      if (Array.isArray(raw.exercises) && raw.exercises.every(isRoutineExerciseLike)) {
+        const migrated = raw.exercises.map((re) => ({
           ...re,
           reps: typeof re.reps === 'number' ? String(re.reps) : re.reps,
           toFailure: re.toFailure ?? false,
         }));
-        return { ...r, exercises: migrated } as Routine;
+        return [{ id: raw.id, name: raw.name, exercises: migrated }];
       }
-      const migrated: RoutineExercise[] = (r.exerciseIds ?? []).map((id) => ({
+      const exerciseIds = Array.isArray(raw.exerciseIds) ? raw.exerciseIds.filter((id): id is string => typeof id === 'string') : [];
+      const migrated: RoutineExercise[] = exerciseIds.map((id) => ({
         exerciseId: id,
         sets: 3,
         reps: '10',
         dropset: false,
         toFailure: false,
       }));
-      return { id: r.id, name: r.name, exercises: migrated };
+      return [{ id: raw.id, name: raw.name, exercises: migrated }];
     });
   }
 
@@ -345,31 +399,38 @@ class LocalStorageManager implements StorageManagerInterface {
 
   importData(jsonString: string): boolean {
     try {
-      const parsed = JSON.parse(jsonString);
+      const parsed = JSON.parse(jsonString) as unknown;
       
       let exercisesToImport: Exercise[] = [];
       let groupsToImport: string[] = [];
       let routinesToImport: Routine[] = [];
 
       if (Array.isArray(parsed)) {
-        exercisesToImport = parsed;
-      } else if (parsed.exercises && Array.isArray(parsed.exercises)) {
-        exercisesToImport = parsed.exercises;
-        if (Array.isArray(parsed.groups)) {
-          groupsToImport = parsed.groups;
+        exercisesToImport = parsed.filter(isExercise);
+      } else if (typeof parsed === 'object' && parsed !== null && 'exercises' in parsed && Array.isArray((parsed as { exercises: unknown }).exercises)) {
+        exercisesToImport = (parsed as { exercises: unknown[] }).exercises.filter(isExercise);
+        if (Array.isArray((parsed as { groups?: unknown }).groups)) {
+          groupsToImport = (parsed as { groups: unknown[] }).groups.filter((item): item is string => typeof item === 'string');
         }
-        if (Array.isArray(parsed.routines)) {
-          routinesToImport = parsed.routines;
+        if (Array.isArray((parsed as { routines?: unknown }).routines)) {
+        routinesToImport = (parsed as { routines: unknown[] }).routines.filter((routine): routine is Routine => {
+          if (!isRoutine(routine)) return false;
+          return routine.exercises.every((exercise) => typeof exercise.reps === 'string' || typeof exercise.reps === 'number');
+        }).map((routine) => ({
+          ...routine,
+          exercises: routine.exercises.map((exercise) => ({
+            ...exercise,
+            reps: typeof exercise.reps === 'number' ? String(exercise.reps) : exercise.reps,
+            toFailure: exercise.toFailure ?? false,
+          })),
+        }));
         }
       } else {
         return false;
       }
-      
-      const isValid = exercisesToImport.every(item => item.id && item.name && Array.isArray(item.logs));
-      if (!isValid) return false;
 
       const currentData = this.loadData();
-      const newMap = new Map(currentData.map(item => [item.id, item]));
+      const newMap = new Map(currentData.map((item) => [item.id, item]));
       exercisesToImport.forEach((item: Exercise) => {
         newMap.set(item.id, item);
       });
@@ -383,7 +444,7 @@ class LocalStorageManager implements StorageManagerInterface {
 
       if (routinesToImport.length > 0) {
         const currentRoutines = this.getRoutines();
-        const routineMap = new Map(currentRoutines.map(r => [r.id, r]));
+        const routineMap = new Map(currentRoutines.map((r) => [r.id, r]));
         routinesToImport.forEach((r: Routine) => {
           routineMap.set(r.id, r);
         });
@@ -399,3 +460,5 @@ class LocalStorageManager implements StorageManagerInterface {
 }
 
 export const storageManager = new LocalStorageManager();
+
+export { makeId };

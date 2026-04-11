@@ -1,5 +1,5 @@
 import React from 'react';
-import { t } from '../utils/translations';
+import { useTranslations } from '../utils/translations';
 import { Modal } from './Modal';
 
 export interface ActionSheetAction {
@@ -17,6 +17,7 @@ interface Props {
 }
 
 export const ActionSheet: React.FC<Props> = ({ title, subtitle, actions, onClose }) => {
+  const t = useTranslations();
   return (
     <Modal open onClose={onClose} position="bottom">
       <div

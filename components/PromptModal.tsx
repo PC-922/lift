@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { t } from '../utils/translations';
+import { useTranslations } from '../utils/translations';
 import { Modal } from './Modal';
 
 interface Props {
@@ -17,6 +17,7 @@ export default function PromptModal({
   onConfirm,
   onCancel,
 }: Props) {
+  const t = useTranslations();
   const [value, setValue] = useState(initialValue);
 
   const handleConfirm = () => {

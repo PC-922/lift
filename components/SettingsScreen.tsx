@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Download, Upload, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { t, getLanguage } from '../utils/translations';
+import { useTranslations, useLanguage } from '../utils/translations';
 import { preferencesService } from '../services/preferencesService';
 import type { ScreenType } from './BottomNav';
 
@@ -12,8 +12,9 @@ interface Props {
 const SCREEN_ORDER: ScreenType[] = ['home', 'insights', 'routines', 'settings'];
 
 export const SettingsScreen: React.FC<Props> = ({ onExport, onImport }) => {
+  const t = useTranslations();
   const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const [currentLang, setCurrentLang] = useState<'es' | 'en'>(() => getLanguage());
+  const currentLang = useLanguage();
   const [currentDefaultScreen, setCurrentDefaultScreen] = useState<ScreenType | null>(
     () => preferencesService.getDefaultScreen()
   );
@@ -45,8 +46,6 @@ export const SettingsScreen: React.FC<Props> = ({ onExport, onImport }) => {
 
   const handleSetLanguage = (lang: 'es' | 'en') => {
     preferencesService.setLanguage(lang);
-    setCurrentLang(lang);
-    window.location.reload();
   };
 
   const handleSetDefaultScreen = (screen: ScreenType) => {

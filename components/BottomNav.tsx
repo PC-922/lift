@@ -1,6 +1,6 @@
 import React from 'react';
 import { Home, BarChart3, Settings, ListChecks } from 'lucide-react';
-import { t } from '../utils/translations';
+import { useTranslations } from '../utils/translations';
 
 export type ScreenType = 'home' | 'insights' | 'routines' | 'settings';
 
@@ -11,6 +11,7 @@ interface Props {
 }
 
 export const BottomNav: React.FC<Props> = ({ currentScreen, onScreenChange, onScreenReset }) => {
+  const t = useTranslations();
   const navItems: { id: ScreenType; label: string; icon: React.ReactNode }[] = [
     { id: 'home', label: t.labels.home, icon: <Home size={22} /> },
     { id: 'insights', label: t.labels.insights, icon: <BarChart3 size={22} /> },

@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Plus, Check, ChevronUp, Pencil, X, Search, ChevronDown, ArrowUp, ArrowDown, Shuffle } from 'lucide-react';
 import { Exercise, Routine, RoutineExercise } from '../types';
-import { t, getTranslatedGroupName } from '../utils/translations';
+import { useTranslations, getTranslatedGroupName } from '../utils/translations';
 import { getLatestLog } from '../utils/progression';
 import { RoutineCard } from './RoutineCard';
 import { ActionSheet } from './ActionSheet';
@@ -9,6 +9,7 @@ import ConfirmModal from './ConfirmModal';
 import { Modal } from './Modal';
 import { useLongPress } from '../hooks/useLongPress';
 import { useToast } from '../hooks/useToast';
+import { makeId } from '../services/storageService';
 
 interface Props {
   routines: Routine[];
@@ -39,6 +40,7 @@ export const RoutinesScreen: React.FC<Props> = ({
   onReorderRoutineExercise,
   resetSignal,
 }) => {
+  const t = useTranslations();
   const [activeRoutineId, setActiveRoutineId] = useState<string | null>(null);
   const [modalMode, setModalMode] = useState<ModalMode | null>(null);
   const [editingRoutine, setEditingRoutine] = useState<Routine | null>(null);
@@ -69,6 +71,11 @@ export const RoutinesScreen: React.FC<Props> = ({
   const activeRoutine = useMemo(
     () => routines.find((r) => r.id === activeRoutineId) ?? null,
     [routines, activeRoutineId]
+  );
+
+  const exerciseById = useMemo(
+    () => new Map(exercises.map((exercise) => [exercise.id, exercise] as const)),
+    [exercises]
   );
 
   const activeRoutineExercises = useMemo(() => {
@@ -161,7 +168,7 @@ export const RoutinesScreen: React.FC<Props> = ({
     const name = formName.trim();
     if (!name) return;
     onSaveRoutine({
-      id: editingRoutine?.id ?? Date.now().toString(),
+      id: editingRoutine?.id ?? makeId('routine'),
       name,
       exercises: formExercises,
     });
@@ -179,7 +186,7 @@ export const RoutinesScreen: React.FC<Props> = ({
 
   const handleDuplicate = (routine: Routine) => {
     onSaveRoutine({
-      id: Date.now().toString(),
+      id: makeId('routine'),
       name: `${routine.name} (2)`,
       exercises: [...routine.exercises],
     });
@@ -187,12 +194,12 @@ export const RoutinesScreen: React.FC<Props> = ({
 
   const getLogForm = useCallback((exerciseId: string): LogFormState => {
     if (logForms[exerciseId]) return logForms[exerciseId];
-    const latest = getLatestLog(exercises.find((e) => e.id === exerciseId)?.logs ?? []);
+    const latest = getLatestLog(exerciseById.get(exerciseId)?.logs ?? []);
     return {
       weight: latest?.weight.toString() ?? '',
       reps: latest?.reps.toString() ?? '',
     };
-  }, [logForms, exercises]);
+  }, [logForms, exerciseById]);
 
   const updateLogForm = (exerciseId: string, field: keyof LogFormState, value: string) => {
     setLogForms((prev) => ({
@@ -207,7 +214,7 @@ export const RoutinesScreen: React.FC<Props> = ({
     const reps = parseInt(form.reps, 10);
     if (Number.isNaN(weight) || Number.isNaN(reps)) return;
 
-    const targetExercise = exercises.find((e) => e.id === targetId);
+    const targetExercise = exerciseById.get(targetId);
     const latest = getLatestLog(targetExercise?.logs ?? []);
     const isFirst = (targetExercise?.logs ?? []).length === 0;
     const prevMax = latest?.weight ?? 0;
@@ -274,7 +281,7 @@ export const RoutinesScreen: React.FC<Props> = ({
     ? actionSheetExerciseIndex === activeRoutine.exercises.length - 1
     : true;
   const actionSheetExerciseName = actionSheetExerciseId
-    ? exercises.find((e) => e.id === actionSheetExerciseId)?.name ?? ''
+    ? exerciseById.get(actionSheetExerciseId)?.name ?? ''
     : '';
 
   return (
@@ -508,12 +515,12 @@ export const RoutinesScreen: React.FC<Props> = ({
                             </div>
 
                             <div className="mt-1">
-                              {routineEx.alternativeExerciseId ? (
+                                  {routineEx.alternativeExerciseId ? (
                                 <div className="flex items-center justify-between">
                                   <p className="text-xs text-ios-gray">
                                     {t.labels.alternative}:{' '}
                                     <span className="font-semibold text-ios-text">
-                                      {exercises.find((e) => e.id === routineEx.alternativeExerciseId)?.name ?? '—'}
+                                      {exerciseById.get(routineEx.alternativeExerciseId)?.name ?? '—'}
                                     </span>
                                   </p>
                                   <button
@@ -667,6 +674,7 @@ const RoutineExerciseCard: React.FC<RoutineExerciseCardProps> = ({
   onLongPress,
   onToggleAlternative,
 }) => {
+  const t = useTranslations();
   const handlers = useLongPress({ onLongPress });
 
   return (

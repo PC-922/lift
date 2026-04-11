@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { Routine } from '../types';
-import { t } from '../utils/translations';
+import { useTranslations } from '../utils/translations';
 import { ActionSheet } from './ActionSheet';
 
 interface Props {
@@ -15,6 +15,7 @@ interface Props {
 const LONG_PRESS_MS = 500;
 
 export const RoutineCard: React.FC<Props> = ({ routine, onClick, onEdit, onDelete, onDuplicate }) => {
+  const t = useTranslations();
   const [showActions, setShowActions] = useState(false);
 
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);

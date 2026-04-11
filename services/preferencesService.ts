@@ -14,6 +14,14 @@ const DEFAULT_PREFS: Prefs = {
   defaultScreen: null,
 };
 
+type PrefsListener = () => void;
+
+const listeners = new Set<PrefsListener>();
+
+function notifyListeners(): void {
+  listeners.forEach((listener) => listener());
+}
+
 function getPrefs(): Prefs {
   try {
     const raw = localStorage.getItem(PREFS_KEY);
@@ -30,6 +38,8 @@ function savePrefs(partial: Partial<Prefs>): void {
     localStorage.setItem(PREFS_KEY, JSON.stringify({ ...current, ...partial }));
   } catch {
     // localStorage unavailable — silently ignore
+  } finally {
+    notifyListeners();
   }
 }
 
@@ -57,6 +67,13 @@ function markOnboardingDone(): void {
   savePrefs({ onboardingDone: true });
 }
 
+function subscribe(listener: PrefsListener): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
 export const preferencesService = {
   getPrefs,
   savePrefs,
@@ -66,4 +83,5 @@ export const preferencesService = {
   setDefaultScreen,
   isOnboardingDone,
   markOnboardingDone,
+  subscribe,
 };

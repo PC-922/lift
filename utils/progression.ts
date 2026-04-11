@@ -1,6 +1,6 @@
 import { ExerciseLog } from '../types';
 import { Exercise } from '../types';
-import { t } from './translations';
+import { getLanguage, translations } from './translations';
 
 export const getLastProgressionDate = (logs: ExerciseLog[]): string | null => {
   if (!logs || logs.length < 2) return null;
@@ -128,6 +128,7 @@ export const calculateProgression = (logs: ExerciseLog[]): string | null => {
 };
 
 const formatRelativeDays = (diffDays: number): string => {
+  const t = translations[getLanguage()];
   if (diffDays <= 0) return t.time.today;
   if (diffDays === 1) return t.time.yesterday;
   if (diffDays < 7) return `${diffDays} ${t.time.days}`;

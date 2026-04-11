@@ -1,4 +1,4 @@
-import { t } from '../utils/translations';
+import { useTranslations } from '../utils/translations';
 import { Modal } from './Modal';
 
 interface Props {
@@ -18,6 +18,7 @@ export default function ConfirmModal({
   onConfirm,
   onCancel,
 }: Props) {
+  const t = useTranslations();
   return (
     <Modal open onClose={onCancel} position="bottom">
       <div className="w-full max-w-md rounded-t-2xl bg-ios-card p-6 space-y-4" onClick={(e) => e.stopPropagation()} onTouchEnd={(e) => e.stopPropagation()}>

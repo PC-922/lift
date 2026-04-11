@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ChevronLeft, Pencil, Trash2, X } from 'lucide-react';
 import { Exercise, ExerciseLog } from '../types';
-import { t, getTranslatedGroupName } from '../utils/translations';
+import { useTranslations, getTranslatedGroupName } from '../utils/translations';
 import { getLatestLog } from '../utils/progression';
 import { useToast } from '../hooks/useToast';
 import ConfirmModal from './ConfirmModal';
@@ -46,6 +46,7 @@ export const ExerciseDetail: React.FC<Props> = ({
   onDelete,
 }) => {
   const { showToast } = useToast();
+  const t = useTranslations();
   const latest = getLatestLog(exercise.logs);
 
   const [weight, setWeight] = useState(() => latest?.weight.toString() ?? '');

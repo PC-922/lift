@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Search, X } from 'lucide-react';
 import { Exercise } from '../types';
-import { t, getTranslatedGroupName } from '../utils/translations';
+import { useTranslations, getTranslatedGroupName } from '../utils/translations';
 import { useLongPress } from '../hooks/useLongPress';
 import { ActionSheet } from './ActionSheet';
 
@@ -67,6 +67,7 @@ export const ExerciseList: React.FC<Props> = ({
   onRenameGroup,
   onDeleteGroup,
 }) => {
+  const t = useTranslations();
   const [search, setSearch] = useState('');
   const [activeGroup, setActiveGroup] = useState<string | null>(null);
   const [actionExercise, setActionExercise] = useState<Exercise | null>(null);
