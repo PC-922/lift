@@ -15,6 +15,11 @@ import { ToastProvider } from './hooks/useToast';
 import { useTranslations, getTranslatedGroupName } from './utils/translations';
 import { Plus, Download, Share, PlusSquare, MoreVertical, Pencil } from 'lucide-react';
 import { makeId } from './services/storageService';
+import { Button } from './components/ui/Button';
+import { Input } from './components/ui/Input';
+import { Surface } from './components/ui/Surface';
+import { Badge } from './components/ui/Badge';
+import { cn } from './utils/cn';
 
 const APP_LOGO_SRC = '/lift-32.png';
 
@@ -186,25 +191,26 @@ const App: React.FC = () => {
 
   return (
     <ToastProvider>
-      <div className="min-h-screen pb-24 px-4 sm:max-w-md sm:mx-auto">
+      <div className="min-h-screen pb-24 sm:mx-auto sm:max-w-md">
 
         {showHeader && (
-          <header className="pt-8 pb-6 sticky top-0 z-20 bg-ios-bg/95 backdrop-blur-md">
-            <div className="grid grid-cols-3 items-center">
+          <header className="sticky top-0 z-20 border-b border-app-border bg-app-bg py-5 backdrop-blur-sm">
+            <div className="grid grid-cols-3 items-center px-4">
               <div />
               <div className="flex flex-col items-center text-center">
-                <img src={APP_LOGO_SRC} alt={t.appTitle} className="h-8 w-8 mb-2" />
-                <h1 className="text-xl font-bold tracking-tight text-ios-text">{t.appTitle}</h1>
+                <img src={APP_LOGO_SRC} alt={t.appTitle} className="mb-2 h-8 w-8" />
+                <h1 className="text-xl font-bold tracking-tight text-app-text">{t.appTitle}</h1>
               </div>
               <div className="flex items-center justify-end">
                 {!isStandalone && (
-                  <button
+                  <Button
                     onClick={() => setIsInstallModalOpen(true)}
-                    className="h-8 px-3 rounded-full bg-ios-blue text-white text-xs font-bold flex items-center gap-1 shadow-md animate-pulse active:opacity-80"
+                    size="sm"
+                    className="gap-1"
                   >
                     <Download size={14} />
                     {t.actions.install}
-                  </button>
+                  </Button>
                 )}
               </div>
             </div>
@@ -212,8 +218,8 @@ const App: React.FC = () => {
         )}
 
         {currentScreen !== 'home' && (
-          <header className="pt-8 pb-6">
-            <h1 className="text-2xl font-bold text-ios-text text-center">
+          <header className="px-4 pt-6 pb-4">
+            <h1 className="text-center text-2xl font-bold text-app-text">
               {currentScreen === 'insights' ? t.labels.insights
                 : currentScreen === 'routines' ? t.labels.routines
                 : t.labels.settings}
@@ -221,7 +227,7 @@ const App: React.FC = () => {
           </header>
         )}
 
-        <main className="animate-slideUp pb-24">
+          <main className="animate-slideUp pb-24">
           {currentScreen === 'settings' ? (
             <SettingsScreen onExport={handleExport} onImport={handleImportData} />
           ) : currentScreen === 'insights' ? (
@@ -252,7 +258,26 @@ const App: React.FC = () => {
               onDelete={() => { storageManager.deleteExercise(currentExercise.id); setSelectedExercise(null); loadData(); }}
             />
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-4 px-4 pt-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Button
+                  onClick={() => { setNewExerciseName(''); setNewExerciseGroup(muscleGroups[0] ?? ''); setAddingExercise(true); }}
+                  className="w-full"
+                >
+                  <Plus size={18} />
+                  {t.labels.newExercise}
+                </Button>
+
+                <Button
+                  onClick={() => setAddingGroup(true)}
+                  variant="secondary"
+                  className="w-full border-dashed"
+                >
+                  <Plus size={20} className="mr-2" />
+                  {t.actions.addGroup}
+                </Button>
+              </div>
+
               <ExerciseList
                 exercises={exercises}
                 muscleGroups={muscleGroups}
@@ -263,83 +288,64 @@ const App: React.FC = () => {
                 onRenameGroup={(group) => setRenamingGroup(group)}
                 onDeleteGroup={(group) => setDeletingGroup(group)}
               />
-
-              <div className="pt-2 border-t border-ios-separator">
-                <button
-                  onClick={() => setAddingGroup(true)}
-                  className="mt-2 py-4 border-2 border-dashed border-ios-separator rounded-2xl flex items-center justify-center text-ios-gray font-medium active:bg-gray-100 dark:active:bg-gray-800 transition-colors w-full"
-                >
-                  <Plus size={20} className="mr-2" />
-                  {t.actions.addGroup}
-                </button>
-              </div>
             </div>
           )}
         </main>
-
-        {currentScreen === 'home' && !currentExercise && (
-          <button
-            onClick={() => { setNewExerciseName(''); setNewExerciseGroup(muscleGroups[0] ?? ''); setAddingExercise(true); }}
-            className="fixed right-6 w-14 h-14 bg-ios-blue rounded-full shadow-lg shadow-blue-500/30 flex items-center justify-center text-white active:scale-95 transition-transform z-40"
-            style={{ bottom: 'calc(env(safe-area-inset-bottom) + 5rem)' }}
-            aria-label={t.labels.newExercise}
-          >
-            <Plus size={28} strokeWidth={2.5} />
-          </button>
-        )}
 
         <BottomNav currentScreen={currentScreen} onScreenChange={setCurrentScreen} onScreenReset={handleScreenReset} />
 
         <Modal open={addingExercise} onClose={() => setAddingExercise(false)} position="bottom">
           <div
-            className="bg-ios-card w-full max-w-md rounded-t-3xl p-6 shadow-2xl max-h-[85vh] overflow-y-auto animate-slideUp"
+            className="w-full max-w-md rounded-t-3xl border border-app-border bg-app-surface p-6 max-h-[85vh] overflow-y-auto animate-slideUp"
             onClick={(e) => e.stopPropagation()}
             onTouchEnd={(e) => e.stopPropagation()}
             style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 1.5rem)' }}
           >
-            <h2 className="text-xl font-bold mb-4 text-ios-text">{t.labels.newExercise}</h2>
+            <h2 className="mb-4 text-xl font-bold text-app-text">{t.labels.newExercise}</h2>
             <form onSubmit={handleAddExercise}>
-              <label className="block text-xs font-medium text-ios-gray mb-1 ml-1">{t.labels.name}</label>
-              <input
+              <label className="mb-1 ml-1 block text-xs font-medium text-app-text-muted">{t.labels.name}</label>
+              <Input
                 autoFocus
                 type="text"
                 placeholder="Ej. Bench Press"
                 value={newExerciseName}
                 onChange={(e) => setNewExerciseName(e.target.value)}
-                className="w-full bg-ios-bg text-ios-text p-4 rounded-xl mb-4 outline-none focus:ring-2 focus:ring-ios-blue"
+                className="mb-4"
               />
-              <label className="block text-xs font-medium text-ios-gray mb-2 ml-1">{t.labels.muscleGroup}</label>
+              <label className="mb-2 ml-1 block text-xs font-medium text-app-text-muted">{t.labels.muscleGroup}</label>
               <div className="grid grid-cols-3 gap-2 mb-6">
                 {muscleGroups.map((group) => (
                   <button
                     key={group}
                     type="button"
                     onClick={() => setNewExerciseGroup(group)}
-                    className={`py-2 px-1 rounded-lg text-sm font-medium transition-colors truncate ${
+                    className={cn(
+                      'truncate rounded-lg border px-1 py-2 text-sm font-medium transition-colors',
                       newExerciseGroup === group
-                        ? 'bg-ios-blue text-white shadow-md'
-                        : 'bg-ios-bg text-ios-text active:bg-gray-200 dark:active:bg-gray-700'
-                    }`}
+                        ? 'border-app-accent bg-app-accent text-app-accent-foreground'
+                        : 'border-app-border bg-app-surface text-app-text active:bg-app-surface-muted'
+                    )}
                   >
                     {getTranslatedGroupName(group)}
                   </button>
                 ))}
               </div>
-              <div className="flex gap-3 sticky bottom-0 bg-ios-card pt-2">
-                <button
+              <div className="sticky bottom-0 flex gap-3 bg-app-surface pt-2">
+                <Button
                   type="button"
                   onClick={() => setAddingExercise(false)}
-                  className="flex-1 py-3.5 rounded-xl font-semibold bg-ios-bg text-ios-text active:opacity-70"
+                  variant="secondary"
+                  className="flex-1"
                 >
                   {t.actions.cancel}
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
                   disabled={!newExerciseName.trim()}
-                  className="flex-1 py-3.5 rounded-xl font-semibold bg-ios-blue text-white active:opacity-80 disabled:opacity-50"
+                  className="flex-1"
                 >
                   {t.actions.save}
-                </button>
+                </Button>
               </div>
             </form>
           </div>
@@ -348,12 +354,12 @@ const App: React.FC = () => {
         <Modal open={!!movingExercise} onClose={() => setMovingExercise(null)} position="center">
           {movingExercise && (
             <div
-              className="bg-ios-card w-full max-w-md rounded-2xl p-6 shadow-2xl animate-scaleIn mx-4"
+              className="mx-4 w-full max-w-md rounded-2xl border border-app-border bg-app-surface p-6 animate-scaleIn"
               onClick={(e) => e.stopPropagation()}
               onTouchEnd={(e) => e.stopPropagation()}
             >
-              <h2 className="text-xl font-bold mb-2 text-ios-text">{t.actions.move}</h2>
-              <p className="text-sm text-ios-gray mb-4">{movingExercise.name}</p>
+              <h2 className="mb-2 text-xl font-bold text-app-text">{t.actions.move}</h2>
+              <p className="mb-4 text-sm text-app-text-muted">{movingExercise.name}</p>
               <div className="grid grid-cols-3 gap-2 mb-6 max-h-[40vh] overflow-y-auto">
                 {muscleGroups
                   .filter((g) => g !== movingExercise.muscleGroup)
@@ -365,18 +371,19 @@ const App: React.FC = () => {
                         setMovingExercise(null);
                         loadData();
                       }}
-                      className="py-2 px-1 rounded-lg text-sm font-medium transition-colors bg-ios-bg text-ios-text active:bg-ios-blue active:text-white truncate"
+                      className="truncate rounded-lg border border-app-border bg-app-surface px-1 py-2 text-sm font-medium text-app-text transition-colors active:bg-app-accent active:text-app-accent-foreground"
                     >
                       {getTranslatedGroupName(group)}
                     </button>
                   ))}
               </div>
-              <button
+              <Button
                 onClick={() => setMovingExercise(null)}
-                className="w-full py-3.5 rounded-xl font-semibold bg-ios-bg text-ios-text active:opacity-70"
+                variant="secondary"
+                className="w-full"
               >
                 {t.actions.cancel}
-              </button>
+              </Button>
             </div>
           )}
         </Modal>
@@ -451,45 +458,46 @@ const App: React.FC = () => {
 
         <Modal open={isInstallModalOpen} onClose={() => setIsInstallModalOpen(false)} position="center">
           <div
-            className="bg-ios-card w-full max-w-sm rounded-2xl p-6 shadow-2xl animate-scaleIn max-h-[80vh] overflow-y-auto mx-4"
+            className="mx-4 max-h-[80vh] w-full max-w-sm animate-scaleIn overflow-y-auto rounded-2xl border border-app-border bg-app-surface p-6"
             onClick={(e) => e.stopPropagation()}
             onTouchEnd={(e) => e.stopPropagation()}
           >
-            <h2 className="text-xl font-bold mb-6 text-ios-text text-center">{t.labels.installGuide}</h2>
+            <h2 className="mb-6 text-center text-xl font-bold text-app-text">{t.labels.installGuide}</h2>
             <div className="space-y-6">
               <div className="space-y-2">
-                <h3 className="font-semibold text-ios-text text-sm uppercase tracking-wide opacity-80">{t.labels.installIosSafari}</h3>
-                <div className="bg-ios-bg p-4 rounded-xl space-y-3">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-app-text-muted">{t.labels.installIosSafari}</h3>
+                <Surface className="space-y-3 p-4">
                   <div className="flex items-center gap-3">
-                    <div className="bg-white dark:bg-gray-700 p-2 rounded-lg text-ios-blue shadow-sm"><Share size={20} /></div>
-                    <span className="text-sm text-ios-text">{t.labels.stepShare}</span>
+                    <Badge variant="accent" className="rounded-lg px-2 py-2"><Share size={20} /></Badge>
+                    <span className="text-sm text-app-text">{t.labels.stepShare}</span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="bg-white dark:bg-gray-700 p-2 rounded-lg text-ios-text shadow-sm"><PlusSquare size={20} /></div>
-                    <span className="text-sm text-ios-text">{t.labels.stepAdd}</span>
+                    <Badge variant="neutral" className="rounded-lg px-2 py-2"><PlusSquare size={20} /></Badge>
+                    <span className="text-sm text-app-text">{t.labels.stepAdd}</span>
                   </div>
-                </div>
+                </Surface>
               </div>
               <div className="space-y-2">
-                <h3 className="font-semibold text-ios-text text-sm uppercase tracking-wide opacity-80">{t.labels.installAndroid}</h3>
-                <div className="bg-ios-bg p-4 rounded-xl space-y-3">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-app-text-muted">{t.labels.installAndroid}</h3>
+                <Surface className="space-y-3 p-4">
                   <div className="flex items-center gap-3">
-                    <div className="bg-white dark:bg-gray-700 p-2 rounded-lg text-ios-text shadow-sm"><MoreVertical size={20} /></div>
-                    <span className="text-sm text-ios-text">{t.labels.stepMenu}</span>
+                    <Badge variant="neutral" className="rounded-lg px-2 py-2"><MoreVertical size={20} /></Badge>
+                    <span className="text-sm text-app-text">{t.labels.stepMenu}</span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="bg-white dark:bg-gray-700 p-2 rounded-lg text-ios-text shadow-sm"><Download size={20} /></div>
-                    <span className="text-sm text-ios-text">{t.labels.stepInstall}</span>
+                    <Badge variant="accent" className="rounded-lg px-2 py-2"><Download size={20} /></Badge>
+                    <span className="text-sm text-app-text">{t.labels.stepInstall}</span>
                   </div>
-                </div>
+                </Surface>
               </div>
             </div>
-            <button
+            <Button
               onClick={() => setIsInstallModalOpen(false)}
-              className="mt-6 w-full py-3.5 rounded-xl font-semibold bg-ios-bg text-ios-text active:opacity-70"
+              variant="secondary"
+              className="mt-6 w-full"
             >
               {t.actions.close}
-            </button>
+            </Button>
           </div>
         </Modal>
       </div>
