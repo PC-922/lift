@@ -10,6 +10,7 @@ import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Surface } from './ui/Surface';
 import { Badge } from './ui/Badge';
+import { MuscleGroupPicker } from './ui/MuscleGroupPicker';
 import { cn } from '../utils/cn';
 
 interface Props {
@@ -333,23 +334,16 @@ export const ExerciseDetail: React.FC<Props> = ({
           onTouchEnd={(e) => e.stopPropagation()}
         >
           <h2 className="mb-4 text-lg font-bold text-app-text">{t.labels.muscleGroup}</h2>
-          <div className="grid grid-cols-3 gap-2 mb-4 max-h-[50vh] overflow-y-auto">
-            {muscleGroups.map((g) => (
-              <button
-                key={g}
-                onClick={() => { onChangeGroup(g); setEditingGroup(false); }}
-                className={cn(
-                  'truncate rounded-lg border px-1 py-2 text-sm font-medium transition-colors',
-                  g === exercise.muscleGroup
-                    ? 'border-app-accent bg-app-accent text-app-accent-foreground'
-                    : 'border-app-border bg-app-surface text-app-text active:bg-app-surface-muted'
-                )}
-              >
-                {getTranslatedGroupName(g)}
-              </button>
-            ))}
-          </div>
-          <Button onClick={() => setEditingGroup(false)} variant="secondary" className="w-full">
+          <MuscleGroupPicker
+            groups={muscleGroups}
+            selected={exercise.muscleGroup}
+            onSelect={(group) => {
+              onChangeGroup(group);
+              setEditingGroup(false);
+            }}
+            maxHeightClass="max-h-[50vh]"
+          />
+          <Button onClick={() => setEditingGroup(false)} variant="secondary" className="w-full mt-4">
             {t.actions.cancel}
           </Button>
         </div>

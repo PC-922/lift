@@ -93,15 +93,15 @@ export const SettingsScreen: React.FC<Props> = ({ onExport, onImport }) => {
           </button>
         </ListRow>
 
-        <ListRow padded={false}>
-          <button onClick={handleImportClick} className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors active:bg-app-surface-muted sm:px-5 sm:py-5">
-            <Badge variant="success" className="rounded-xl px-3 py-3"><Upload size={20} /></Badge>
-            <div className="text-left">
-              <div className="font-semibold text-app-text">{t.actions.import}</div>
-              <div className="text-xs text-app-text-muted">{t.labels.importDesc}</div>
-            </div>
-          </button>
-        </ListRow>
+         <ListRow padded={false}>
+           <button onClick={handleImportClick} className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors active:bg-app-surface-muted sm:px-5 sm:py-5">
+             <Badge variant="accent" className="rounded-xl px-3 py-3"><Upload size={20} /></Badge>
+             <div className="text-left">
+               <div className="font-semibold text-app-text">{t.actions.import}</div>
+               <div className="text-xs text-app-text-muted">{t.labels.importDesc}</div>
+             </div>
+           </button>
+         </ListRow>
 
         <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".json" className="hidden" />
 

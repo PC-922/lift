@@ -110,13 +110,13 @@ export const ExerciseList: React.FC<Props> = ({
           {t.labels.allGroups}
         </button>
         {muscleGroups.map((group) => (
-          <GroupChip
-            key={group}
-            group={group}
-            active={activeGroup === group}
-            onTap={() => setActiveGroup(activeGroup === group ? null : group)}
-            onLongPress={() => setActionGroup(group)}
-          />
+           <GroupChip
+             key={group}
+             group={group}
+             active={activeGroup === group}
+             onTap={() => setActiveGroup((prev) => prev === group ? null : group)}
+             onLongPress={() => setActionGroup(group)}
+           />
         ))}
       </div>
 

@@ -33,12 +33,10 @@ export const InsightsScreen: React.FC<Props> = ({ exercises }) => {
   const hasInsights = recentProgressions.length > 0 || topWeightExercises.length > 0;
 
   const renderProgressMetric = (label: string, previous: number, current: number) => {
-    const state = getProgressState(previous, current);
-
     return (
       <div className="flex items-center gap-2">
         <span className="w-10 text-xs text-app-text-muted">{label}</span>
-        <Badge variant={getProgressVariant(state)} className="rounded-lg px-2.5 py-1 text-sm">
+        <Badge variant="accent" className="rounded-lg px-2.5 py-1 text-sm">
           {previous} → {current}
         </Badge>
       </div>
@@ -48,7 +46,7 @@ export const InsightsScreen: React.FC<Props> = ({ exercises }) => {
   const renderValueMetric = (label: string, value: string) => (
     <div className="flex items-center gap-2">
       <span className="w-10 text-xs text-app-text-muted">{label}</span>
-      <Badge variant="neutral" className="rounded-lg px-2.5 py-1 text-sm">
+      <Badge variant="accent" className="rounded-lg px-2.5 py-1 text-sm">
         {value}
       </Badge>
     </div>
@@ -76,10 +74,10 @@ export const InsightsScreen: React.FC<Props> = ({ exercises }) => {
               </div>
               <span className="flex-shrink-0 text-xs text-app-text-muted">{progression.progressionText}</span>
             </div>
-            <div className="mt-3 flex flex-col gap-1.5">
-              {renderProgressMetric('kg', progression.detail.prevWeight, progression.detail.currWeight)}
-              {renderProgressMetric('reps', progression.detail.prevReps, progression.detail.currReps)}
-            </div>
+             <div className="mt-3 flex flex-col gap-1.5">
+               {renderProgressMetric('kg', progression.detail.prevWeight, progression.detail.currWeight)}
+               {progression.detail.type !== 'weight' && renderProgressMetric('reps', progression.detail.prevReps, progression.detail.currReps)}
+             </div>
           </ListRow>
         ))}
       </div>
@@ -106,7 +104,7 @@ export const InsightsScreen: React.FC<Props> = ({ exercises }) => {
                   </div>
                 </div>
               </div>
-              <Badge variant="success" className="flex-shrink-0 whitespace-nowrap px-3 py-1.5 text-xs">
+              <Badge variant="accent" className="flex-shrink-0 whitespace-nowrap px-3 py-1.5 text-xs">
                 {exercise.timeSince}
               </Badge>
             </div>

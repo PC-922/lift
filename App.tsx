@@ -19,6 +19,7 @@ import { Button } from './components/ui/Button';
 import { Input } from './components/ui/Input';
 import { Surface } from './components/ui/Surface';
 import { Badge } from './components/ui/Badge';
+import { MuscleGroupPicker } from './components/ui/MuscleGroupPicker';
 import { cn } from './utils/cn';
 
 const APP_LOGO_SRC = '/lift-32.png';
@@ -236,10 +237,20 @@ const App: React.FC = () => {
             <RoutinesScreen
               routines={routines}
               exercises={exercises}
+              muscleGroups={muscleGroups}
               onSaveRoutine={handleSaveRoutine}
               onDeleteRoutine={handleDeleteRoutine}
               onLogExercise={handleLog}
               onReorderRoutineExercise={handleReorderRoutineExercise}
+              onUpdateNote={handleUpdateNote}
+              onUpdateLog={handleUpdateLog}
+              onDeleteLog={handleDeleteLog}
+              onDeleteAllLogs={handleDeleteAllLogs}
+              onDeleteAllLogsExceptLatest={handleDeleteAllLogsExceptLatest}
+              onDeleteExercise={(id) => {
+                storageManager.deleteExercise(id);
+                loadData();
+              }}
               resetSignal={screenResetSignal}
             />
           ) : currentExercise ? (
@@ -315,23 +326,12 @@ const App: React.FC = () => {
 
                 <div className="space-y-3">
                   <label className="block text-sm font-medium text-app-text-muted">{t.labels.muscleGroup}</label>
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                    {muscleGroups.map((group) => (
-                      <button
-                        key={group}
-                        type="button"
-                        onClick={() => setNewExerciseGroup(group)}
-                        className={cn(
-                          'min-h-12 truncate rounded-2xl border px-3 py-3 text-sm font-medium transition-colors',
-                          newExerciseGroup === group
-                            ? 'border-app-accent bg-app-accent text-app-accent-foreground'
-                            : 'border-app-border bg-app-surface text-app-text active:bg-app-surface-muted'
-                        )}
-                      >
-                        {getTranslatedGroupName(group)}
-                      </button>
-                    ))}
-                  </div>
+                  <MuscleGroupPicker
+                    groups={muscleGroups}
+                    selected={newExerciseGroup}
+                    onSelect={setNewExerciseGroup}
+                    maxHeightClass="max-h-[40vh]"
+                  />
                 </div>
               </div>
 
@@ -367,22 +367,18 @@ const App: React.FC = () => {
             >
               <h2 className="mb-2 text-xl font-bold text-app-text">{t.actions.move}</h2>
               <p className="mb-4 text-sm text-app-text-muted">{movingExercise.name}</p>
-              <div className="grid grid-cols-3 gap-2 mb-6 max-h-[40vh] overflow-y-auto">
-                {muscleGroups
-                  .filter((g) => g !== movingExercise.muscleGroup)
-                  .map((group) => (
-                    <button
-                      key={group}
-                      onClick={() => {
-                        storageManager.updateExerciseDetails(movingExercise.id, movingExercise.name, group);
-                        setMovingExercise(null);
-                        loadData();
-                      }}
-                      className="truncate rounded-lg border border-app-border bg-app-surface px-1 py-2 text-sm font-medium text-app-text transition-colors active:bg-app-accent active:text-app-accent-foreground"
-                    >
-                      {getTranslatedGroupName(group)}
-                    </button>
-                  ))}
+              <div className="mb-6">
+                <MuscleGroupPicker
+                  groups={muscleGroups}
+                  selected={movingExercise.muscleGroup}
+                  onSelect={(group) => {
+                    storageManager.updateExerciseDetails(movingExercise.id, movingExercise.name, group);
+                    setMovingExercise(null);
+                    loadData();
+                  }}
+                  excludeSelected={true}
+                  maxHeightClass="max-h-[40vh]"
+                />
               </div>
               <Button
                 onClick={() => setMovingExercise(null)}

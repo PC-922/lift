@@ -1,12 +1,13 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Check, Pencil, X, Search, ArrowUp, ArrowDown, Shuffle, Plus } from 'lucide-react';
-import { Exercise, Routine, RoutineExercise } from '../types';
+import { Exercise, Routine, RoutineExercise, ExerciseLog } from '../types';
 import { useTranslations, getTranslatedGroupName } from '../utils/translations';
 import { getLatestLog } from '../utils/progression';
 import { RoutineCard } from './RoutineCard';
 import { ActionSheet } from './ActionSheet';
 import ConfirmModal from './ConfirmModal';
 import { Modal } from './Modal';
+import { ExerciseDetail } from './ExerciseDetail';
 import { useLongPress } from '../hooks/useLongPress';
 import { useToast } from '../hooks/useToast';
 import { makeId } from '../services/storageService';
@@ -21,10 +22,17 @@ import { cn } from '../utils/cn';
 interface Props {
   routines: Routine[];
   exercises: Exercise[];
+  muscleGroups: string[];
   onSaveRoutine: (routine: Routine) => void;
   onDeleteRoutine: (id: string) => void;
   onLogExercise: (exerciseId: string, weight: number, reps: number) => void;
   onReorderRoutineExercise: (routineId: string, from: number, to: number) => void;
+  onUpdateNote: (exerciseId: string, note: string) => void;
+  onUpdateLog: (exerciseId: string, originalDate: string, log: ExerciseLog) => void;
+  onDeleteLog: (exerciseId: string, date: string) => void;
+  onDeleteAllLogs: (exerciseId: string) => void;
+  onDeleteAllLogsExceptLatest: (exerciseId: string) => void;
+  onDeleteExercise: (exerciseId: string) => void;
   resetSignal?: number;
 }
 
@@ -41,10 +49,17 @@ const DEFAULT_REPS = '10';
 export const RoutinesScreen: React.FC<Props> = ({
   routines,
   exercises,
+  muscleGroups,
   onSaveRoutine,
   onDeleteRoutine,
   onLogExercise,
   onReorderRoutineExercise,
+  onUpdateNote,
+  onUpdateLog,
+  onDeleteLog,
+  onDeleteAllLogs,
+  onDeleteAllLogsExceptLatest,
+  onDeleteExercise,
   resetSignal,
 }) => {
   const t = useTranslations();
@@ -61,6 +76,7 @@ export const RoutinesScreen: React.FC<Props> = ({
   const [confirmRemoveExerciseId, setConfirmRemoveExerciseId] = useState<string | null>(null);
   const [pickingAlternativeFor, setPickingAlternativeFor] = useState<string | null>(null);
   const [alternativeSearch, setAlternativeSearch] = useState('');
+  const [editingExerciseId, setEditingExerciseId] = useState<string | null>(null);
 
   useEffect(() => {
     setActiveRoutineId(null);
@@ -301,7 +317,7 @@ export const RoutinesScreen: React.FC<Props> = ({
       )}
 
       <Modal open={!!modalMode} onClose={closeModal} position="bottom">
-        <div className="flex max-h-[calc(100dvh-1.5rem)] w-full flex-col">
+        <div className="flex max-h-[calc(100dvh-1.5rem-env(safe-area-inset-top,0px))] w-full flex-col pt-[env(safe-area-inset-top,0px)]">
           <div className="shrink-0 border-b border-app-border px-6 pb-4 pt-5">
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -314,86 +330,88 @@ export const RoutinesScreen: React.FC<Props> = ({
             </div>
           </div>
 
+          <div className="shrink-0 border-b border-app-border px-6 py-4">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-app-text-muted">{t.labels.routineName}</label>
+              <Input type="text" value={formName} onChange={(e) => setFormName(e.target.value)} placeholder={t.labels.routineName} autoFocus />
+            </div>
+          </div>
+
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 py-5">
-            <div className="space-y-5">
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-app-text-muted">{t.labels.routineName}</label>
-                <Input type="text" value={formName} onChange={(e) => setFormName(e.target.value)} placeholder={t.labels.routineName} autoFocus />
+            <div className="space-y-3">
+              <label className="block text-sm font-medium text-app-text-muted">{t.labels.selectExercises}</label>
+
+              <div className="sticky top-0 z-10 bg-app-bg pb-3 -mx-6 px-6">
+                <SearchInput value={formSearch} onChange={(e) => setFormSearch(e.target.value)} onClear={() => setFormSearch('')} placeholder={t.labels.searchExercises} />
               </div>
 
-              <div className="space-y-3">
-                <label className="block text-sm font-medium text-app-text-muted">{t.labels.selectExercises}</label>
+              {filteredFormExercises.length === 0 ? (
+                <p className="py-4 text-center text-sm text-app-text-muted">{t.labels.noExercisesFound}</p>
+              ) : (
+                <div className="space-y-3 pb-2">
+                  {filteredFormExercises.map((exercise) => {
+                    const routineEx = formExercises.find((re) => re.exerciseId === exercise.id);
+                    const selected = routineEx !== undefined;
+                    return (
+                      <div key={exercise.id} className="space-y-2">
+                        <button
+                          onClick={() => toggleExercise(exercise.id)}
+                          className={cn(
+                            'w-full rounded-2xl border p-4 text-left transition-colors active:opacity-70',
+                            selected ? 'border-app-accent bg-app-surface-muted' : 'border-app-border bg-app-surface'
+                          )}
+                        >
+                          <p className="text-sm font-semibold text-app-text">{exercise.name}</p>
+                          <p className="mt-0.5 text-xs text-app-text-muted">{getTranslatedGroupName(exercise.muscleGroup)}</p>
+                        </button>
 
-                <SearchInput value={formSearch} onChange={(e) => setFormSearch(e.target.value)} onClear={() => setFormSearch('')} placeholder={t.labels.searchExercises} />
-
-                {filteredFormExercises.length === 0 ? (
-                  <p className="py-4 text-center text-sm text-app-text-muted">{t.labels.noExercisesFound}</p>
-                ) : (
-                  <div className="space-y-3 pb-2">
-                    {filteredFormExercises.map((exercise) => {
-                      const routineEx = formExercises.find((re) => re.exerciseId === exercise.id);
-                      const selected = routineEx !== undefined;
-                      return (
-                        <div key={exercise.id} className="space-y-2">
-                          <button
-                            onClick={() => toggleExercise(exercise.id)}
-                            className={cn(
-                              'w-full rounded-2xl border p-4 text-left transition-colors active:opacity-70',
-                              selected ? 'border-app-accent bg-app-surface-muted' : 'border-app-border bg-app-surface'
-                            )}
-                          >
-                            <p className="text-sm font-semibold text-app-text">{exercise.name}</p>
-                            <p className="mt-0.5 text-xs text-app-text-muted">{getTranslatedGroupName(exercise.muscleGroup)}</p>
-                          </button>
-
-                          {selected && routineEx && (
-                            <div className="rounded-2xl border border-app-border bg-app-surface-muted px-4 py-4">
-                              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                                <div className="space-y-1">
-                                  <label className="block text-xs font-medium text-app-text-muted">{t.labels.sets}</label>
-                                  <Input compact type="text" inputMode="numeric" value={routineEx.sets} onChange={(e) => updateFormExerciseField(exercise.id, 'sets', e.target.value)} onBlur={(e) => commitSetsField(exercise.id, e.target.value)} className="text-center" />
-                                </div>
-                                <div className="space-y-1">
-                                  <label className="block text-xs font-medium text-app-text-muted">{t.labels.reps}</label>
-                                  <Input compact type="text" inputMode="text" value={routineEx.reps} onChange={(e) => updateFormExerciseField(exercise.id, 'reps', e.target.value)} disabled={routineEx.toFailure} className="text-center disabled:opacity-30" placeholder="10" />
-                                </div>
-                                <div className="space-y-1">
-                                  <label className="block text-xs font-medium text-app-text-muted">{t.labels.dropset}</label>
-                                  <button onClick={() => toggleDropset(exercise.id)} className={cn('w-full rounded-xl border px-3 py-3 text-sm font-semibold transition-colors active:opacity-70', routineEx.dropset ? 'border-app-warning bg-app-warning text-app-text' : 'border-app-border bg-app-surface text-app-text-muted')}>
-                                    {routineEx.dropset ? 'Yes' : 'No'}
-                                  </button>
-                                </div>
-                                <div className="space-y-1">
-                                  <label className="block text-xs font-medium text-app-text-muted">{t.labels.toFailure}</label>
-                                  <button onClick={() => toggleToFailure(exercise.id)} className={cn('w-full rounded-xl border px-3 py-3 text-sm font-semibold transition-colors active:opacity-70', routineEx.toFailure ? 'border-app-danger bg-app-danger text-white' : 'border-app-border bg-app-surface text-app-text-muted')}>
-                                    {routineEx.toFailure ? 'Yes' : 'No'}
-                                  </button>
-                                </div>
+                        {selected && routineEx && (
+                          <div className="rounded-2xl border border-app-border bg-app-surface-muted px-4 py-4">
+                            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                              <div className="space-y-1">
+                                <label className="block text-xs font-medium text-app-text-muted">{t.labels.sets}</label>
+                                <Input compact type="text" inputMode="numeric" value={routineEx.sets} onChange={(e) => updateFormExerciseField(exercise.id, 'sets', e.target.value)} onBlur={(e) => commitSetsField(exercise.id, e.target.value)} className="text-center" />
                               </div>
-
-                              <div className="mt-4">
-                                {routineEx.alternativeExerciseId ? (
-                                  <div className="flex items-center justify-between gap-3">
-                                    <p className="text-xs text-app-text-muted">
-                                      {t.labels.alternative}: <span className="font-semibold text-app-text">{exerciseById.get(routineEx.alternativeExerciseId)?.name ?? '—'}</span>
-                                    </p>
-                                    <button onClick={() => setAlternative(exercise.id, undefined)} className="text-xs text-app-danger active:opacity-70">{t.labels.clearAlternative}</button>
-                                  </div>
-                                ) : (
-                                  <button onClick={() => { setPickingAlternativeFor(exercise.id); setAlternativeSearch(''); }} className="flex items-center gap-1 text-xs font-medium text-app-text underline decoration-app-accent decoration-2 underline-offset-4 active:opacity-70">
-                                    <Shuffle size={12} />
-                                    {t.labels.setAlternative}
-                                  </button>
-                                )}
+                              <div className="space-y-1">
+                                <label className="block text-xs font-medium text-app-text-muted">{t.labels.reps}</label>
+                                <Input compact type="text" inputMode="text" value={routineEx.reps} onChange={(e) => updateFormExerciseField(exercise.id, 'reps', e.target.value)} disabled={routineEx.toFailure} className="text-center disabled:opacity-30" placeholder="10" />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="block text-xs font-medium text-app-text-muted">{t.labels.dropset}</label>
+                                <button onClick={() => toggleDropset(exercise.id)} className={cn('w-full rounded-xl border px-3 py-3 text-sm font-semibold transition-colors active:opacity-70', routineEx.dropset ? 'border-app-warning bg-app-warning text-app-text' : 'border-app-border bg-app-surface text-app-text-muted')}>
+                                  {routineEx.dropset ? 'Yes' : 'No'}
+                                </button>
+                              </div>
+                              <div className="space-y-1">
+                                <label className="block text-xs font-medium text-app-text-muted">{t.labels.toFailure}</label>
+                                <button onClick={() => toggleToFailure(exercise.id)} className={cn('w-full rounded-xl border px-3 py-3 text-sm font-semibold transition-colors active:opacity-70', routineEx.toFailure ? 'border-app-danger bg-app-danger text-white' : 'border-app-border bg-app-surface text-app-text-muted')}>
+                                  {routineEx.toFailure ? 'Yes' : 'No'}
+                                </button>
                               </div>
                             </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+
+                            <div className="mt-4">
+                              {routineEx.alternativeExerciseId ? (
+                                <div className="flex items-center justify-between gap-3">
+                                  <p className="text-xs text-app-text-muted">
+                                    {t.labels.alternative}: <span className="font-semibold text-app-text">{exerciseById.get(routineEx.alternativeExerciseId)?.name ?? '—'}</span>
+                                  </p>
+                                  <button onClick={() => setAlternative(exercise.id, undefined)} className="text-xs text-app-danger active:opacity-70">{t.labels.clearAlternative}</button>
+                                </div>
+                              ) : (
+                                <button onClick={() => { setPickingAlternativeFor(exercise.id); setAlternativeSearch(''); }} className="flex items-center gap-1 text-xs font-medium text-app-text underline decoration-app-accent decoration-2 underline-offset-4 active:opacity-70">
+                                  <Shuffle size={12} />
+                                  {t.labels.setAlternative}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
 
@@ -432,6 +450,7 @@ export const RoutinesScreen: React.FC<Props> = ({
         <ActionSheet
           title={actionSheetExerciseName}
           actions={[
+            { label: t.actions.edit, onPress: () => { setEditingExerciseId(actionSheetExerciseId); setActionSheetExerciseId(null); } },
             ...(!isFirst ? [{ label: t.labels.moveUp, icon: <ArrowUp size={16} />, onPress: () => { handleMoveUp(actionSheetExerciseId); setActionSheetExerciseId(null); } }] : []),
             ...(!isLast ? [{ label: t.labels.moveDown, icon: <ArrowDown size={16} />, onPress: () => { handleMoveDown(actionSheetExerciseId); setActionSheetExerciseId(null); } }] : []),
             { label: t.labels.removeFromRoutine, destructive: true, onPress: () => { setConfirmRemoveExerciseId(actionSheetExerciseId); setActionSheetExerciseId(null); } },
@@ -447,6 +466,44 @@ export const RoutinesScreen: React.FC<Props> = ({
       {confirmRemoveExerciseId && (
         <ConfirmModal title={t.labels.removeFromRoutine} confirmLabel={t.actions.delete} destructive onConfirm={() => handleRemoveExerciseFromRoutine(confirmRemoveExerciseId)} onCancel={() => setConfirmRemoveExerciseId(null)} />
       )}
+
+      <Modal open={!!editingExerciseId} onClose={() => setEditingExerciseId(null)} position="bottom">
+        {editingExerciseId && exercises.find((e) => e.id === editingExerciseId) && (
+          <ExerciseDetail
+            exercise={exercises.find((e) => e.id === editingExerciseId)!}
+            muscleGroups={muscleGroups}
+            onBack={() => setEditingExerciseId(null)}
+            onLog={(weight, reps) => {
+              onLogExercise(editingExerciseId, weight, reps);
+            }}
+            onUpdateNote={(note) => {
+              onUpdateNote(editingExerciseId, note);
+            }}
+            onUpdateLog={(originalDate, log) => {
+              onUpdateLog(editingExerciseId, originalDate, log);
+            }}
+            onDeleteLog={(date) => {
+              onDeleteLog(editingExerciseId, date);
+            }}
+            onDeleteAllLogs={() => {
+              onDeleteAllLogs(editingExerciseId);
+            }}
+            onDeleteAllLogsExceptLatest={() => {
+              onDeleteAllLogsExceptLatest(editingExerciseId);
+            }}
+            onRename={(name) => {
+              // This would need to be passed as a prop - for now we skip rename from routine context
+            }}
+            onChangeGroup={(group) => {
+              // This would need to be passed as a prop - for now we skip group change from routine context
+            }}
+            onDelete={() => {
+              onDeleteExercise(editingExerciseId);
+              setEditingExerciseId(null);
+            }}
+          />
+        )}
+      </Modal>
     </div>
   );
 };
