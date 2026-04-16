@@ -293,9 +293,7 @@ export const RoutinesScreen: React.FC<Props> = ({
         </div>
       ) : (
         <div className="space-y-6">
-          <div className="mb-8 text-center">
-            <p className="mt-2 text-sm text-app-text-muted">{t.labels.routinesDesc}</p>
-          </div>
+          <p className="-mt-2 mb-2 text-center text-sm text-app-text-muted">{t.labels.routinesDesc}</p>
 
           <Button onClick={openCreate} className="w-full">
             <Plus size={18} />

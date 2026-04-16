@@ -1,11 +1,11 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useSyncExternalStore } from 'react';
 import { Download, Upload, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useTranslations, useLanguage } from '../utils/translations';
 import { preferencesService } from '../services/preferencesService';
 import type { ScreenType } from './BottomNav';
-import { Button } from './ui/Button';
 import { Badge } from './ui/Badge';
 import { ListRow } from './ui/ListRow';
+import { Select } from './ui/Select';
 
 interface Props {
   onExport: () => void;
@@ -18,7 +18,11 @@ export const SettingsScreen: React.FC<Props> = ({ onExport, onImport }) => {
   const t = useTranslations();
   const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const currentLang = useLanguage();
-  const [currentDefaultScreen, setCurrentDefaultScreen] = useState<ScreenType | null>(() => preferencesService.getDefaultScreen());
+  const currentDefaultScreen = useSyncExternalStore(
+    preferencesService.subscribe,
+    preferencesService.getDefaultScreen,
+    preferencesService.getDefaultScreen
+  ) ?? 'home';
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImportClick = () => {
@@ -61,24 +65,27 @@ export const SettingsScreen: React.FC<Props> = ({ onExport, onImport }) => {
 
       <div className="space-y-3">
         <p className="ml-1 text-xs font-semibold uppercase tracking-wide text-app-text-muted">{t.labels.language}</p>
-        <div className="flex gap-2">
-          {(['es', 'en'] as const).map((lang) => (
-            <Button key={lang} onClick={() => preferencesService.setLanguage(lang)} variant={currentLang === lang ? 'primary' : 'secondary'} className="flex-1">
-              {lang === 'es' ? t.labels.languageES : t.labels.languageEN}
-            </Button>
-          ))}
-        </div>
+        <Select
+          value={currentLang}
+          onChange={(event) => preferencesService.setLanguage(event.target.value as 'es' | 'en')}
+          aria-label={t.labels.language}
+        >
+          <option value="es">{t.labels.languageES}</option>
+          <option value="en">{t.labels.languageEN}</option>
+        </Select>
       </div>
 
       <div className="space-y-3">
         <p className="ml-1 text-xs font-semibold uppercase tracking-wide text-app-text-muted">{t.labels.defaultScreen}</p>
-        <div className="flex flex-wrap gap-2">
+        <Select
+          value={currentDefaultScreen}
+          onChange={(event) => preferencesService.setDefaultScreen(event.target.value as ScreenType)}
+          aria-label={t.labels.defaultScreen}
+        >
           {SCREEN_ORDER.map((screen) => (
-            <Button key={screen} onClick={() => { preferencesService.setDefaultScreen(screen); setCurrentDefaultScreen(screen); }} variant={currentDefaultScreen === screen ? 'primary' : 'secondary'} size="sm">
-              {screenLabel(screen)}
-            </Button>
+            <option key={screen} value={screen}>{screenLabel(screen)}</option>
           ))}
-        </div>
+        </Select>
       </div>
 
       <div className="space-y-3">

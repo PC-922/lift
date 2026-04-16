@@ -22,8 +22,6 @@ import { Badge } from './components/ui/Badge';
 import { MuscleGroupPicker } from './components/ui/MuscleGroupPicker';
 import { cn } from './utils/cn';
 
-const APP_LOGO_SRC = '/lift-32.png';
-
 const App: React.FC = () => {
   const t = useTranslations();
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -190,20 +188,18 @@ const App: React.FC = () => {
     : null;
 
   const showHeader = currentScreen === 'home' && !currentExercise;
+  const appHeaderClassName = 'px-4 pt-6 pb-4';
+  const appHeaderTitleClassName = 'text-center text-2xl font-bold text-app-text';
 
   return (
     <ToastProvider>
       <div className="min-h-screen pb-24 sm:mx-auto sm:max-w-md">
 
         {showHeader && (
-          <header className="sticky top-0 z-20 border-b border-app-border bg-app-bg py-5 backdrop-blur-sm">
-            <div className="grid grid-cols-3 items-center px-4">
-              <div />
-              <div className="flex flex-col items-center text-center">
-                <img src={APP_LOGO_SRC} alt={t.appTitle} className="mb-2 h-8 w-8" />
-                <h1 className="text-xl font-bold tracking-tight text-app-text">{t.appTitle}</h1>
-              </div>
-              <div className="flex items-center justify-end">
+          <header className={cn('home-header-glass sticky top-0 z-20', appHeaderClassName)}>
+            <div className="relative">
+              <h1 className={appHeaderTitleClassName}>{t.appTitle}</h1>
+              <div className="absolute right-0 top-1/2 -translate-y-1/2">
                 {!isStandalone && (
                   <Button
                     onClick={() => setIsInstallModalOpen(true)}
@@ -220,12 +216,14 @@ const App: React.FC = () => {
         )}
 
         {currentScreen !== 'home' && (
-          <header className="px-4 pt-6 pb-4">
-            <h1 className="text-center text-2xl font-bold text-app-text">
+          <header className={appHeaderClassName}>
+            <div className="relative">
+              <h1 className={appHeaderTitleClassName}>
               {currentScreen === 'insights' ? t.labels.insights
                 : currentScreen === 'routines' ? t.labels.routines
                 : t.labels.settings}
-            </h1>
+              </h1>
+            </div>
           </header>
         )}
 
