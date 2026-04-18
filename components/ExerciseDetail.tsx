@@ -354,51 +354,54 @@ export const ExerciseDetail: React.FC<Props> = ({
           <div className="space-y-3">
             {editableLogs.map((log, index) => (
               <Surface key={log.originalDate}>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  <div className="col-span-2 sm:col-span-2">
+                <div className="space-y-3">
+                  <div className="min-w-0">
                     <label className="mb-1 block text-xs font-medium text-app-text-muted">{t.labels.date}</label>
                     <Input
-                      type="date"
+                      type="text"
                       value={log.date}
                       onChange={(e) => handleLogChange(index, 'date', e.target.value)}
                       onBlur={() => handleLogBlur(index)}
                       compact
-                      className="w-[calc(100%-1.5rem)] text-xs"
+                      placeholder="YYYY-MM-DD"
+                      className="w-full text-xs"
                     />
                   </div>
-              <div className="col-span-1">
-                <label className="mb-1 block text-xs font-medium text-app-text-muted">{t.labels.weightShort}</label>
-                <Input
-                  type="number"
-                  inputMode="decimal"
-                  value={log.weight}
-                  onChange={(e) => handleLogChange(index, 'weight', e.target.value)}
-                  onBlur={() => handleLogBlur(index)}
-                  compact
-                />
-              </div>
-              <div className="col-span-1">
-                <label className="mb-1 block text-xs font-medium text-app-text-muted">{t.labels.reps}</label>
-                <Input
-                  type="number"
-                  inputMode="numeric"
-                  value={log.reps}
-                  onChange={(e) => handleLogChange(index, 'reps', e.target.value)}
-                  onBlur={() => handleLogBlur(index)}
-                  compact
-                />
-              </div>
-            </div>
-            <div className="mt-3 flex justify-end">
-              <button
-                onClick={() => setConfirmAction({ action: 'deleteLog', logIndex: index })}
-                className="flex items-center gap-1 text-xs text-app-danger active:opacity-70"
-              >
-                <X size={12} />
-                {t.actions.delete}
-              </button>
-            </div>
-          </Surface>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-app-text-muted">{t.labels.weightShort}</label>
+                      <Input
+                        type="number"
+                        inputMode="decimal"
+                        value={log.weight}
+                        onChange={(e) => handleLogChange(index, 'weight', e.target.value)}
+                        onBlur={() => handleLogBlur(index)}
+                        compact
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-app-text-muted">{t.labels.reps}</label>
+                      <Input
+                        type="number"
+                        inputMode="numeric"
+                        value={log.reps}
+                        onChange={(e) => handleLogChange(index, 'reps', e.target.value)}
+                        onBlur={() => handleLogBlur(index)}
+                        compact
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-3 flex justify-end">
+                  <button
+                    onClick={() => setConfirmAction({ action: 'deleteLog', logIndex: index })}
+                    className="flex items-center gap-1 text-xs text-app-danger active:opacity-70"
+                  >
+                    <X size={12} />
+                    {t.actions.delete}
+                  </button>
+                </div>
+              </Surface>
         ))}
       </div>
         </div>
