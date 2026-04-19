@@ -1,3 +1,4 @@
+import pkg from '../package.json';
 import React, { useState, useRef, useSyncExternalStore } from 'react';
 import { Download, Upload, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useTranslations, useLanguage } from '../utils/translations';
@@ -126,8 +127,9 @@ export const SettingsScreen: React.FC<Props> = ({ onExport, onImport }) => {
         )}
       </div>
 
-      <div className="border-t border-app-border pt-6">
+      <div className="border-t border-app-border pt-6 pb-2">
         <p className="text-center text-xs leading-relaxed text-app-text-muted">{t.labels.settingsInfo}</p>
+        <p className="mt-4 text-center text-[10px] font-medium tracking-widest text-app-text-muted/50 uppercase">v{pkg.version}</p>
       </div>
     </div>
   );

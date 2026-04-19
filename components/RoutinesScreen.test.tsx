@@ -272,7 +272,7 @@ describe('RoutinesScreen', () => {
     await act(() => vi.runAllTimersAsync());
     expect(screen.getByText('Bench Press')).toBeTruthy();
 
-    fireEvent.click(screen.getByText(`← ${t.labels.routines}`));
+    fireEvent.click(screen.getByText(t.labels.routines));
     await act(() => vi.runAllTimersAsync());
     expect(screen.getByText('Leg Day')).toBeTruthy();
   });

@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { ChevronRight } from 'lucide-react';
+import { ArrowUp, ArrowDown, ChevronRight } from 'lucide-react';
 import { Routine } from '../types';
 import { useTranslations } from '../utils/translations';
 import { useLongPress } from '../hooks/useLongPress';
-import { ActionSheet } from './ActionSheet';
+import { ActionSheet, ActionSheetAction } from './ActionSheet';
 import { ListRow } from './ui/ListRow';
 
 interface Props {
@@ -12,9 +12,13 @@ interface Props {
   onEdit: () => void;
   onDelete: () => void;
   onDuplicate: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  isFirst: boolean;
+  isLast: boolean;
 }
 
-export const RoutineCard: React.FC<Props> = ({ routine, onClick, onEdit, onDelete, onDuplicate }) => {
+export const RoutineCard: React.FC<Props> = ({ routine, onClick, onEdit, onDelete, onDuplicate, onMoveUp, onMoveDown, isFirst, isLast }) => {
   const t = useTranslations();
   const [showActions, setShowActions] = useState(false);
 
@@ -23,9 +27,11 @@ export const RoutineCard: React.FC<Props> = ({ routine, onClick, onEdit, onDelet
     onTap: onClick,
   });
 
-  const actions = [
+  const actions: ActionSheetAction[] = [
     { label: t.actions.edit, onPress: onEdit },
     { label: t.actions.duplicate, onPress: onDuplicate },
+    ...(!isFirst ? [{ label: t.labels.moveUp, icon: <ArrowUp size={16} />, keepOpen: true, onPress: onMoveUp }] : []),
+    ...(!isLast ? [{ label: t.labels.moveDown, icon: <ArrowDown size={16} />, keepOpen: true, onPress: onMoveDown }] : []),
     { label: t.actions.delete, destructive: true, onPress: onDelete },
   ];
 

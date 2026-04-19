@@ -7,6 +7,7 @@ export interface ActionSheetAction {
   label: string;
   icon?: React.ReactNode;
   destructive?: boolean;
+  keepOpen?: boolean;
   onPress: () => void;
 }
 
@@ -34,7 +35,7 @@ export const ActionSheet: React.FC<Props> = ({ title, subtitle, actions, onClose
                 key={`${action.label}-${index}`}
                 onClick={() => {
                   action.onPress();
-                  onClose();
+                  if (!action.keepOpen) onClose();
                 }}
                 className={`flex w-full items-center justify-between rounded-2xl border px-4 py-4 text-left text-base font-medium transition-colors active:bg-app-surface-muted ${
                   action.destructive ? 'border-app-danger bg-app-danger text-white' : 'border-app-border text-app-text'

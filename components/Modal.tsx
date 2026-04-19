@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 interface Props {
@@ -11,10 +11,16 @@ interface Props {
 
 export const Modal: React.FC<Props> = ({ open, onClose, position = 'center', labelledBy, children }) => {
   const mountedAt = useRef(0);
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setIsReady(false);
+      return;
+    }
     mountedAt.current = Date.now();
+    const timer = setTimeout(() => setIsReady(true), 400);
+
     document.body.style.overflow = 'hidden';
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose();
@@ -22,6 +28,7 @@ export const Modal: React.FC<Props> = ({ open, onClose, position = 'center', lab
 
     window.addEventListener('keydown', handleEscape);
     return () => {
+      clearTimeout(timer);
       document.body.style.overflow = '';
       window.removeEventListener('keydown', handleEscape);
     };
@@ -49,7 +56,7 @@ export const Modal: React.FC<Props> = ({ open, onClose, position = 'center', lab
         role="dialog"
         aria-modal="true"
         aria-labelledby={labelledBy}
-        className={`overflow-hidden rounded-3xl border border-app-border bg-app-surface shadow-2xl ${panelClass}`}
+        className={`overflow-hidden rounded-3xl border border-app-border bg-app-surface shadow-2xl transition-opacity ${!isReady ? 'pointer-events-none' : ''} ${panelClass}`}
         onClick={(e) => e.stopPropagation()}
         onTouchEnd={(e) => e.stopPropagation()}
       >

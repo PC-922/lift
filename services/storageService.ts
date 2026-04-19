@@ -399,6 +399,14 @@ class LocalStorageManager implements StorageManagerInterface {
     localStorage.setItem(ROUTINES_KEY, JSON.stringify(routines));
   }
 
+  reorderRoutine(fromIndex: number, toIndex: number): void {
+    const routines = this.getRoutines();
+    if (fromIndex < 0 || fromIndex >= routines.length || toIndex < 0 || toIndex >= routines.length) return;
+    const [moved] = routines.splice(fromIndex, 1);
+    routines.splice(toIndex, 0, moved);
+    localStorage.setItem(ROUTINES_KEY, JSON.stringify(routines));
+  }
+
   reorderRoutineExercise(routineId: string, fromIndex: number, toIndex: number): void {
     const routines = this.getRoutines();
     const routine = routines.find((r) => r.id === routineId);

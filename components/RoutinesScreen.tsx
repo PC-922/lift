@@ -200,7 +200,8 @@ export const RoutinesScreen: React.FC<Props> = ({
     const targetExercise = exerciseById.get(targetId);
     const latest = getLatestLog(targetExercise?.logs ?? []);
     const isFirst = (targetExercise?.logs ?? []).length === 0;
-    const prevMax = latest?.weight ?? 0;
+    const prevWeight = latest?.weight ?? 0;
+    const prevReps = latest?.reps ?? 0;
 
     onLogExercise(targetId, weight, reps);
     setLogForms((prev) => {
@@ -211,8 +212,10 @@ export const RoutinesScreen: React.FC<Props> = ({
 
     if (isFirst) {
       showToast(t.labels.firstLog, 'achievement');
-    } else if (weight > prevMax) {
+    } else if (weight > prevWeight) {
       showToast(t.labels.newWeightRecord, 'achievement');
+    } else if (weight === prevWeight && reps > prevReps) {
+      showToast(t.labels.newRepsRecord, 'achievement');
     }
   };
 
@@ -228,6 +231,22 @@ export const RoutinesScreen: React.FC<Props> = ({
     const idx = activeRoutine.exercises.findIndex((re) => re.exerciseId === exerciseId);
     if (idx === -1 || idx >= activeRoutine.exercises.length - 1) return;
     onReorderRoutineExercise(activeRoutine.id, idx, idx + 1);
+  };
+
+  const handleMoveRoutineUp = (id: string) => {
+    const index = routines.findIndex(r => r.id === id);
+    if (index > 0) {
+      storageManager.reorderRoutine(index, index - 1);
+      setRoutines(storageManager.getRoutines());
+    }
+  };
+
+  const handleMoveRoutineDown = (id: string) => {
+    const index = routines.findIndex(r => r.id === id);
+    if (index < routines.length - 1) {
+      storageManager.reorderRoutine(index, index + 1);
+      setRoutines(storageManager.getRoutines());
+    }
   };
 
   const handleRemoveExerciseFromRoutine = (exerciseId: string) => {
@@ -310,8 +329,19 @@ export const RoutinesScreen: React.FC<Props> = ({
             </div>
           ) : (
             <div className="space-y-3">
-              {routines.map((routine) => (
-                <RoutineCard key={routine.id} routine={routine} onClick={() => setActiveRoutineId(routine.id)} onEdit={() => openEdit(routine)} onDelete={() => handleDelete(routine.id)} onDuplicate={() => handleDuplicate(routine)} />
+              {routines.map((routine, index) => (
+                <RoutineCard
+                  key={routine.id}
+                  routine={routine}
+                  onClick={() => setActiveRoutineId(routine.id)}
+                  onEdit={() => openEdit(routine)}
+                  onDelete={() => handleDelete(routine.id)}
+                  onDuplicate={() => handleDuplicate(routine)}
+                  onMoveUp={() => handleMoveRoutineUp(routine.id)}
+                  onMoveDown={() => handleMoveRoutineDown(routine.id)}
+                  isFirst={index === 0}
+                  isLast={index === routines.length - 1}
+                />
               ))}
             </div>
           )}
@@ -343,7 +373,7 @@ export const RoutinesScreen: React.FC<Props> = ({
             <div className="space-y-3">
               <label className="block text-sm font-medium text-app-text-muted">{t.labels.selectExercises}</label>
 
-              <div className="sticky top-0 z-10 bg-app-bg pb-3 -mx-6 px-6">
+              <div className="sticky top-0 z-10 bg-app-surface pb-3 -mx-6 px-6">
                 <SearchInput value={formSearch} onChange={(e) => setFormSearch(e.target.value)} onClear={() => setFormSearch('')} placeholder={t.labels.searchExercises} />
               </div>
 
@@ -453,8 +483,8 @@ export const RoutinesScreen: React.FC<Props> = ({
           title={actionSheetExerciseName}
           actions={[
             { label: t.actions.edit, onPress: () => { setEditingExerciseId(actionSheetExerciseId); setEditingRoutineId(activeRoutineId); setActionSheetExerciseId(null); } },
-            ...(!isFirst ? [{ label: t.labels.moveUp, icon: <ArrowUp size={16} />, onPress: () => { handleMoveUp(actionSheetExerciseId); setActionSheetExerciseId(null); } }] : []),
-            ...(!isLast ? [{ label: t.labels.moveDown, icon: <ArrowDown size={16} />, onPress: () => { handleMoveDown(actionSheetExerciseId); setActionSheetExerciseId(null); } }] : []),
+            ...(!isFirst ? [{ label: t.labels.moveUp, icon: <ArrowUp size={16} />, keepOpen: true, onPress: () => handleMoveUp(actionSheetExerciseId) }] : []),
+            ...(!isLast ? [{ label: t.labels.moveDown, icon: <ArrowDown size={16} />, keepOpen: true, onPress: () => handleMoveDown(actionSheetExerciseId) }] : []),
             { label: t.labels.removeFromRoutine, destructive: true, onPress: () => { setConfirmRemoveExerciseId(actionSheetExerciseId); setActionSheetExerciseId(null); } },
           ]}
           onClose={() => setActionSheetExerciseId(null)}

@@ -53,5 +53,6 @@ export interface StorageManagerInterface {
   getRoutines(): Routine[];
   saveRoutine(routine: Routine): void;
   deleteRoutine(id: string): void;
+  reorderRoutine(fromIndex: number, toIndex: number): void;
   reorderRoutineExercise(routineId: string, fromIndex: number, toIndex: number): void;
 }

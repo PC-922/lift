@@ -77,7 +77,7 @@ export const InsightsScreen: React.FC<Props> = ({ exercises }) => {
               </Badge>
             </div>
              <div className="mt-3 flex flex-col gap-1.5">
-               {renderProgressMetric('kg', progression.detail.prevWeight, progression.detail.currWeight)}
+               {progression.detail.type !== 'reps' && renderProgressMetric('kg', progression.detail.prevWeight, progression.detail.currWeight)}
                {progression.detail.type !== 'weight' && renderProgressMetric('reps', progression.detail.prevReps, progression.detail.currReps)}
              </div>
           </ListRow>

@@ -64,7 +64,7 @@ const Toast: React.FC<{ toast: ToastMessage }> = ({ toast }) => {
         animate-slideDown max-w-sm w-full px-4 py-3 rounded-2xl shadow-lg
         flex items-center gap-3
         ${isAchievement
-          ? 'bg-app-accent text-app-accent-foreground'
+          ? 'border border-app-accent bg-app-surface text-app-text'
           : 'border border-app-border bg-app-surface text-app-text'}
       `}
     >
