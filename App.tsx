@@ -149,6 +149,11 @@ const App: React.FC = () => {
     loadData();
   };
 
+  const handleReorderRoutine = (from: number, to: number) => {
+    storageManager.reorderRoutine(from, to);
+    loadData();
+  };
+
   const handleSaveRoutine = (routine: Routine) => {
     storageManager.saveRoutine(routine);
     loadData();
@@ -240,6 +245,7 @@ const App: React.FC = () => {
               onSaveRoutine={handleSaveRoutine}
               onDeleteRoutine={handleDeleteRoutine}
               onLogExercise={handleLog}
+              onReorderRoutine={handleReorderRoutine}
               onReorderRoutineExercise={handleReorderRoutineExercise}
               onUpdateNote={handleUpdateNote}
               onUpdateLog={handleUpdateLog}

@@ -6,10 +6,11 @@ interface Props {
   onClose: () => void;
   position?: 'center' | 'bottom';
   labelledBy?: string;
+  blurBackdrop?: boolean;
   children: React.ReactNode;
 }
 
-export const Modal: React.FC<Props> = ({ open, onClose, position = 'center', labelledBy, children }) => {
+export const Modal: React.FC<Props> = ({ open, onClose, position = 'center', labelledBy, blurBackdrop = true, children }) => {
   const mountedAt = useRef(0);
   const [isReady, setIsReady] = useState(false);
 
@@ -48,7 +49,7 @@ export const Modal: React.FC<Props> = ({ open, onClose, position = 'center', lab
   return createPortal(
     <div
       role="presentation"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-3 backdrop-blur-[2px]"
+      className={`fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-3 ${blurBackdrop ? 'backdrop-blur-[2px]' : ''}`}
       onClick={handleBackdrop}
       onTouchEnd={handleBackdrop}
     >

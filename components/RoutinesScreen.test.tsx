@@ -45,6 +45,7 @@ const defaultProps = {
   onSaveRoutine: vi.fn(),
   onDeleteRoutine: vi.fn(),
   onLogExercise: vi.fn(),
+  onReorderRoutine: vi.fn(),
   onReorderRoutineExercise: vi.fn(),
 };
 
@@ -226,7 +227,7 @@ describe('RoutinesScreen', () => {
     renderWithToast(<RoutinesScreen {...defaultProps} />);
     clickRoutineCard('Push Day');
     await act(() => vi.runAllTimersAsync());
-    expect(screen.getByText('3×10')).toBeTruthy();
+    expect(screen.getByText('3 sets × 10 reps')).toBeTruthy();
   });
 
   it('shows dropset badge when dropset is enabled', async () => {
@@ -290,8 +291,8 @@ describe('RoutinesScreen', () => {
     renderWithToast(<RoutinesScreen {...defaultProps} routines={routinesWithNoReps} />);
     clickRoutineCard('No Reps Day');
     await act(() => vi.runAllTimersAsync());
-    expect(screen.getByText('4')).toBeTruthy();
-    expect(screen.queryByText('4×')).toBeNull();
+    expect(screen.getByText('4 sets')).toBeTruthy();
+    expect(screen.queryByText(/×/)).toBeNull();
   });
 
   it('shows toFailure badge in detail view', async () => {
@@ -368,8 +369,52 @@ describe('RoutinesScreen', () => {
     await act(() => vi.runAllTimersAsync());
 
     expect(screen.getByText('Bench Press', { selector: 'p' })).toBeTruthy();
-    expect(screen.getByText(t.labels.moveDown)).toBeTruthy();
+    expect(screen.getByText(t.labels.move)).toBeTruthy();
     expect(screen.getByText(t.labels.removeFromRoutine)).toBeTruthy();
+  });
+
+  it('opens a dedicated move modal and reorders an exercise to the selected position', async () => {
+    const onReorderRoutineExercise = vi.fn();
+    const multiExRoutine: Routine[] = [
+      {
+        id: 'r5',
+        name: 'Full Day',
+        exercises: [
+          { exerciseId: 'ex1', sets: 3, reps: '10', dropset: false, toFailure: false },
+          { exerciseId: 'ex2', sets: 3, reps: '10', dropset: false, toFailure: false },
+        ],
+      },
+    ];
+
+    renderWithToast(
+      <RoutinesScreen
+        {...defaultProps}
+        routines={multiExRoutine}
+        onReorderRoutineExercise={onReorderRoutineExercise}
+      />
+    );
+
+    const card = screen.getByText('Full Day').closest('div[class*="rounded-2xl"]')!;
+    fireEvent.mouseDown(card);
+    fireEvent.mouseUp(card);
+    await act(() => vi.runAllTimersAsync());
+
+    const exerciseCard = screen.getByText('Bench Press').closest('div[class*="rounded-2xl"]')!;
+    fireEvent.mouseDown(exerciseCard);
+    act(() => { vi.advanceTimersByTime(600); });
+    await act(() => vi.runAllTimersAsync());
+
+    fireEvent.click(screen.getByText(t.labels.move));
+    await act(() => vi.runAllTimersAsync());
+
+    expect(screen.getByText(t.labels.moveExercise, { selector: 'h2' })).toBeTruthy();
+    expect(screen.getByText(t.labels.movePreview)).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText(t.labels.targetPosition), { target: { value: '1' } });
+    fireEvent.click(screen.getByRole('button', { name: t.actions.save }));
+    await act(() => vi.runAllTimersAsync());
+
+    expect(onReorderRoutineExercise).toHaveBeenCalledWith('r5', 0, 1);
   });
   it('updates form and logs the alternative exercise correctly', async () => {
     const customExercises = [

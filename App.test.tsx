@@ -30,6 +30,7 @@ vi.mock('./services/storageService', () => ({
     deleteAllLogsExceptLatest: vi.fn(),
     updateExerciseDetails: vi.fn(),
     deleteExercise: vi.fn(),
+    reorderRoutine: vi.fn(),
     reorderRoutineExercise: vi.fn(),
     saveRoutine: vi.fn(),
     deleteRoutine: vi.fn(),

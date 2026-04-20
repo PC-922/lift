@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Check, Pencil, X, Search, ArrowUp, ArrowDown, Shuffle, Plus } from 'lucide-react';
+import { Pencil, X, ArrowUp, ArrowDown, Shuffle, Plus } from 'lucide-react';
 import { Exercise, Routine, RoutineExercise, ExerciseLog } from '../types';
 import { useTranslations, getTranslatedGroupName } from '../utils/translations';
 import { getLatestLog } from '../utils/progression';
@@ -15,9 +15,9 @@ import { Button } from './ui/Button';
 import { Badge } from './ui/Badge';
 import { Input } from './ui/Input';
 import { SearchInput } from './ui/SearchInput';
-import { Surface } from './ui/Surface';
 import { ListRow } from './ui/ListRow';
 import { BackButton } from './ui/BackButton';
+import { Select } from './ui/Select';
 import { cn } from '../utils/cn';
 
 interface Props {
@@ -27,6 +27,7 @@ interface Props {
   onSaveRoutine: (routine: Routine) => void;
   onDeleteRoutine: (id: string) => void;
   onLogExercise: (exerciseId: string, weight: number, reps: number) => void;
+  onReorderRoutine: (from: number, to: number) => void;
   onReorderRoutineExercise: (routineId: string, from: number, to: number) => void;
   onUpdateNote: (exerciseId: string, note: string) => void;
   onUpdateLog: (exerciseId: string, originalDate: string, log: ExerciseLog) => void;
@@ -54,6 +55,7 @@ export const RoutinesScreen: React.FC<Props> = ({
   onSaveRoutine,
   onDeleteRoutine,
   onLogExercise,
+  onReorderRoutine,
   onReorderRoutineExercise,
   onUpdateNote,
   onUpdateLog,
@@ -79,6 +81,8 @@ export const RoutinesScreen: React.FC<Props> = ({
   const [alternativeSearch, setAlternativeSearch] = useState('');
   const [editingExerciseId, setEditingExerciseId] = useState<string | null>(null);
   const [editingRoutineId, setEditingRoutineId] = useState<string | null>(null);
+  const [movingExerciseId, setMovingExerciseId] = useState<string | null>(null);
+  const [movingExerciseTargetIndex, setMovingExerciseTargetIndex] = useState<number>(0);
 
   useEffect(() => {
     setActiveRoutineId(null);
@@ -219,33 +223,47 @@ export const RoutinesScreen: React.FC<Props> = ({
     }
   };
 
-  const handleMoveUp = (exerciseId: string) => {
+  const openMoveExercise = (exerciseId: string) => {
     if (!activeRoutine) return;
     const idx = activeRoutine.exercises.findIndex((re) => re.exerciseId === exerciseId);
-    if (idx <= 0) return;
-    onReorderRoutineExercise(activeRoutine.id, idx, idx - 1);
+    if (idx === -1) return;
+    setMovingExerciseId(exerciseId);
+    setMovingExerciseTargetIndex(idx);
   };
 
-  const handleMoveDown = (exerciseId: string) => {
+  const closeMoveExercise = () => {
+    setMovingExerciseId(null);
+    setMovingExerciseTargetIndex(0);
+  };
+
+  const moveExerciseTarget = (direction: -1 | 1) => {
     if (!activeRoutine) return;
-    const idx = activeRoutine.exercises.findIndex((re) => re.exerciseId === exerciseId);
-    if (idx === -1 || idx >= activeRoutine.exercises.length - 1) return;
-    onReorderRoutineExercise(activeRoutine.id, idx, idx + 1);
+    setMovingExerciseTargetIndex((current) => Math.max(0, Math.min(activeRoutine.exercises.length - 1, current + direction)));
+  };
+
+  const applyMoveExercise = () => {
+    if (!activeRoutine || !movingExerciseId) return;
+    const fromIndex = activeRoutine.exercises.findIndex((re) => re.exerciseId === movingExerciseId);
+    if (fromIndex === -1 || fromIndex === movingExerciseTargetIndex) {
+      closeMoveExercise();
+      return;
+    }
+
+    onReorderRoutineExercise(activeRoutine.id, fromIndex, movingExerciseTargetIndex);
+    closeMoveExercise();
   };
 
   const handleMoveRoutineUp = (id: string) => {
-    const index = routines.findIndex(r => r.id === id);
+    const index = routines.findIndex((r) => r.id === id);
     if (index > 0) {
-      storageManager.reorderRoutine(index, index - 1);
-      setRoutines(storageManager.getRoutines());
+      onReorderRoutine(index, index - 1);
     }
   };
 
   const handleMoveRoutineDown = (id: string) => {
-    const index = routines.findIndex(r => r.id === id);
+    const index = routines.findIndex((r) => r.id === id);
     if (index < routines.length - 1) {
-      storageManager.reorderRoutine(index, index + 1);
-      setRoutines(storageManager.getRoutines());
+      onReorderRoutine(index, index + 1);
     }
   };
 
@@ -265,10 +283,23 @@ export const RoutinesScreen: React.FC<Props> = ({
     return exercises.slice().sort((a, b) => a.name.localeCompare(b.name)).filter((ex) => !q || ex.name.toLowerCase().includes(q));
   }, [exercises, alternativeSearch]);
 
-  const actionSheetExerciseIndex = actionSheetExerciseId ? activeRoutine?.exercises.findIndex((re) => re.exerciseId === actionSheetExerciseId) ?? -1 : -1;
-  const isFirst = actionSheetExerciseIndex === 0;
-  const isLast = activeRoutine ? actionSheetExerciseIndex === activeRoutine.exercises.length - 1 : true;
   const actionSheetExerciseName = actionSheetExerciseId ? exerciseById.get(actionSheetExerciseId)?.name ?? '' : '';
+  const movingExerciseIndex = movingExerciseId ? activeRoutine?.exercises.findIndex((re) => re.exerciseId === movingExerciseId) ?? -1 : -1;
+  const movingExerciseName = movingExerciseId ? exerciseById.get(movingExerciseId)?.name ?? '' : '';
+  const movePreviewExercises = useMemo(() => {
+    if (!activeRoutine || !movingExerciseId || movingExerciseIndex === -1) return [];
+
+    const reordered = [...activeRoutine.exercises];
+    const [movingExercise] = reordered.splice(movingExerciseIndex, 1);
+    reordered.splice(movingExerciseTargetIndex, 0, movingExercise);
+    return reordered.map((routineExercise, index) => ({
+      index,
+      routineExercise,
+      exercise: exerciseById.get(routineExercise.exerciseId),
+      isMovingExercise: routineExercise.exerciseId === movingExerciseId,
+      isTarget: index === movingExerciseTargetIndex,
+    }));
+  }, [activeRoutine, movingExerciseId, movingExerciseIndex, movingExerciseTargetIndex, exerciseById]);
 
   return (
     <div className="space-y-6">
@@ -483,13 +514,93 @@ export const RoutinesScreen: React.FC<Props> = ({
           title={actionSheetExerciseName}
           actions={[
             { label: t.actions.edit, onPress: () => { setEditingExerciseId(actionSheetExerciseId); setEditingRoutineId(activeRoutineId); setActionSheetExerciseId(null); } },
-            ...(!isFirst ? [{ label: t.labels.moveUp, icon: <ArrowUp size={16} />, keepOpen: true, onPress: () => handleMoveUp(actionSheetExerciseId) }] : []),
-            ...(!isLast ? [{ label: t.labels.moveDown, icon: <ArrowDown size={16} />, keepOpen: true, onPress: () => handleMoveDown(actionSheetExerciseId) }] : []),
+            { label: t.labels.move, icon: <ArrowDown size={16} />, onPress: () => { openMoveExercise(actionSheetExerciseId); setActionSheetExerciseId(null); } },
             { label: t.labels.removeFromRoutine, destructive: true, onPress: () => { setConfirmRemoveExerciseId(actionSheetExerciseId); setActionSheetExerciseId(null); } },
           ]}
           onClose={() => setActionSheetExerciseId(null)}
         />
       )}
+
+      <Modal open={!!movingExerciseId} onClose={closeMoveExercise} position="bottom" blurBackdrop={false}>
+        {movingExerciseId && activeRoutine && (
+          <div className="flex max-h-[calc(100dvh-1.5rem)] w-full flex-col">
+            <div className="shrink-0 border-b border-app-border px-6 pb-4 pt-5">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-xl font-bold text-app-text">{t.labels.moveExercise}</h2>
+                  <p className="mt-1 text-sm text-app-text-muted">{movingExerciseName}</p>
+                </div>
+                <button onClick={closeMoveExercise} className="rounded-full border border-app-border p-2 text-app-text-muted active:opacity-70" aria-label={t.actions.cancel}>
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-6 py-5">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+                <div className="space-y-2">
+
+
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    variant="secondary"
+                    onClick={() => moveExerciseTarget(-1)}
+                    disabled={movingExerciseTargetIndex === 0}
+                    aria-label={t.labels.moveUp}
+                  >
+                    <ArrowUp size={16} />
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => moveExerciseTarget(1)}
+                    disabled={!activeRoutine.exercises.length || movingExerciseTargetIndex === activeRoutine.exercises.length - 1}
+                    aria-label={t.labels.moveDown}
+                  >
+                    <ArrowDown size={16} />
+                  </Button>
+                </div>
+              </div>
+
+
+
+              <div className="mt-5 space-y-3">
+                <p className="text-sm font-medium text-app-text-muted">{t.labels.movePreview}</p>
+                <div className="space-y-2">
+                  {movePreviewExercises.map(({ index, exercise, isMovingExercise, isTarget, routineExercise }) => (
+                    <ListRow
+                      key={`${routineExercise.exerciseId}-${index}`}
+                      className={cn(
+                        'px-4 py-3',
+                        isMovingExercise ? 'border-app-accent bg-app-accent/10' : '',
+                        isTarget ? 'border-lime-400' : ''
+                      )}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-app-text">{index + 1}.</span>
+                            <p className="text-sm font-semibold text-app-text">{exercise?.name ?? routineExercise.exerciseId}</p>
+                          </div>
+                          <p className="mt-1 text-xs text-app-text-muted">{getTranslatedGroupName(exercise?.muscleGroup ?? '')}</p>
+                        </div>
+                      </div>
+                    </ListRow>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="shrink-0 border-t border-app-border px-6 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-4">
+              <div className="flex gap-3">
+                <Button onClick={closeMoveExercise} variant="secondary" className="flex-1">{t.actions.cancel}</Button>
+                <Button onClick={applyMoveExercise} className="flex-1">{t.actions.save}</Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       {confirmDeleteRoutineId && (
         <ConfirmModal title={t.prompts.confirmDelete} confirmLabel={t.actions.delete} destructive onConfirm={handleConfirmDeleteRoutine} onCancel={() => setConfirmDeleteRoutineId(null)} />
