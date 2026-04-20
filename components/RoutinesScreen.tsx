@@ -17,7 +17,6 @@ import { Input } from './ui/Input';
 import { SearchInput } from './ui/SearchInput';
 import { ListRow } from './ui/ListRow';
 import { BackButton } from './ui/BackButton';
-import { Select } from './ui/Select';
 import { cn } from '../utils/cn';
 
 interface Props {
@@ -514,7 +513,7 @@ export const RoutinesScreen: React.FC<Props> = ({
           title={actionSheetExerciseName}
           actions={[
             { label: t.actions.edit, onPress: () => { setEditingExerciseId(actionSheetExerciseId); setEditingRoutineId(activeRoutineId); setActionSheetExerciseId(null); } },
-            { label: t.labels.move, icon: <ArrowDown size={16} />, onPress: () => { openMoveExercise(actionSheetExerciseId); setActionSheetExerciseId(null); } },
+            { label: t.labels.move, onPress: () => { openMoveExercise(actionSheetExerciseId); setActionSheetExerciseId(null); } },
             { label: t.labels.removeFromRoutine, destructive: true, onPress: () => { setConfirmRemoveExerciseId(actionSheetExerciseId); setActionSheetExerciseId(null); } },
           ]}
           onClose={() => setActionSheetExerciseId(null)}
@@ -574,7 +573,7 @@ export const RoutinesScreen: React.FC<Props> = ({
                       className={cn(
                         'px-4 py-3',
                         isMovingExercise ? 'border-app-accent bg-app-accent/10' : '',
-                        isTarget ? 'border-lime-400' : ''
+                        isTarget ? 'border-2 border-app-accent ring-2 ring-app-accent' : ''
                       )}
                     >
                       <div className="flex items-center justify-between gap-3">
