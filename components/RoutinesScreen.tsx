@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { Pencil, X, ArrowUp, ArrowDown, Shuffle, Plus } from 'lucide-react';
 import { Exercise, Routine, RoutineExercise, ExerciseLog } from '../types';
 import { useTranslations, getTranslatedGroupName } from '../utils/translations';
@@ -87,7 +87,12 @@ export const RoutinesScreen: React.FC<Props> = ({
   const [movingRoutineId, setMovingRoutineId] = useState<string | null>(null);
   const [movingRoutineTargetIndex, setMovingRoutineTargetIndex] = useState<number>(0);
 
+  const isFirstMount = useRef(true);
   useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      return;
+    }
     onActiveRoutineChange(null);
     setModalMode(null);
   }, [resetSignal]);
