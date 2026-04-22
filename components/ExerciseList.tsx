@@ -28,7 +28,7 @@ const ExerciseItem: React.FC<{
   return (
     <Surface {...handlers} className="cursor-pointer select-none active:bg-app-surface-muted">
       <div className="min-w-0">
-        <h3 className="truncate text-base font-semibold text-app-text">{exercise.name}</h3>
+        <h3 className="text-base font-semibold text-app-text">{exercise.name}</h3>
         <p className="mt-0.5 text-xs uppercase tracking-wide text-app-text-muted">
           {getTranslatedGroupName(exercise.muscleGroup)}
         </p>

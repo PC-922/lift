@@ -69,7 +69,7 @@ export const InsightsScreen: React.FC<Props> = ({ exercises }) => {
           <ListRow key={progression.exerciseId}>
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <h3 className="truncate text-base font-semibold text-app-text">{progression.exerciseName}</h3>
+                <h3 className="text-base font-semibold text-app-text">{progression.exerciseName}</h3>
                 <p className="mt-0.5 text-xs uppercase tracking-wide text-app-text-muted">{getTranslatedGroupName(progression.muscleGroup)}</p>
               </div>
               <Badge variant="accent" className="flex-shrink-0 whitespace-nowrap px-3 py-1.5 text-xs">
