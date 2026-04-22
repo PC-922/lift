@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowUp, ArrowDown, ChevronRight } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { Routine } from '../types';
 import { useTranslations } from '../utils/translations';
 import { useLongPress } from '../hooks/useLongPress';
@@ -12,13 +12,10 @@ interface Props {
   onEdit: () => void;
   onDelete: () => void;
   onDuplicate: () => void;
-  onMoveUp: () => void;
-  onMoveDown: () => void;
-  isFirst: boolean;
-  isLast: boolean;
+  onMove: () => void;
 }
 
-export const RoutineCard: React.FC<Props> = ({ routine, onClick, onEdit, onDelete, onDuplicate, onMoveUp, onMoveDown, isFirst, isLast }) => {
+export const RoutineCard: React.FC<Props> = ({ routine, onClick, onEdit, onDelete, onDuplicate, onMove }) => {
   const t = useTranslations();
   const [showActions, setShowActions] = useState(false);
 
@@ -30,8 +27,7 @@ export const RoutineCard: React.FC<Props> = ({ routine, onClick, onEdit, onDelet
   const actions: ActionSheetAction[] = [
     { label: t.actions.edit, onPress: onEdit },
     { label: t.actions.duplicate, onPress: onDuplicate },
-    ...(!isFirst ? [{ label: t.labels.moveUp, icon: <ArrowUp size={16} />, keepOpen: true, onPress: onMoveUp }] : []),
-    ...(!isLast ? [{ label: t.labels.moveDown, icon: <ArrowDown size={16} />, keepOpen: true, onPress: onMoveDown }] : []),
+    { label: t.labels.move, onPress: onMove },
     { label: t.actions.delete, destructive: true, onPress: onDelete },
   ];
 

@@ -82,6 +82,8 @@ export const RoutinesScreen: React.FC<Props> = ({
   const [editingRoutineId, setEditingRoutineId] = useState<string | null>(null);
   const [movingExerciseId, setMovingExerciseId] = useState<string | null>(null);
   const [movingExerciseTargetIndex, setMovingExerciseTargetIndex] = useState<number>(0);
+  const [movingRoutineId, setMovingRoutineId] = useState<string | null>(null);
+  const [movingRoutineTargetIndex, setMovingRoutineTargetIndex] = useState<number>(0);
 
   useEffect(() => {
     setActiveRoutineId(null);
@@ -252,6 +254,33 @@ export const RoutinesScreen: React.FC<Props> = ({
     closeMoveExercise();
   };
 
+  const openMoveRoutine = (routineId: string) => {
+    const idx = routines.findIndex((r) => r.id === routineId);
+    if (idx === -1) return;
+    setMovingRoutineId(routineId);
+    setMovingRoutineTargetIndex(idx);
+  };
+
+  const closeMoveRoutine = () => {
+    setMovingRoutineId(null);
+    setMovingRoutineTargetIndex(0);
+  };
+
+  const moveRoutineTarget = (direction: -1 | 1) => {
+    setMovingRoutineTargetIndex((current) => Math.max(0, Math.min(routines.length - 1, current + direction)));
+  };
+
+  const applyMoveRoutine = () => {
+    if (!movingRoutineId) return;
+    const fromIndex = routines.findIndex((r) => r.id === movingRoutineId);
+    if (fromIndex === -1 || fromIndex === movingRoutineTargetIndex) {
+      closeMoveRoutine();
+      return;
+    }
+    onReorderRoutine(fromIndex, movingRoutineTargetIndex);
+    closeMoveRoutine();
+  };
+
   const handleMoveRoutineUp = (id: string) => {
     const index = routines.findIndex((r) => r.id === id);
     if (index > 0) {
@@ -299,6 +328,21 @@ export const RoutinesScreen: React.FC<Props> = ({
       isTarget: index === movingExerciseTargetIndex,
     }));
   }, [activeRoutine, movingExerciseId, movingExerciseIndex, movingExerciseTargetIndex, exerciseById]);
+
+  const movingRoutineName = movingRoutineId ? routines.find((r) => r.id === movingRoutineId)?.name ?? '' : '';
+  const movingRoutineFromIndex = movingRoutineId ? routines.findIndex((r) => r.id === movingRoutineId) : -1;
+  const movePreviewRoutines = useMemo(() => {
+    if (!movingRoutineId || movingRoutineFromIndex === -1) return [];
+    const reordered = [...routines];
+    const [moving] = reordered.splice(movingRoutineFromIndex, 1);
+    reordered.splice(movingRoutineTargetIndex, 0, moving);
+    return reordered.map((routine, index) => ({
+      index,
+      routine,
+      isMoving: routine.id === movingRoutineId,
+      isTarget: index === movingRoutineTargetIndex,
+    }));
+  }, [routines, movingRoutineId, movingRoutineFromIndex, movingRoutineTargetIndex]);
 
   return (
     <div className="space-y-6">
@@ -359,7 +403,7 @@ export const RoutinesScreen: React.FC<Props> = ({
             </div>
           ) : (
             <div className="space-y-3">
-              {routines.map((routine, index) => (
+              {routines.map((routine) => (
                 <RoutineCard
                   key={routine.id}
                   routine={routine}
@@ -367,10 +411,7 @@ export const RoutinesScreen: React.FC<Props> = ({
                   onEdit={() => openEdit(routine)}
                   onDelete={() => handleDelete(routine.id)}
                   onDuplicate={() => handleDuplicate(routine)}
-                  onMoveUp={() => handleMoveRoutineUp(routine.id)}
-                  onMoveDown={() => handleMoveRoutineDown(routine.id)}
-                  isFirst={index === 0}
-                  isLast={index === routines.length - 1}
+                  onMove={() => openMoveRoutine(routine.id)}
                 />
               ))}
             </div>
@@ -595,6 +636,73 @@ export const RoutinesScreen: React.FC<Props> = ({
               <div className="flex gap-3">
                 <Button onClick={closeMoveExercise} variant="secondary" className="flex-1">{t.actions.cancel}</Button>
                 <Button onClick={applyMoveExercise} className="flex-1">{t.actions.save}</Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <Modal open={!!movingRoutineId} onClose={closeMoveRoutine} position="bottom" blurBackdrop={false}>
+        {movingRoutineId && (
+          <div className="flex max-h-[calc(100dvh-1.5rem)] w-full flex-col">
+            <div className="shrink-0 border-b border-app-border px-6 pb-4 pt-5">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-xl font-bold text-app-text">{t.labels.move}</h2>
+                  <p className="mt-1 text-sm text-app-text-muted">{movingRoutineName}</p>
+                </div>
+                <button onClick={closeMoveRoutine} className="rounded-full border border-app-border p-2 text-app-text-muted active:opacity-70" aria-label={t.actions.cancel}>
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-6 py-5">
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="secondary"
+                  onClick={() => moveRoutineTarget(-1)}
+                  disabled={movingRoutineTargetIndex === 0}
+                  aria-label={t.labels.moveUp}
+                >
+                  <ArrowUp size={16} />
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => moveRoutineTarget(1)}
+                  disabled={movingRoutineTargetIndex === routines.length - 1}
+                  aria-label={t.labels.moveDown}
+                >
+                  <ArrowDown size={16} />
+                </Button>
+              </div>
+
+              <div className="mt-5 space-y-3">
+                <p className="text-sm font-medium text-app-text-muted">{t.labels.movePreview}</p>
+                <div className="space-y-2">
+                  {movePreviewRoutines.map(({ index, routine, isMoving, isTarget }) => (
+                    <ListRow
+                      key={`${routine.id}-${index}`}
+                      className={cn(
+                        'px-4 py-3',
+                        isMoving ? 'border-app-accent bg-app-accent/10' : '',
+                        isTarget ? 'border-2 border-app-accent ring-2 ring-app-accent' : ''
+                      )}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-app-text">{index + 1}.</span>
+                        <p className="text-sm font-semibold text-app-text">{routine.name}</p>
+                      </div>
+                    </ListRow>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="shrink-0 border-t border-app-border px-6 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-4">
+              <div className="flex gap-3">
+                <Button onClick={closeMoveRoutine} variant="secondary" className="flex-1">{t.actions.cancel}</Button>
+                <Button onClick={applyMoveRoutine} className="flex-1">{t.actions.save}</Button>
               </div>
             </div>
           </div>
