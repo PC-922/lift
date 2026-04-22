@@ -80,6 +80,15 @@ body {
   animation: slideDown 0.22s ease-out forwards;
 }
 
+@keyframes toastOut {
+  from { transform: translateY(0); opacity: 1; }
+  to { transform: translateY(-12px); opacity: 0; }
+}
+
+.animate-toastOut {
+  animation: toastOut 0.22s ease-in forwards;
+}
+
 @keyframes slideUp {
   from { transform: translateY(12px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }

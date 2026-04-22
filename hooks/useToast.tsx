@@ -16,22 +16,28 @@ interface ToastContextValue {
 const ToastContext = createContext<ToastContextValue | null>(null);
 
 const TOAST_DURATION_MS = 3000;
+const TOAST_EXIT_MS = 220;
 
 export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const [removingIds, setRemovingIds] = useState<ReadonlySet<string>>(new Set());
 
   const showToast = useCallback((text: string, type: ToastType = 'achievement') => {
     const id = makeId('toast');
     setToasts((prev) => [...prev, { id, text, type }]);
     setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
+      setRemovingIds((prev) => new Set([...prev, id]));
+      setTimeout(() => {
+        setToasts((prev) => prev.filter((t) => t.id !== id));
+        setRemovingIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
+      }, TOAST_EXIT_MS);
     }, TOAST_DURATION_MS);
   }, []);
 
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      <ToastContainer toasts={toasts} />
+      <ToastContainer toasts={toasts} removingIds={removingIds} />
     </ToastContext.Provider>
   );
 };
@@ -42,7 +48,7 @@ export function useToast(): ToastContextValue {
   return ctx;
 }
 
-const ToastContainer: React.FC<{ toasts: ToastMessage[] }> = ({ toasts }) => {
+const ToastContainer: React.FC<{ toasts: ToastMessage[]; removingIds: ReadonlySet<string> }> = ({ toasts, removingIds }) => {
   if (toasts.length === 0) return null;
   return (
     <div
@@ -50,18 +56,18 @@ const ToastContainer: React.FC<{ toasts: ToastMessage[] }> = ({ toasts }) => {
       style={{ top: 'calc(env(safe-area-inset-top, 0px) + 16px)' }}
     >
       {toasts.map((toast) => (
-        <Toast key={toast.id} toast={toast} />
+        <Toast key={toast.id} toast={toast} isRemoving={removingIds.has(toast.id)} />
       ))}
     </div>
   );
 };
 
-const Toast: React.FC<{ toast: ToastMessage }> = ({ toast }) => {
+const Toast: React.FC<{ toast: ToastMessage; isRemoving: boolean }> = ({ toast, isRemoving }) => {
   const isAchievement = toast.type === 'achievement';
   return (
     <div
       className={`
-        animate-slideDown max-w-sm w-full px-4 py-3 rounded-2xl shadow-lg
+        ${isRemoving ? 'animate-toastOut' : 'animate-slideDown'} max-w-sm w-full px-4 py-3 rounded-2xl shadow-lg
         flex items-center gap-3
         ${isAchievement
           ? 'border border-app-accent bg-app-surface text-app-text'
