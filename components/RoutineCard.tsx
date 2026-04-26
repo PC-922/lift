@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { Routine } from '../types';
-import { useTranslations } from '../utils/translations';
+import { getTranslatedGroupName, useTranslations } from '../utils/translations';
 import { useLongPress } from '../hooks/useLongPress';
 import { ActionSheet, ActionSheetAction } from './ActionSheet';
 import { ListRow } from './ui/ListRow';
 
 interface Props {
   routine: Routine;
+  muscleGroups: string[];
   onClick: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -15,7 +16,7 @@ interface Props {
   onMove: () => void;
 }
 
-export const RoutineCard: React.FC<Props> = ({ routine, onClick, onEdit, onDelete, onDuplicate, onMove }) => {
+export const RoutineCard: React.FC<Props> = ({ routine, muscleGroups, onClick, onEdit, onDelete, onDuplicate, onMove }) => {
   const t = useTranslations();
   const [showActions, setShowActions] = useState(false);
 
@@ -43,6 +44,20 @@ export const RoutineCard: React.FC<Props> = ({ routine, onClick, onEdit, onDelet
             <p className="text-xs text-app-text-muted mt-1">
               {routine.exercises.length} {t.labels.exercises}
             </p>
+
+            {muscleGroups.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {muscleGroups.map((group) => (
+                  <span
+                    key={group}
+                    className="inline-flex rounded-full border border-app-border bg-app-surface px-3 py-1.5 text-xs font-semibold text-app-text-muted"
+                  >
+                    {getTranslatedGroupName(group)}
+                  </span>
+                ))}
+              </div>
+            )}
+
           </div>
           <ChevronRight size={18} className="text-app-text-muted ml-3 flex-shrink-0" />
         </div>

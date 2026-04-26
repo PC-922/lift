@@ -95,6 +95,14 @@ export const RoutinesScreen: React.FC<Props> = ({
 
   const activeRoutine = useMemo(() => routines.find((r) => r.id === activeRoutineId) ?? null, [routines, activeRoutineId]);
   const exerciseById = useMemo(() => new Map(exercises.map((exercise) => [exercise.id, exercise] as const)), [exercises]);
+  const getRoutineMuscleGroups = useCallback(
+    (routine: Routine) => Array.from(new Set(
+      routine.exercises
+        .map((routineExercise) => exerciseById.get(routineExercise.exerciseId)?.muscleGroup)
+        .filter((group): group is string => group !== undefined)
+    )),
+    [exerciseById]
+  );
 
   const activeRoutineExercises = useMemo(() => {
     if (!activeRoutine) return [];
@@ -409,6 +417,7 @@ export const RoutinesScreen: React.FC<Props> = ({
                 <RoutineCard
                   key={routine.id}
                   routine={routine}
+                  muscleGroups={getRoutineMuscleGroups(routine)}
                   onClick={() => onActiveRoutineChange(routine.id)}
                   onEdit={() => openEdit(routine)}
                   onDelete={() => handleDelete(routine.id)}
