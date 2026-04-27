@@ -179,6 +179,10 @@ export const translations = {
       loggedToday: 'Registrado',
       noExercisesFound: 'No hay ejercicios que coincidan',
       exerciseDetails: 'Detalle del ejercicio',
+      restTimer: 'Temporizador de descanso',
+      restPause: 'Pausa',
+      restResume: 'Reanudar',
+      restStop: 'Detener',
     },
     time: {
       today: 'Hoy',
@@ -370,6 +374,10 @@ export const translations = {
       loggedToday: 'Logged',
       noExercisesFound: 'No matching exercises',
       exerciseDetails: 'Exercise detail',
+      restTimer: 'Rest timer',
+      restPause: 'Pause',
+      restResume: 'Resume',
+      restStop: 'Stop',
     },
     time: {
       today: 'Today',

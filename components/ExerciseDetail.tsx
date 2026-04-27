@@ -1,16 +1,17 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Pencil, Trash2, X } from 'lucide-react';
-import { Exercise, ExerciseLog } from '../types';
-import { useTranslations, getTranslatedGroupName } from '../utils/translations';
-import { getLatestLog } from '../utils/progression';
-import { useToast } from '../hooks/useToast';
+import React, {useCallback, useEffect, useState} from 'react';
+import {Pencil, Trash2, X} from 'lucide-react';
+import {Exercise, ExerciseLog} from '../types';
+import {getTranslatedGroupName, useTranslations} from '../utils/translations';
+import {getLatestLog} from '../utils/progression';
+import {useToast} from '../hooks/useToast';
+import {useRestTimer} from '../hooks/useRestTimer';
 import ConfirmModal from './ConfirmModal';
-import { BackButton } from './ui/BackButton';
-import { Button } from './ui/Button';
-import { Input } from './ui/Input';
-import { Surface } from './ui/Surface';
-import { MuscleGroupPicker } from './ui/MuscleGroupPicker';
-import { cn } from '../utils/cn';
+import {BackButton} from './ui/BackButton';
+import {Button} from './ui/Button';
+import {Input} from './ui/Input';
+import {Surface} from './ui/Surface';
+import {MuscleGroupPicker} from './ui/MuscleGroupPicker';
+import {cn} from '../utils/cn';
 
 interface RoutineExerciseSettings {
   sets: number;
@@ -64,6 +65,7 @@ export const ExerciseDetail: React.FC<Props> = ({
   onUpdateRoutineExercise,
 }) => {
   const { showToast } = useToast();
+  const { startTimer } = useRestTimer();
   const t = useTranslations();
   const latest = getLatestLog(exercise.logs);
 

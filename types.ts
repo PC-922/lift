@@ -56,3 +56,10 @@ export interface StorageManagerInterface {
   reorderRoutine(fromIndex: number, toIndex: number): void;
   reorderRoutineExercise(routineId: string, fromIndex: number, toIndex: number): void;
 }
+
+export interface RestTimerState {
+  remainingTime: number;
+  isActive: boolean;
+  duration: number;
+  isMinimized: boolean;
+}

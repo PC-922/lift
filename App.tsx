@@ -1,26 +1,27 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { storageManager } from './services/storageService';
-import { preferencesService } from './services/preferencesService';
-import { Exercise, ExerciseLog, Routine } from './types';
-import { ExerciseList } from './components/ExerciseList';
-import { ExerciseDetail } from './components/ExerciseDetail';
-import { SettingsScreen } from './components/SettingsScreen';
-import { InsightsScreen } from './components/InsightsScreen';
-import { RoutinesScreen } from './components/RoutinesScreen';
-import { BottomNav, ScreenType } from './components/BottomNav';
+import React, {useCallback, useEffect, useState} from 'react';
+import {makeId, storageManager} from './services/storageService';
+import {preferencesService} from './services/preferencesService';
+import {Exercise, ExerciseLog, Routine} from './types';
+import {ExerciseList} from './components/ExerciseList';
+import {ExerciseDetail} from './components/ExerciseDetail';
+import {SettingsScreen} from './components/SettingsScreen';
+import {InsightsScreen} from './components/InsightsScreen';
+import {RoutinesScreen} from './components/RoutinesScreen';
+import {BottomNav, ScreenType} from './components/BottomNav';
 import ConfirmModal from './components/ConfirmModal';
 import PromptModal from './components/PromptModal';
-import { Modal } from './components/Modal';
-import { ToastProvider } from './hooks/useToast';
-import { useTranslations, getTranslatedGroupName } from './utils/translations';
-import { Plus, Download, Share, PlusSquare, MoreVertical, Pencil } from 'lucide-react';
-import { makeId } from './services/storageService';
-import { Button } from './components/ui/Button';
-import { Input } from './components/ui/Input';
-import { Surface } from './components/ui/Surface';
-import { Badge } from './components/ui/Badge';
-import { MuscleGroupPicker } from './components/ui/MuscleGroupPicker';
-import { cn } from './utils/cn';
+import {Modal} from './components/Modal';
+import {ToastProvider} from './hooks/useToast';
+import {RestTimerProvider} from './hooks/useRestTimer';
+import {RestTimer} from './components/RestTimer';
+import {useTranslations} from './utils/translations';
+import {Download, MoreVertical, Plus, PlusSquare, Share} from 'lucide-react';
+import {Button} from './components/ui/Button';
+import {Input} from './components/ui/Input';
+import {Surface} from './components/ui/Surface';
+import {Badge} from './components/ui/Badge';
+import {MuscleGroupPicker} from './components/ui/MuscleGroupPicker';
+import {cn} from './utils/cn';
 
 const App: React.FC = () => {
   const t = useTranslations();
@@ -219,8 +220,9 @@ const App: React.FC = () => {
   const appHeaderTitleClassName = 'text-center text-2xl font-bold text-app-text';
 
   return (
-    <ToastProvider>
-      <div className="min-h-screen pb-24 sm:mx-auto sm:max-w-md">
+    <RestTimerProvider>
+      <ToastProvider>
+        <div className="min-h-screen pb-24 sm:mx-auto sm:max-w-md">
 
         {showHeader && (
           <header className={cn('sticky top-0 z-20 bg-app-bg', appHeaderClassName)}>
@@ -545,8 +547,10 @@ const App: React.FC = () => {
             </Button>
           </div>
         </Modal>
+        <RestTimer />
       </div>
     </ToastProvider>
+  </RestTimerProvider>
   );
 };
 
