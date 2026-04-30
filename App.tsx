@@ -406,11 +406,7 @@ const App: React.FC = () => {
 
         <Modal open={!!movingExercise} onClose={() => setMovingExercise(null)} position="center">
           {movingExercise && (
-            <div
-              className="mx-4 w-full max-w-md rounded-2xl border border-app-border bg-app-surface p-6 animate-scaleIn"
-              onClick={(e) => e.stopPropagation()}
-              onTouchEnd={(e) => e.stopPropagation()}
-            >
+            <div className="p-6" onClick={(e) => e.stopPropagation()}>
               <h2 className="mb-2 text-xl font-bold text-app-text">{t.actions.move}</h2>
               <p className="mb-4 text-sm text-app-text-muted">{movingExercise.name}</p>
               <div className="mb-6">
@@ -506,11 +502,7 @@ const App: React.FC = () => {
         )}
 
         <Modal open={isInstallModalOpen} onClose={() => setIsInstallModalOpen(false)} position="center">
-          <div
-            className="mx-4 max-h-[80vh] w-full max-w-sm animate-scaleIn overflow-y-auto rounded-2xl border border-app-border bg-app-surface p-6"
-            onClick={(e) => e.stopPropagation()}
-            onTouchEnd={(e) => e.stopPropagation()}
-          >
+          <div className="p-6">
             <h2 className="mb-6 text-center text-xl font-bold text-app-text">{t.labels.installGuide}</h2>
             <div className="space-y-6">
               <div className="space-y-2">
