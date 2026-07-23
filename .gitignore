@@ -34,3 +34,5 @@ coverage/
 .cache/
 .pnp
 .pnp.js
+
+.atl
