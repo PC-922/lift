@@ -40,6 +40,7 @@ vi.mock('./services/storageService', () => ({
     addMuscleGroup: vi.fn(() => Promise.resolve()),
     renameMuscleGroup: vi.fn(() => Promise.resolve()),
     deleteMuscleGroup: vi.fn(() => Promise.resolve()),
+    resetData: vi.fn(() => Promise.resolve()),
   },
   makeId: (prefix: string) => `${prefix}_id`,
   setStorageUser: vi.fn(),

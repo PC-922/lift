@@ -9,6 +9,7 @@ import {
 } from 'firebase/firestore';
 import { Exercise, ExerciseLog, GroupSortPreference, Routine, RoutineExercise, StorageManagerInterface } from '../../types';
 import { DEFAULT_GROUP_SORT_PREFERENCE } from '../../utils/exerciseSorting';
+import { getDefaultExercises, getDefaultMuscleGroups } from './seedData';
 
 export class FirestoreAdapter implements StorageManagerInterface {
   constructor(
@@ -34,7 +35,16 @@ export class FirestoreAdapter implements StorageManagerInterface {
 
   async getExercises(): Promise<Exercise[]> {
     const snapshot = await getDocs(this.exercisesRef());
-    return snapshot.docs.map((d) => d.data() as Exercise);
+    if (!snapshot.empty) {
+      return snapshot.docs.map((d) => d.data() as Exercise);
+    }
+    const seed = getDefaultExercises();
+    const batch = writeBatch(this.db);
+    seed.forEach((exercise) => {
+      batch.set(doc(this.exercisesRef(), exercise.id), exercise);
+    });
+    await batch.commit();
+    return seed;
   }
 
   async saveExercise(exercise: Exercise): Promise<void> {
@@ -144,7 +154,12 @@ export class FirestoreAdapter implements StorageManagerInterface {
     const snapshot = await getDocs(collection(this.db, 'users', this.uid, 'metadata'));
     const groupsDoc = snapshot.docs.find((d) => d.id === 'groups');
     const items = groupsDoc?.data().items;
-    return Array.isArray(items) ? items : [];
+    if (Array.isArray(items) && items.length > 0) {
+      return items;
+    }
+    const groups = getDefaultMuscleGroups();
+    await setDoc(this.groupsDoc(), { items: groups });
+    return groups;
   }
 
   async addMuscleGroup(group: string): Promise<void> {
@@ -224,6 +239,16 @@ export class FirestoreAdapter implements StorageManagerInterface {
     const current = (await getDocs(collection(this.db, 'users', this.uid, 'metadata')))
       .docs.find((d) => d.id === 'prefs')?.data() ?? {};
     await setDoc(this.prefsDoc(), { ...current, groupSortPreference: preference });
+  }
+
+  async resetData(): Promise<void> {
+    const batch = writeBatch(this.db);
+    const exercisesSnapshot = await getDocs(this.exercisesRef());
+    exercisesSnapshot.docs.forEach((d) => batch.delete(d.ref));
+    const routinesSnapshot = await getDocs(this.routinesRef());
+    routinesSnapshot.docs.forEach((d) => batch.delete(d.ref));
+    batch.delete(this.groupsDoc());
+    await batch.commit();
   }
 
   async getRoutines(): Promise<Routine[]> {

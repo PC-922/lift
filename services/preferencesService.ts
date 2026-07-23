@@ -1,6 +1,6 @@
 import type { ScreenType } from '../components/BottomNav';
 
-const PREFS_KEY = 'lift_prefs_v1';
+export const PREFS_KEY = 'lift_prefs_v1';
 
 export type AuthMode = 'google' | 'guest' | null;
 

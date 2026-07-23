@@ -71,6 +71,8 @@ export const translations = {
       move: 'Mover a grupo',
       signInWithGoogle: 'Iniciar sesión con Google',
       continueAsGuest: 'Continuar sin iniciar sesión',
+      signOut: 'Cerrar sesión',
+      resetData: 'Restablecer datos',
     },
     prompts: {
       deleteExercise: '¿Eliminar "{name}"?',
@@ -80,7 +82,8 @@ export const translations = {
       newGroupName: 'Nombre del nuevo grupo muscular:',
       confirmDelete: 'Confirmar eliminación',
       confirmDeleteAll: '¿Borrar todos los registros de este ejercicio?',
-      confirmDeleteAllExceptLatest: '¿Borrar todos los registros excepto el más reciente?'
+      confirmDeleteAllExceptLatest: '¿Borrar todos los registros excepto el más reciente?',
+      confirmResetData: '¿Eliminar todos los datos y volver a los valores iniciales?'
     },
     labels: {
       empty: 'Vacío',
@@ -201,6 +204,9 @@ export const translations = {
       rest: 'Descanso',
       restSeconds: 'seg',
       muscleGroups: 'Grupos musculares',
+      account: 'Cuenta',
+      signOutDesc: 'Volver a la pantalla de inicio de sesión',
+      resetDataDesc: 'Borrar todo y volver a los ejercicios de inicio',
     },
     time: {
       today: 'Hoy',
@@ -284,6 +290,8 @@ export const translations = {
       move: 'Move to group',
       signInWithGoogle: 'Sign in with Google',
       continueAsGuest: 'Continue without signing in',
+      signOut: 'Sign out',
+      resetData: 'Reset data',
     },
     prompts: {
       deleteExercise: 'Delete "{name}"?',
@@ -293,7 +301,8 @@ export const translations = {
       newGroupName: 'Name of the new muscle group:',
       confirmDelete: 'Confirm deletion',
       confirmDeleteAll: 'Delete all logs for this exercise?',
-      confirmDeleteAllExceptLatest: 'Delete all logs except the most recent one?'
+      confirmDeleteAllExceptLatest: 'Delete all logs except the most recent one?',
+      confirmResetData: 'Delete all data and reset to defaults?'
     },
     labels: {
       empty: 'Empty',
@@ -414,6 +423,9 @@ export const translations = {
       rest: 'Rest',
       restSeconds: 's',
       muscleGroups: 'Muscle groups',
+      account: 'Account',
+      signOutDesc: 'Return to the login screen',
+      resetDataDesc: 'Clear everything and restore starter exercises',
     },
     time: {
       today: 'Today',

@@ -1,6 +1,7 @@
 import { Exercise, ExerciseLog, GroupSortPreference, Routine, RoutineDay, RoutineExercise, StorageManagerInterface } from '../../types';
 import { DEFAULT_GROUP_SORT_PREFERENCE } from '../../utils/exerciseSorting';
-import { getLanguage, translations } from '../../utils/translations';
+import { PREFS_KEY } from '../preferencesService';
+import { getDefaultMuscleGroups, getDefaultExercises } from './seedData';
 
 export const SCHEMA_VERSION = 3;
 
@@ -67,75 +68,8 @@ function isRoutine(value: unknown): value is Routine {
     && (value as Routine).days.every(isRoutineDay);
 }
 
-const DEFAULT_GROUPS = [
-  'Pecho',
-  'Espalda',
-  'Cuádriceps',
-  'Femoral',
-  'Glúteo',
-  'Hombro',
-  'Bíceps',
-  'Tríceps',
-  'Abdominales',
-  'Cardio',
-  'Otro'
-];
-
-function buildSeedExercises(): Exercise[] {
-  const lang = getLanguage();
-  const names = translations[lang].seedExercises;
-  const seed: Array<{ key: keyof typeof names; group: string }> = [
-    { key: 'benchPress', group: 'Pecho' },
-    { key: 'inclinePress', group: 'Pecho' },
-    { key: 'chestFly', group: 'Pecho' },
-    { key: 'dips', group: 'Pecho' },
-    { key: 'latPulldown', group: 'Espalda' },
-    { key: 'barbellRow', group: 'Espalda' },
-    { key: 'deadlift', group: 'Espalda' },
-    { key: 'facePull', group: 'Espalda' },
-    { key: 'squat', group: 'Cuádriceps' },
-    { key: 'legPress', group: 'Cuádriceps' },
-    { key: 'legExtension', group: 'Cuádriceps' },
-    { key: 'legCurl', group: 'Femoral' },
-    { key: 'romanianDeadlift', group: 'Femoral' },
-    { key: 'goodMorning', group: 'Femoral' },
-    { key: 'hipThrust', group: 'Glúteo' },
-    { key: 'bulgarianSplitSquat', group: 'Glúteo' },
-    { key: 'gluteKickback', group: 'Glúteo' },
-    { key: 'militaryPress', group: 'Hombro' },
-    { key: 'lateralRaise', group: 'Hombro' },
-    { key: 'frontRaise', group: 'Hombro' },
-    { key: 'barbellCurl', group: 'Bíceps' },
-    { key: 'hammerCurl', group: 'Bíceps' },
-    { key: 'inclineCurl', group: 'Bíceps' },
-    { key: 'skullCrusher', group: 'Tríceps' },
-    { key: 'tricepPushdown', group: 'Tríceps' },
-    { key: 'tricepKickback', group: 'Tríceps' },
-    { key: 'crunch', group: 'Abdominales' },
-    { key: 'plank', group: 'Abdominales' },
-    { key: 'legRaise', group: 'Abdominales' },
-    { key: 'treadmill', group: 'Cardio' },
-    { key: 'bike', group: 'Cardio' },
-    { key: 'elliptical', group: 'Cardio' },
-    { key: 'cableWristCurl', group: 'Otro' },
-    { key: 'shrugs', group: 'Otro' },
-  ];
-  return seed.map(({ key, group }, index) => ({
-    id: `seed_${index}_${key}`,
-    name: names[key],
-    muscleGroup: group,
-    logs: [],
-  }));
-}
-
 function clearAllLiftKeys(): void {
-  const keysToRemove: string[] = [];
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key && key.startsWith('lift_')) {
-      keysToRemove.push(key);
-    }
-  }
+  const keysToRemove = Object.keys(localStorage).filter((key) => key.startsWith('lift_'));
   keysToRemove.forEach((key) => localStorage.removeItem(key));
 }
 
@@ -168,7 +102,7 @@ export class LocalStorageAdapter implements StorageManagerInterface {
     if (localStorage.getItem(STORAGE_KEY)) {
       await this.saveData([]);
     }
-    const seed = buildSeedExercises();
+    const seed = getDefaultExercises();
     await this.saveData(seed);
     return seed;
   }
@@ -314,8 +248,9 @@ export class LocalStorageAdapter implements StorageManagerInterface {
     if (isStringArray(parsed)) {
       return parsed;
     }
-    await this.saveMuscleGroups(DEFAULT_GROUPS);
-    return DEFAULT_GROUPS;
+    const groups = getDefaultMuscleGroups();
+    await this.saveMuscleGroups(groups);
+    return groups;
   }
 
   private async saveMuscleGroups(groups: string[]): Promise<void> {
@@ -410,6 +345,19 @@ export class LocalStorageAdapter implements StorageManagerInterface {
 
   async saveGroupSortPreference(preference: GroupSortPreference): Promise<void> {
     localStorage.setItem(GROUP_SORT_KEY, JSON.stringify(preference));
+  }
+
+  async resetData(): Promise<void> {
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('lift_') && key !== PREFS_KEY) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach((key) => localStorage.removeItem(key));
+    await this.saveMuscleGroups(getDefaultMuscleGroups());
+    await this.saveData(getDefaultExercises());
   }
 
   async getRoutines(): Promise<Routine[]> {

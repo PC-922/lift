@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { SettingsScreen } from './SettingsScreen';
 import { preferencesService } from '../services/preferencesService';
+import { AuthProvider } from '../hooks/useAuth';
 
 const mockStorage: Record<string, string> = {};
 vi.stubGlobal('localStorage', {
@@ -15,14 +16,24 @@ vi.stubGlobal('localStorage', {
   key: vi.fn((index: number) => Object.keys(mockStorage)[index] || null),
 });
 
+vi.mock('../services/firebase', () => ({
+  isFirebaseAvailable: vi.fn(() => false),
+  auth: null,
+}));
+
 const defaultProps = {
   onExport: vi.fn(),
   onImport: vi.fn(() => true),
+  onResetData: vi.fn(() => Promise.resolve()),
 };
 
 const PREFS_KEY = 'lift_prefs_v1';
 
-const renderWithRouter = (ui: React.ReactElement) => render(<BrowserRouter>{ui}</BrowserRouter>);
+const renderWithRouter = (ui: React.ReactElement) => render(
+  <BrowserRouter>
+    <AuthProvider>{ui}</AuthProvider>
+  </BrowserRouter>
+);
 
 describe('SettingsScreen selectors', () => {
   beforeEach(() => {

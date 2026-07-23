@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { authService, AuthUser } from '../services/authService';
+import { authService, AuthUser, AUTH_TIMEOUT_MS } from '../services/authService';
 import { AuthMode } from '../services/preferencesService';
 
 interface AuthContextValue {
@@ -19,11 +19,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    return authService.subscribe((nextUser, nextMode) => {
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+
+    const unsubscribe = authService.subscribe((nextUser, nextMode) => {
       setUser(nextUser);
       setMode(nextMode);
       setIsLoading(false);
+      if (timeout) {
+        clearTimeout(timeout);
+        timeout = undefined;
+      }
     });
+
+    timeout = setTimeout(() => {
+      setIsLoading(false);
+    }, AUTH_TIMEOUT_MS);
+
+    return () => {
+      unsubscribe();
+      if (timeout) clearTimeout(timeout);
+    };
   }, []);
 
   const value: AuthContextValue = {

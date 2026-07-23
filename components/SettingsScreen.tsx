@@ -1,25 +1,31 @@
 import pkg from '../package.json';
 import React, { useState, useRef, useSyncExternalStore } from 'react';
-import { Download, Upload, AlertCircle, CheckCircle2, Layers } from 'lucide-react';
+import { Download, Upload, AlertCircle, CheckCircle2, Layers, LogOut, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslations, useLanguage } from '../utils/translations';
 import { preferencesService } from '../services/preferencesService';
+import { useAuth } from '../hooks/useAuth';
 import type { ScreenType } from './BottomNav';
 import { Badge } from './ui/Badge';
 import { ListRow } from './ui/ListRow';
 import { Select } from './ui/Select';
+import ConfirmModal from './ConfirmModal';
 
 interface Props {
   onExport: () => void;
   onImport: (content: string) => boolean;
+  onResetData: () => Promise<void>;
 }
 
 const SCREEN_ORDER: ScreenType[] = ['home', 'insights', 'routines', 'settings'];
 
-export const SettingsScreen: React.FC<Props> = ({ onExport, onImport }) => {
+export const SettingsScreen: React.FC<Props> = ({ onExport, onImport, onResetData }) => {
   const t = useTranslations();
   const navigate = useNavigate();
+  const { signOut } = useAuth();
   const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [isResetting, setIsResetting] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
   const currentLang = useLanguage();
   const currentDefaultScreen = useSyncExternalStore(
     preferencesService.subscribe,
@@ -141,6 +147,44 @@ export const SettingsScreen: React.FC<Props> = ({ onExport, onImport }) => {
           </div>
         )}
       </div>
+
+      <div className="space-y-3">
+        <p className="ml-1 text-xs font-semibold uppercase tracking-wide text-app-text-muted">{t.labels.account}</p>
+        <ListRow padded={false}>
+          <button onClick={() => signOut()} className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors active:bg-app-surface-muted sm:px-5 sm:py-5">
+            <Badge variant="neutral" className="rounded-xl px-3 py-3 bg-app-surface-muted text-app-text-muted border-none"><LogOut size={20} /></Badge>
+            <div className="text-left">
+              <div className="font-semibold text-app-text">{t.actions.signOut}</div>
+              <div className="text-xs text-app-text-muted">{t.labels.signOutDesc}</div>
+            </div>
+          </button>
+        </ListRow>
+
+        <ListRow padded={false}>
+          <button onClick={() => setShowResetConfirm(true)} disabled={isResetting} className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors active:bg-app-surface-muted sm:px-5 sm:py-5">
+            <Badge variant="neutral" className="rounded-xl px-3 py-3 bg-app-surface-muted text-app-danger border-none"><Trash2 size={20} /></Badge>
+            <div className="text-left">
+              <div className="font-semibold text-app-danger">{t.actions.resetData}</div>
+              <div className="text-xs text-app-text-muted">{t.labels.resetDataDesc}</div>
+            </div>
+          </button>
+        </ListRow>
+      </div>
+
+      {showResetConfirm && (
+        <ConfirmModal
+          title={t.prompts.confirmResetData}
+          confirmLabel={t.actions.resetData}
+          destructive
+          onConfirm={async () => {
+            setIsResetting(true);
+            setShowResetConfirm(false);
+            await onResetData();
+            setIsResetting(false);
+          }}
+          onCancel={() => setShowResetConfirm(false)}
+        />
+      )}
 
       <div className="border-t border-app-border pt-6 pb-2">
         <p className="text-center text-xs leading-relaxed text-app-text-muted">{t.labels.settingsInfo}</p>

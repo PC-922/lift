@@ -3,14 +3,60 @@ import { storageManager, setStorageUser } from './storageService';
 import { Exercise, Routine } from '../types';
 
 const mockStorage: Record<string, string> = {};
-vi.stubGlobal('localStorage', {
-  getItem: vi.fn((key: string) => mockStorage[key] || null),
-  setItem: vi.fn((key: string, value: string) => { mockStorage[key] = value; }),
-  removeItem: vi.fn((key: string) => { delete mockStorage[key]; }),
-  clear: vi.fn(() => { Object.keys(mockStorage).forEach(key => delete mockStorage[key]); }),
-  length: 0,
-  key: vi.fn((index: number) => Object.keys(mockStorage)[index] || null),
-});
+
+const mockLocalStorageTarget: Record<string, unknown> = {};
+
+const defineMockMethod = (name: string, fn: (...args: unknown[]) => unknown) => {
+  Object.defineProperty(mockLocalStorageTarget, name, {
+    value: vi.fn(fn),
+    enumerable: false,
+    configurable: true,
+  });
+};
+
+defineMockMethod('getItem', (key: string) => mockStorage[key] ?? null);
+defineMockMethod('setItem', (key: string, value: string) => { mockStorage[key] = value; });
+defineMockMethod('removeItem', (key: string) => { delete mockStorage[key]; });
+defineMockMethod('clear', () => { Object.keys(mockStorage).forEach((key) => delete mockStorage[key]); });
+defineMockMethod('key', (index: number) => Object.keys(mockStorage)[index] ?? null);
+
+vi.stubGlobal(
+  'localStorage',
+  new Proxy(mockLocalStorageTarget, {
+    get(_target, prop) {
+      if (prop === 'length') return Object.keys(mockStorage).length;
+      if (typeof prop === 'string' && prop in mockStorage) return mockStorage[prop];
+      return Reflect.get(mockLocalStorageTarget, prop);
+    },
+    set(_target, prop, value) {
+      if (typeof prop === 'string') {
+        mockStorage[prop] = value;
+        return true;
+      }
+      return Reflect.set(mockLocalStorageTarget, prop, value);
+    },
+    deleteProperty(_target, prop) {
+      if (typeof prop === 'string') {
+        delete mockStorage[prop];
+        return true;
+      }
+      return Reflect.deleteProperty(mockLocalStorageTarget, prop);
+    },
+    ownKeys() {
+      return Object.keys(mockStorage);
+    },
+    getOwnPropertyDescriptor(_target, prop) {
+      if (typeof prop === 'string' && prop in mockStorage) {
+        return { enumerable: true, configurable: true, value: mockStorage[prop] };
+      }
+      return Reflect.getOwnPropertyDescriptor(mockLocalStorageTarget, prop);
+    },
+    has(_target, prop) {
+      if (typeof prop === 'string' && prop in mockStorage) return true;
+      return Reflect.has(mockLocalStorageTarget, prop);
+    },
+  })
+);
 
 const seedExercise = (id: string, group: string = 'Pecho'): Exercise => ({
   id,
@@ -217,5 +263,23 @@ describe('storageService — routines', () => {
     const routines = await storageManager.getRoutines();
     expect(routines[0].days[0].exercises[0].exerciseId).toBe('ex2');
     expect(routines[0].days[0].exercises[1].exerciseId).toBe('ex1');
+  });
+
+  it('resets data to defaults and clears routines', async () => {
+    await storageManager.addMuscleGroup('CustomGroup');
+    await storageManager.saveExercise(seedExercise('ex1'));
+    await storageManager.saveRoutine({ id: 'r1', name: 'Test', days: [makeDay('d1')] });
+
+    await storageManager.resetData();
+
+    const groups = await storageManager.getMuscleGroups();
+    expect(groups).not.toContain('CustomGroup');
+    expect(groups).toContain('Pecho');
+
+    const exercises = await storageManager.getExercises();
+    expect(exercises.some((exercise) => exercise.id === 'ex1')).toBe(false);
+    expect(exercises.length).toBeGreaterThan(0);
+
+    expect(await storageManager.getRoutines()).toEqual([]);
   });
 });

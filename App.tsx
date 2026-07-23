@@ -262,6 +262,10 @@ const SettingsRoute: React.FC = () => {
         if (success) await refresh();
         return success;
       }}
+      onResetData={async () => {
+        await storageManager.resetData();
+        await refresh();
+      }}
     />
   );
 };
@@ -269,12 +273,7 @@ const SettingsRoute: React.FC = () => {
 const AppLayout: React.FC = () => {
   const t = useTranslations();
   const location = useLocation();
-  const { user, mode: authMode } = useAuth();
   const { isLoading } = useAppData();
-
-  useEffect(() => {
-    setStorageUser(user, authMode);
-  }, [user, authMode]);
 
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
   const [isStandalone, setIsStandalone] = useState(true);
@@ -410,11 +409,13 @@ const AppLayout: React.FC = () => {
 const AppContent: React.FC = () => {
   const { user, mode: authMode } = useAuth();
 
+  useEffect(() => {
+    setStorageUser(user, authMode);
+  }, [user, authMode]);
+
   if (authMode === null) {
     return <OnboardingScreen />;
   }
-
-  setStorageUser(user, authMode);
 
   return (
     <ToastProvider>

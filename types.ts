@@ -66,6 +66,7 @@ export interface StorageManagerInterface {
   reorderRoutineExercise(routineId: string, dayId: string, fromIndex: number, toIndex: number): Promise<void>;
   exportData(): Promise<string>;
   importData(jsonString: string): Promise<boolean>;
+  resetData(): Promise<void>;
 }
 
 export interface RestTimerState {
