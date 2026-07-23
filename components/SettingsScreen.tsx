@@ -1,6 +1,7 @@
 import pkg from '../package.json';
 import React, { useState, useRef, useSyncExternalStore } from 'react';
-import { Download, Upload, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Download, Upload, AlertCircle, CheckCircle2, Layers } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslations, useLanguage } from '../utils/translations';
 import { preferencesService } from '../services/preferencesService';
 import type { ScreenType } from './BottomNav';
@@ -17,6 +18,7 @@ const SCREEN_ORDER: ScreenType[] = ['home', 'insights', 'routines', 'settings'];
 
 export const SettingsScreen: React.FC<Props> = ({ onExport, onImport }) => {
   const t = useTranslations();
+  const navigate = useNavigate();
   const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const currentLang = useLanguage();
   const currentDefaultScreen = useSyncExternalStore(
@@ -87,6 +89,19 @@ export const SettingsScreen: React.FC<Props> = ({ onExport, onImport }) => {
             <option key={screen} value={screen}>{screenLabel(screen)}</option>
           ))}
         </Select>
+      </div>
+
+      <div className="space-y-3">
+        <p className="ml-1 text-xs font-semibold uppercase tracking-wide text-app-text-muted">{t.actions.addGroup}</p>
+        <ListRow padded={false}>
+          <button onClick={() => navigate('/settings/muscle-groups')} className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors active:bg-app-surface-muted sm:px-5 sm:py-5">
+            <Badge variant="neutral" className="rounded-xl px-3 py-3 bg-app-surface-muted text-app-text-muted border-none"><Layers size={20} /></Badge>
+            <div className="text-left">
+              <div className="font-semibold text-app-text">{t.actions.addGroup}</div>
+              <div className="text-xs text-app-text-muted">{t.labels.routinesDesc}</div>
+            </div>
+          </button>
+        </ListRow>
       </div>
 
       <div className="space-y-3">

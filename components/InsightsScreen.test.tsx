@@ -1,5 +1,5 @@
 import React from 'react';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { InsightsScreen, getProgressState, getProgressVariant } from './InsightsScreen';
 import { Exercise } from '../types';
@@ -53,7 +53,7 @@ describe('InsightsScreen', () => {
   });
 
   it('renders shared progression states for weight and reps', () => {
-    render(<InsightsScreen exercises={exercises} />);
+    render(<InsightsScreen exercises={exercises} onSelectExercise={vi.fn()} />);
 
     expect(getProgressState(100, 120)).toBe('up');
     expect(getProgressState(100, 100)).toBe('same');
@@ -64,19 +64,53 @@ describe('InsightsScreen', () => {
 
     expect(screen.getByText('Your recent progressions')).toBeTruthy();
     expect(screen.getByText('Top weight')).toBeTruthy();
-    expect(screen.getByText('100 → 120')).toBeTruthy();
-    expect(screen.getByText('6 → 8')).toBeTruthy();
+    expect(screen.getAllByText('100 → 120')).toHaveLength(2);
+    expect(screen.getAllByText('6 → 8')).toHaveLength(2);
 
-    expect(screen.getAllByText('Weight Up')).toHaveLength(2);
+    expect(screen.getAllByText('Weight Up')).toHaveLength(3);
     expect(screen.getAllByText('Equal Weight')).toHaveLength(2);
-    expect(screen.getAllByText('Reps Down')).toHaveLength(1);
-    expect(screen.getAllByText((_, element) => element?.textContent === '120 kg')).toHaveLength(1);
-    expect(screen.getAllByText((_, element) => element?.textContent === '100 kg')).toHaveLength(1);
-    expect(screen.getAllByText((_, element) => element?.textContent === '8 reps')).toHaveLength(2);
+    expect(screen.getAllByText('Reps Down')).toHaveLength(2);
+    expect(screen.getAllByText('120 kg', { selector: 'span' })).toHaveLength(1);
+    expect(screen.getAllByText('100 kg', { selector: 'span' })).toHaveLength(1);
+    expect(screen.getAllByText('8 reps', { selector: 'span' })).toHaveLength(2);
+  });
+
+  it('renders regression section for exercises with performance drops', () => {
+    render(<InsightsScreen exercises={exercises} onSelectExercise={vi.fn()} />);
+
+    expect(screen.getByText('Performance drops')).toBeTruthy();
+    expect(screen.getAllByText('Reps Down')).toHaveLength(2);
+  });
+
+  it('renders featured card with the latest insight', () => {
+    render(<InsightsScreen exercises={exercises} onSelectExercise={vi.fn()} />);
+
+    expect(screen.getByText('Latest change')).toBeTruthy();
+    expect(screen.getByText('View detail')).toBeTruthy();
+  });
+
+  it('calls onSelectExercise when a progression card is clicked', () => {
+    const onSelectExercise = vi.fn();
+    render(<InsightsScreen exercises={exercises} onSelectExercise={onSelectExercise} />);
+
+    const cards = screen.getAllByText('Weight Up');
+    fireEvent.click(cards[0]);
+
+    expect(onSelectExercise).toHaveBeenCalledWith('up');
+  });
+
+  it('calls onSelectExercise when featured card is clicked', () => {
+    const onSelectExercise = vi.fn();
+    render(<InsightsScreen exercises={exercises} onSelectExercise={onSelectExercise} />);
+
+    const featured = screen.getByText('View detail').closest('div[class*="rounded-2xl"]') ?? screen.getByText('View detail').closest('section');
+    if (featured) fireEvent.click(featured);
+
+    expect(onSelectExercise).toHaveBeenCalled();
   });
 
   it('keeps the empty state when there are no progression logs', () => {
-    render(<InsightsScreen exercises={[]} />);
+    render(<InsightsScreen exercises={[]} onSelectExercise={vi.fn()} />);
 
     expect(screen.getByText(/No progressions|Sin progresos/i)).toBeTruthy();
     expect(screen.getByText(/Start logging exercises to see your progress|Empieza a registrar ejercicios para ver tu progreso/i)).toBeTruthy();

@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { makeId } from '../services/storageService';
 
-export type ToastType = 'achievement' | 'info';
+export type ToastType = 'achievement' | 'regression' | 'info';
 
 interface ToastMessage {
   id: string;
@@ -64,17 +64,21 @@ const ToastContainer: React.FC<{ toasts: ToastMessage[]; removingIds: ReadonlySe
 
 const Toast: React.FC<{ toast: ToastMessage; isRemoving: boolean }> = ({ toast, isRemoving }) => {
   const isAchievement = toast.type === 'achievement';
+  const isRegression = toast.type === 'regression';
   return (
     <div
       className={`
-        ${isRemoving ? 'animate-toastOut' : 'animate-slideDown'} max-w-sm w-full px-4 py-3 rounded-2xl shadow-lg
+        ${isRemoving ? 'animate-toastOut' : 'animate-slideDown'} max-w-sm w-full px-4 py-3 rounded-2xl shadow-xl
         flex items-center gap-3
-        ${isAchievement
-          ? 'border border-app-accent bg-app-surface text-app-text'
-          : 'border border-app-border bg-app-surface text-app-text'}
+        ${isRegression
+          ? 'bg-app-danger text-white'
+          : isAchievement
+            ? 'bg-app-accent text-app-accent-foreground'
+            : 'border border-app-border bg-app-surface text-app-text'}
       `}
     >
       {isAchievement && <span className="text-lg">🏆</span>}
+      {isRegression && <span className="text-lg">⚠️</span>}
       <p className="text-sm font-semibold flex-1">{toast.text}</p>
     </div>
   );

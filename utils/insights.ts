@@ -5,8 +5,8 @@ export interface WeightInsight {
   exerciseId: string;
   exerciseName: string;
   muscleGroup: string;
-  weight: number;
-  reps: number;
+  weight: number | null;
+  reps: number | null;
   timeSince: string;
 }
 
@@ -27,7 +27,9 @@ export const getTopWeightExercises = (exercises: Exercise[], limit: number = 3):
     })
     .filter((item): item is WeightInsight => item !== null)
     .sort((a, b) => {
-      if (b.weight !== a.weight) return b.weight - a.weight;
+      const aWeight = a.weight ?? Number.NEGATIVE_INFINITY;
+      const bWeight = b.weight ?? Number.NEGATIVE_INFINITY;
+      if (bWeight !== aWeight) return bWeight - aWeight;
       return a.exerciseName.localeCompare(b.exerciseName);
     })
     .slice(0, limit);
