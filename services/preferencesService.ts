@@ -1,17 +1,21 @@
 import type { ScreenType } from '../components/BottomNav';
 
-const PREFS_KEY = 'lift_prefs_v1';
+export const PREFS_KEY = 'lift_prefs_v1';
+
+export type AuthMode = 'google' | 'guest' | null;
 
 interface Prefs {
   onboardingDone: boolean;
   language: 'es' | 'en' | null;
   defaultScreen: ScreenType | null;
+  authMode: AuthMode;
 }
 
 const DEFAULT_PREFS: Prefs = {
   onboardingDone: false,
   language: null,
   defaultScreen: null,
+  authMode: null,
 };
 
 type PrefsListener = () => void;

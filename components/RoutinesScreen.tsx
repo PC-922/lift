@@ -1,13 +1,13 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Pencil, X, ArrowUp, ArrowDown, Shuffle, Plus } from 'lucide-react';
-import { Exercise, Routine, RoutineExercise, ExerciseLog } from '../types';
+import { Pencil, X, ArrowUp, ArrowDown, Shuffle, Plus, MoreVertical, Trash2 } from 'lucide-react';
+import { Exercise, Routine, RoutineDay, RoutineExercise, ExerciseLog } from '../types';
 import { useTranslations, getTranslatedGroupName } from '../utils/translations';
-import { getLatestLog } from '../utils/progression';
+import { getLatestLog, getLogFeedback } from '../utils/progression';
 import { RoutineCard } from './RoutineCard';
+import { RoutineDayCard } from './RoutineDayCard';
 import { ActionSheet } from './ActionSheet';
 import ConfirmModal from './ConfirmModal';
 import { Modal } from './Modal';
-import { useLongPress } from '../hooks/useLongPress';
 import { useToast } from '../hooks/useToast';
 import { makeId } from '../services/storageService';
 import { Button } from './ui/Button';
@@ -16,6 +16,7 @@ import { Input } from './ui/Input';
 import { SearchInput } from './ui/SearchInput';
 import { ListRow } from './ui/ListRow';
 import { BackButton } from './ui/BackButton';
+import { IconButton } from './ui/IconButton';
 import { cn } from '../utils/cn';
 
 interface Props {
@@ -26,9 +27,9 @@ interface Props {
   onActiveRoutineChange: (id: string | null) => void;
   onSaveRoutine: (routine: Routine) => void;
   onDeleteRoutine: (id: string) => void;
-  onLogExercise: (exerciseId: string, weight: number, reps: number) => void;
+  onLogExercise: (exerciseId: string, weight: number | null, reps: number | null) => void;
   onReorderRoutine: (from: number, to: number) => void;
-  onReorderRoutineExercise: (routineId: string, from: number, to: number) => void;
+  onReorderRoutineExercise: (routineId: string, dayId: string, from: number, to: number) => void;
   onUpdateNote: (exerciseId: string, note: string) => void;
   onUpdateLog: (exerciseId: string, originalDate: string, log: ExerciseLog) => void;
   onDeleteLog: (exerciseId: string, date: string) => void;
@@ -46,13 +47,31 @@ interface LogFormState {
   reps: string;
 }
 
+interface ExerciseDayRef {
+  exerciseId: string;
+  dayId: string;
+}
+
 const DEFAULT_SETS = 3;
 const DEFAULT_REPS = '10';
+const DEFAULT_REST_SECONDS = 90;
+
+function makeDefaultDay(name?: string): RoutineDay {
+  return { id: makeId('day'), name: name ?? 'Día 1', exercises: [] };
+}
+
+function getDayMuscleGroups(day: RoutineDay, exercises: Exercise[]): string[] {
+  const groups = new Set<string>();
+  day.exercises.forEach((re) => {
+    const exercise = exercises.find((e) => e.id === re.exerciseId);
+    if (exercise) groups.add(exercise.muscleGroup);
+  });
+  return Array.from(groups);
+}
 
 export const RoutinesScreen: React.FC<Props> = ({
   routines,
   exercises,
-  muscleGroups,
   activeRoutineId,
   onActiveRoutineChange,
   onSaveRoutine,
@@ -73,43 +92,59 @@ export const RoutinesScreen: React.FC<Props> = ({
   const [modalMode, setModalMode] = useState<ModalMode | null>(null);
   const [editingRoutine, setEditingRoutine] = useState<Routine | null>(null);
   const [formName, setFormName] = useState('');
-  const [formExercises, setFormExercises] = useState<RoutineExercise[]>([]);
+  const [formDays, setFormDays] = useState<RoutineDay[]>([]);
+  const [activeDayIndex, setActiveDayIndex] = useState(0);
   const [formSearch, setFormSearch] = useState('');
   const [logForms, setLogForms] = useState<Record<string, LogFormState>>({});
   const [usingAlternative, setUsingAlternative] = useState<Record<string, boolean>>({});
-  const [actionSheetExerciseId, setActionSheetExerciseId] = useState<string | null>(null);
+  const [actionSheetExercise, setActionSheetExercise] = useState<ExerciseDayRef | null>(null);
   const [confirmDeleteRoutineId, setConfirmDeleteRoutineId] = useState<string | null>(null);
-  const [confirmRemoveExerciseId, setConfirmRemoveExerciseId] = useState<string | null>(null);
-  const [pickingAlternativeFor, setPickingAlternativeFor] = useState<string | null>(null);
+  const [confirmRemoveExercise, setConfirmRemoveExercise] = useState<ExerciseDayRef | null>(null);
+  const [pickingAlternativeFor, setPickingAlternativeFor] = useState<ExerciseDayRef | null>(null);
   const [alternativeSearch, setAlternativeSearch] = useState('');
-  const [movingExerciseId, setMovingExerciseId] = useState<string | null>(null);
-  const [movingExerciseTargetIndex, setMovingExerciseTargetIndex] = useState<number>(0);
+  const [movingExercise, setMovingExercise] = useState<{ ref: ExerciseDayRef; targetIndex: number } | null>(null);
   const [movingRoutineId, setMovingRoutineId] = useState<string | null>(null);
   const [movingRoutineTargetIndex, setMovingRoutineTargetIndex] = useState<number>(0);
+  const [selectedDayId, setSelectedDayId] = useState<string | null>(null);
 
   useEffect(() => {
     setModalMode(null);
+    setSelectedDayId(null);
   }, [resetSignal]);
+
+  useEffect(() => {
+    setSelectedDayId(null);
+  }, [activeRoutineId]);
 
   const { showToast } = useToast();
 
   const activeRoutine = useMemo(() => routines.find((r) => r.id === activeRoutineId) ?? null, [routines, activeRoutineId]);
   const exerciseById = useMemo(() => new Map(exercises.map((exercise) => [exercise.id, exercise] as const)), [exercises]);
 
-  const activeRoutineExercises = useMemo(() => {
+  const activeRoutineDays = useMemo(() => {
     if (!activeRoutine) return [];
-    return activeRoutine.exercises
-      .map((re) => ({
-        routineExercise: re,
-        exercise: exercises.find((e) => e.id === re.exerciseId),
-        alternativeExercise: re.alternativeExerciseId ? exercises.find((e) => e.id === re.alternativeExerciseId) : undefined,
-      }))
-      .filter((item): item is { routineExercise: RoutineExercise; exercise: Exercise; alternativeExercise: Exercise | undefined } => item.exercise !== undefined);
+    return activeRoutine.days.map((day) => ({
+      ...day,
+      resolved: day.exercises
+        .map((re) => ({
+          routineExercise: re,
+          exercise: exercises.find((e) => e.id === re.exerciseId),
+          alternativeExercise: re.alternativeExerciseId ? exercises.find((e) => e.id === re.alternativeExerciseId) : undefined,
+        }))
+        .filter((item): item is { routineExercise: RoutineExercise; exercise: Exercise; alternativeExercise: Exercise | undefined } => item.exercise !== undefined),
+      muscleGroups: getDayMuscleGroups(day, exercises),
+    }));
   }, [activeRoutine, exercises]);
+
+  const selectedDay = useMemo(
+    () => activeRoutineDays.find((day) => day.id === selectedDayId) ?? null,
+    [activeRoutineDays, selectedDayId]
+  );
 
   const openCreate = () => {
     setFormName('');
-    setFormExercises([]);
+    setFormDays([makeDefaultDay(t.labels.day + ' 1')]);
+    setActiveDayIndex(0);
     setFormSearch('');
     setEditingRoutine(null);
     setModalMode('create');
@@ -117,7 +152,8 @@ export const RoutinesScreen: React.FC<Props> = ({
 
   const openEdit = (routine: Routine) => {
     setFormName(routine.name);
-    setFormExercises([...routine.exercises]);
+    setFormDays(routine.days.map((day) => ({ ...day, exercises: day.exercises.map((re) => ({ ...re })) })));
+    setActiveDayIndex(0);
     setFormSearch('');
     setEditingRoutine(routine);
     setModalMode('edit');
@@ -128,46 +164,116 @@ export const RoutinesScreen: React.FC<Props> = ({
     setEditingRoutine(null);
   };
 
-  const toggleExercise = (exerciseId: string) => {
-    setFormExercises((prev) => {
-      const exists = prev.find((re) => re.exerciseId === exerciseId);
-      if (exists) return prev.filter((re) => re.exerciseId !== exerciseId);
-      return [...prev, { exerciseId, sets: DEFAULT_SETS, reps: DEFAULT_REPS, dropset: false, toFailure: false }];
-    });
+  const activeFormDay = formDays[activeDayIndex];
+
+  const addDay = () => {
+    const nextNumber = formDays.length + 1;
+    setFormDays((prev) => [...prev, makeDefaultDay(`${t.labels.day} ${nextNumber}`)]);
+    setActiveDayIndex(formDays.length);
   };
 
-  const updateFormExerciseField = (exerciseId: string, field: 'sets' | 'reps', value: string) => {
-    setFormExercises((prev) => prev.map((re) => (re.exerciseId === exerciseId ? { ...re, [field]: value } : re)));
+  const removeDay = (index: number) => {
+    if (formDays.length <= 1) return;
+    setFormDays((prev) => prev.filter((_, i) => i !== index));
+    setActiveDayIndex((current) => Math.min(current, formDays.length - 2));
+  };
+
+  const updateDayName = (index: number, name: string) => {
+    setFormDays((prev) => prev.map((day, i) => (i === index ? { ...day, name } : day)));
+  };
+
+  const updateFormDays = (updater: (days: RoutineDay[]) => RoutineDay[]) => {
+    setFormDays((prev) => updater(prev.map((day) => ({ ...day, exercises: day.exercises.map((re) => ({ ...re })) }))));
+  };
+
+  const toggleExercise = (exerciseId: string) => {
+    if (!activeFormDay) return;
+    setFormDays((prev) => prev.map((day, i) => {
+      if (i !== activeDayIndex) return day;
+      const exists = day.exercises.find((re) => re.exerciseId === exerciseId);
+      if (exists) {
+        return { ...day, exercises: day.exercises.filter((re) => re.exerciseId !== exerciseId) };
+      }
+      return {
+        ...day,
+        exercises: [...day.exercises, {
+          exerciseId,
+          sets: DEFAULT_SETS,
+          reps: DEFAULT_REPS,
+          dropset: false,
+          toFailure: false,
+          restSeconds: DEFAULT_REST_SECONDS,
+        }],
+      };
+    }));
+  };
+
+  const updateFormExerciseField = (exerciseId: string, field: 'sets' | 'reps' | 'restSeconds', value: string) => {
+    if (!activeFormDay) return;
+    setFormDays((prev) => prev.map((day, i) => {
+      if (i !== activeDayIndex) return day;
+      return {
+        ...day,
+        exercises: day.exercises.map((re) => (re.exerciseId === exerciseId ? { ...re, [field]: value } : re)),
+      };
+    }));
   };
 
   const commitSetsField = (exerciseId: string, value: string) => {
+    if (!activeFormDay) return;
     const parsed = parseInt(value, 10);
     const num = Number.isNaN(parsed) || parsed < 1 ? 1 : parsed;
-    setFormExercises((prev) => prev.map((re) => (re.exerciseId === exerciseId ? { ...re, sets: num } : re)));
+    setFormDays((prev) => prev.map((day, i) => {
+      if (i !== activeDayIndex) return day;
+      return { ...day, exercises: day.exercises.map((re) => (re.exerciseId === exerciseId ? { ...re, sets: num } : re)) };
+    }));
+  };
+
+  const commitRestField = (exerciseId: string, value: string) => {
+    if (!activeFormDay) return;
+    const parsed = parseInt(value, 10);
+    const num = Number.isNaN(parsed) || parsed < 0 ? 0 : parsed;
+    setFormDays((prev) => prev.map((day, i) => {
+      if (i !== activeDayIndex) return day;
+      return { ...day, exercises: day.exercises.map((re) => (re.exerciseId === exerciseId ? { ...re, restSeconds: num } : re)) };
+    }));
   };
 
   const toggleDropset = (exerciseId: string) => {
-    setFormExercises((prev) => prev.map((re) => (re.exerciseId === exerciseId ? { ...re, dropset: !re.dropset } : re)));
+    if (!activeFormDay) return;
+    setFormDays((prev) => prev.map((day, i) => {
+      if (i !== activeDayIndex) return day;
+      return { ...day, exercises: day.exercises.map((re) => (re.exerciseId === exerciseId ? { ...re, dropset: !re.dropset } : re)) };
+    }));
   };
 
   const toggleToFailure = (exerciseId: string) => {
-    setFormExercises((prev) =>
-      prev.map((re) => {
-        if (re.exerciseId !== exerciseId) return re;
-        const next = !re.toFailure;
-        return { ...re, toFailure: next, reps: next ? '' : DEFAULT_REPS };
-      })
-    );
+    if (!activeFormDay) return;
+    setFormDays((prev) => prev.map((day, i) => {
+      if (i !== activeDayIndex) return day;
+      return {
+        ...day,
+        exercises: day.exercises.map((re) => {
+          if (re.exerciseId !== exerciseId) return re;
+          const next = !re.toFailure;
+          return { ...re, toFailure: next, reps: next ? '' : DEFAULT_REPS };
+        }),
+      };
+    }));
   };
 
   const setAlternative = (exerciseId: string, alternativeId: string | undefined) => {
-    setFormExercises((prev) => prev.map((re) => (re.exerciseId === exerciseId ? { ...re, alternativeExerciseId: alternativeId } : re)));
+    if (!activeFormDay) return;
+    setFormDays((prev) => prev.map((day, i) => {
+      if (i !== activeDayIndex) return day;
+      return { ...day, exercises: day.exercises.map((re) => (re.exerciseId === exerciseId ? { ...re, alternativeExerciseId: alternativeId } : re)) };
+    }));
   };
 
   const handleSave = () => {
     const name = formName.trim();
-    if (!name) return;
-    onSaveRoutine({ id: editingRoutine?.id ?? makeId('routine'), name, exercises: formExercises });
+    if (!name || formDays.length === 0) return;
+    onSaveRoutine({ id: editingRoutine?.id ?? makeId('routine'), name, days: formDays });
     closeModal();
   };
 
@@ -181,14 +287,14 @@ export const RoutinesScreen: React.FC<Props> = ({
   };
 
   const handleDuplicate = (routine: Routine) => {
-    onSaveRoutine({ id: makeId('routine'), name: `${routine.name} (2)`, exercises: [...routine.exercises] });
+    onSaveRoutine({ id: makeId('routine'), name: `${routine.name} (2)`, days: routine.days.map((day) => ({ ...day, id: makeId('day'), exercises: day.exercises.map((re) => ({ ...re })) })) });
   };
 
   const getLogForm = useCallback(
     (exerciseId: string): LogFormState => {
       if (logForms[exerciseId]) return logForms[exerciseId];
       const latest = getLatestLog(exerciseById.get(exerciseId)?.logs ?? []);
-      return { weight: latest?.weight.toString() ?? '', reps: latest?.reps.toString() ?? '' };
+      return { weight: latest?.weight?.toString() ?? '', reps: latest?.reps?.toString() ?? '' };
     },
     [logForms, exerciseById]
   );
@@ -199,59 +305,68 @@ export const RoutinesScreen: React.FC<Props> = ({
 
   const handleLog = (targetId: string) => {
     const form = getLogForm(targetId);
-    const weight = parseFloat(form.weight);
-    const reps = parseInt(form.reps, 10);
-    if (Number.isNaN(weight) || Number.isNaN(reps)) return;
+    const weightValue = form.weight.trim() === '' ? null : parseFloat(form.weight);
+    const repsValue = form.reps.trim() === '' ? null : parseInt(form.reps, 10);
+    if (weightValue === null && repsValue === null) return;
+    if ((weightValue !== null && Number.isNaN(weightValue)) || (repsValue !== null && Number.isNaN(repsValue))) return;
 
     const targetExercise = exerciseById.get(targetId);
     const latest = getLatestLog(targetExercise?.logs ?? []);
     const isFirst = (targetExercise?.logs ?? []).length === 0;
-    const prevWeight = latest?.weight ?? 0;
-    const prevReps = latest?.reps ?? 0;
+    const prevWeight = latest?.weight ?? null;
+    const prevReps = latest?.reps ?? null;
 
-    onLogExercise(targetId, weight, reps);
+    onLogExercise(targetId, weightValue, repsValue);
     setLogForms((prev) => {
       const next = { ...prev };
       delete next[targetId];
       return next;
     });
 
-    if (isFirst) {
-      showToast(t.labels.firstLog, 'achievement');
-    } else if (weight > prevWeight) {
-      showToast(t.labels.newWeightRecord, 'achievement');
-    } else if (weight === prevWeight && reps > prevReps) {
-      showToast(t.labels.newRepsRecord, 'achievement');
+    const feedback = getLogFeedback(weightValue, repsValue, prevWeight, prevReps, isFirst);
+    if (feedback) {
+      if (feedback.type === 'first') {
+        showToast(t.labels.firstLog, 'achievement');
+      } else if (feedback.type === 'progress') {
+        showToast(
+          feedback.kind === 'reps' ? t.labels.newRepsRecord : t.labels.newWeightRecord,
+          'achievement'
+        );
+      } else {
+        showToast(t.labels.regressionRecord, 'regression');
+      }
     }
   };
 
-  const openMoveExercise = (exerciseId: string) => {
-    if (!activeRoutine) return;
-    const idx = activeRoutine.exercises.findIndex((re) => re.exerciseId === exerciseId);
+  const openMoveExercise = (ref: ExerciseDayRef) => {
+    const day = activeRoutine?.days.find((d) => d.id === ref.dayId);
+    if (!day) return;
+    const idx = day.exercises.findIndex((re) => re.exerciseId === ref.exerciseId);
     if (idx === -1) return;
-    setMovingExerciseId(exerciseId);
-    setMovingExerciseTargetIndex(idx);
+    setMovingExercise({ ref, targetIndex: idx });
   };
 
-  const closeMoveExercise = () => {
-    setMovingExerciseId(null);
-    setMovingExerciseTargetIndex(0);
-  };
+  const closeMoveExercise = () => setMovingExercise(null);
 
   const moveExerciseTarget = (direction: -1 | 1) => {
-    if (!activeRoutine) return;
-    setMovingExerciseTargetIndex((current) => Math.max(0, Math.min(activeRoutine.exercises.length - 1, current + direction)));
+    const day = activeRoutine?.days.find((d) => d.id === movingExercise?.ref.dayId);
+    if (!day) return;
+    setMovingExercise((current) => {
+      if (!current) return null;
+      return { ...current, targetIndex: Math.max(0, Math.min(day.exercises.length - 1, current.targetIndex + direction)) };
+    });
   };
 
   const applyMoveExercise = () => {
-    if (!activeRoutine || !movingExerciseId) return;
-    const fromIndex = activeRoutine.exercises.findIndex((re) => re.exerciseId === movingExerciseId);
-    if (fromIndex === -1 || fromIndex === movingExerciseTargetIndex) {
+    if (!activeRoutine || !movingExercise) return;
+    const day = activeRoutine.days.find((d) => d.id === movingExercise.ref.dayId);
+    if (!day) return;
+    const fromIndex = day.exercises.findIndex((re) => re.exerciseId === movingExercise.ref.exerciseId);
+    if (fromIndex === -1 || fromIndex === movingExercise.targetIndex) {
       closeMoveExercise();
       return;
     }
-
-    onReorderRoutineExercise(activeRoutine.id, fromIndex, movingExerciseTargetIndex);
+    onReorderRoutineExercise(activeRoutine.id, movingExercise.ref.dayId, fromIndex, movingExercise.targetIndex);
     closeMoveExercise();
   };
 
@@ -282,24 +397,17 @@ export const RoutinesScreen: React.FC<Props> = ({
     closeMoveRoutine();
   };
 
-  const handleMoveRoutineUp = (id: string) => {
-    const index = routines.findIndex((r) => r.id === id);
-    if (index > 0) {
-      onReorderRoutine(index, index - 1);
-    }
-  };
-
-  const handleMoveRoutineDown = (id: string) => {
-    const index = routines.findIndex((r) => r.id === id);
-    if (index < routines.length - 1) {
-      onReorderRoutine(index, index + 1);
-    }
-  };
-
-  const handleRemoveExerciseFromRoutine = (exerciseId: string) => {
+  const handleRemoveExerciseFromRoutine = (ref: ExerciseDayRef) => {
     if (!activeRoutine) return;
-    onSaveRoutine({ ...activeRoutine, exercises: activeRoutine.exercises.filter((re) => re.exerciseId !== exerciseId) });
-    setConfirmRemoveExerciseId(null);
+    onSaveRoutine({
+      ...activeRoutine,
+      days: activeRoutine.days.map((day) =>
+        day.id === ref.dayId
+          ? { ...day, exercises: day.exercises.filter((re) => re.exerciseId !== ref.exerciseId) }
+          : day
+      ),
+    });
+    setConfirmRemoveExercise(null);
   };
 
   const filteredFormExercises = useMemo(() => {
@@ -312,23 +420,34 @@ export const RoutinesScreen: React.FC<Props> = ({
     return exercises.slice().sort((a, b) => a.name.localeCompare(b.name)).filter((ex) => !q || ex.name.toLowerCase().includes(q));
   }, [exercises, alternativeSearch]);
 
-  const actionSheetExerciseName = actionSheetExerciseId ? exerciseById.get(actionSheetExerciseId)?.name ?? '' : '';
-  const movingExerciseIndex = movingExerciseId ? activeRoutine?.exercises.findIndex((re) => re.exerciseId === movingExerciseId) ?? -1 : -1;
-  const movingExerciseName = movingExerciseId ? exerciseById.get(movingExerciseId)?.name ?? '' : '';
-  const movePreviewExercises = useMemo(() => {
-    if (!activeRoutine || !movingExerciseId || movingExerciseIndex === -1) return [];
+  const actionSheetExerciseName = actionSheetExercise ? exerciseById.get(actionSheetExercise.exerciseId)?.name ?? '' : '';
+  const movingExerciseDay = movingExercise ? activeRoutine?.days.find((d) => d.id === movingExercise.ref.dayId) : undefined;
+  const movingExerciseIndex = movingExercise ? movingExerciseDay?.exercises.findIndex((re) => re.exerciseId === movingExercise.ref.exerciseId) ?? -1 : -1;
+  const movingExerciseName = movingExercise ? exerciseById.get(movingExercise.ref.exerciseId)?.name ?? '' : '';
 
-    const reordered = [...activeRoutine.exercises];
-    const [movingExercise] = reordered.splice(movingExerciseIndex, 1);
-    reordered.splice(movingExerciseTargetIndex, 0, movingExercise);
-    return reordered.map((routineExercise, index) => ({
+  const movePreviewExercises = useMemo(() => {
+    if (!movingExerciseDay || !movingExercise || movingExerciseIndex === -1) return [];
+
+    const reordered = [...movingExerciseDay.exercises]
+      .map((routineExercise) => ({
+        routineExercise,
+        exercise: exerciseById.get(routineExercise.exerciseId),
+      }))
+      .filter((item): item is { routineExercise: RoutineExercise; exercise: Exercise } => item.exercise !== undefined);
+
+    const movingIndex = reordered.findIndex((item) => item.routineExercise.exerciseId === movingExercise.ref.exerciseId);
+    if (movingIndex === -1) return [];
+    const [movingItem] = reordered.splice(movingIndex, 1);
+    reordered.splice(movingExercise.targetIndex, 0, movingItem);
+
+    return reordered.map((item, index) => ({
       index,
-      routineExercise,
-      exercise: exerciseById.get(routineExercise.exerciseId),
-      isMovingExercise: routineExercise.exerciseId === movingExerciseId,
-      isTarget: index === movingExerciseTargetIndex,
+      routineExercise: item.routineExercise,
+      exercise: item.exercise,
+      isMovingExercise: item.routineExercise.exerciseId === movingExercise.ref.exerciseId,
+      isTarget: index === movingExercise.targetIndex,
     }));
-  }, [activeRoutine, movingExerciseId, movingExerciseIndex, movingExerciseTargetIndex, exerciseById]);
+  }, [movingExerciseDay, movingExercise, movingExerciseIndex, exerciseById]);
 
   const movingRoutineName = movingRoutineId ? routines.find((r) => r.id === movingRoutineId)?.name ?? '' : '';
   const movingRoutineFromIndex = movingRoutineId ? routines.findIndex((r) => r.id === movingRoutineId) : -1;
@@ -345,27 +464,37 @@ export const RoutinesScreen: React.FC<Props> = ({
     }));
   }, [routines, movingRoutineId, movingRoutineFromIndex, movingRoutineTargetIndex]);
 
+  const pickingAlternativeExerciseId = pickingAlternativeFor?.exerciseId ?? null;
+
   return (
     <div className="space-y-6 pb-20">
       {activeRoutine ? (
         <div className="space-y-4">
-          <div className="mb-6">
-            <BackButton label={t.labels.routines} onClick={() => onActiveRoutineChange(null)} />
-          </div>
+          {selectedDay ? (
+            <div className="mb-6">
+              <BackButton label={activeRoutine.name} onClick={() => setSelectedDayId(null)} />
+            </div>
+          ) : (
+            <div className="mb-6">
+              <BackButton label={t.labels.routines} onClick={() => onActiveRoutineChange(null)} />
+            </div>
+          )}
           <div className="mb-2 flex items-center justify-between">
-            <h1 className="text-xl font-bold text-app-text">{activeRoutine.name}</h1>
-            <button onClick={() => openEdit(activeRoutine)} className="p-1 text-app-text active:opacity-70" aria-label={t.actions.edit}>
-              <Pencil size={18} />
-            </button>
+            <h1 className="text-xl font-bold text-app-text">{selectedDay ? selectedDay.name : activeRoutine.name}</h1>
+            {!selectedDay && (
+              <button onClick={() => openEdit(activeRoutine)} className="p-1 text-app-text active:opacity-70" aria-label={t.actions.edit}>
+                <Pencil size={18} />
+              </button>
+            )}
           </div>
 
-          {activeRoutineExercises.length === 0 ? (
+          {activeRoutineDays.length === 0 ? (
             <div className="py-20 text-center opacity-60">
               <p className="font-medium text-app-text">{t.labels.noExercises}</p>
             </div>
-          ) : (
+          ) : selectedDay ? (
             <div className="space-y-3 pb-32">
-              {activeRoutineExercises.map(({ routineExercise, exercise, alternativeExercise }) => {
+              {selectedDay.resolved.map(({ routineExercise, exercise, alternativeExercise }) => {
                 const isAlt = !!usingAlternative[exercise.id];
                 const displayExercise = isAlt && alternativeExercise ? alternativeExercise : exercise;
                 const form = getLogForm(displayExercise.id);
@@ -380,12 +509,25 @@ export const RoutinesScreen: React.FC<Props> = ({
                     form={form}
                     onUpdateForm={(field, value) => updateLogForm(displayExercise.id, field, value)}
                     onLog={() => handleLog(displayExercise.id)}
-                    onLongPress={() => setActionSheetExerciseId(exercise.id)}
+                    onMenu={() => setActionSheetExercise({ exerciseId: exercise.id, dayId: selectedDay.id })}
                     onTap={() => onNavigateToExercise(displayExercise.id, activeRoutine.id)}
                     onToggleAlternative={() => setUsingAlternative((prev) => ({ ...prev, [exercise.id]: !prev[exercise.id] }))}
+                    onSetAlternative={() => { setPickingAlternativeFor({ exerciseId: exercise.id, dayId: selectedDay.id }); setAlternativeSearch(''); }}
                   />
                 );
               })}
+            </div>
+          ) : (
+            <div className="space-y-3 pb-32">
+              {activeRoutineDays.map((day) => (
+                <RoutineDayCard
+                  key={day.id}
+                  name={day.name}
+                  exerciseCount={day.resolved.length}
+                  muscleGroups={day.muscleGroups}
+                  onClick={() => setSelectedDayId(day.id)}
+                />
+              ))}
             </div>
           )}
         </div>
@@ -442,6 +584,50 @@ export const RoutinesScreen: React.FC<Props> = ({
             </div>
           </div>
 
+          <div className="shrink-0 border-b border-app-border px-6 py-4">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+                {formDays.map((day, index) => (
+                  <button
+                    key={day.id}
+                    onClick={() => setActiveDayIndex(index)}
+                    className={cn(
+                      'shrink-0 rounded-xl border px-3 py-2 text-sm font-medium transition-colors',
+                      activeDayIndex === index
+                        ? 'border-app-accent bg-app-accent text-app-accent-foreground'
+                        : 'border-app-border bg-app-surface text-app-text'
+                    )}
+                  >
+                    {day.name}
+                  </button>
+                ))}
+                <Button variant="secondary" onClick={addDay} className="shrink-0 px-3 py-2 text-sm">
+                  <Plus size={14} />
+                  {t.labels.addDay}
+                </Button>
+              </div>
+
+              {activeFormDay && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="text"
+                      value={activeFormDay.name}
+                      onChange={(e) => updateDayName(activeDayIndex, e.target.value)}
+                      placeholder={t.labels.dayName}
+                      className="flex-1"
+                    />
+                    {formDays.length > 1 && (
+                      <IconButton onClick={() => removeDay(activeDayIndex)} aria-label={t.labels.removeDay} className="shrink-0 text-app-danger">
+                        <Trash2 size={18} />
+                      </IconButton>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 py-5">
             <div className="space-y-3">
               <label className="block text-sm font-medium text-app-text-muted">{t.labels.selectExercises}</label>
@@ -455,7 +641,7 @@ export const RoutinesScreen: React.FC<Props> = ({
               ) : (
                 <div className="space-y-3 pb-2">
                   {filteredFormExercises.map((exercise) => {
-                    const routineEx = formExercises.find((re) => re.exerciseId === exercise.id);
+                    const routineEx = activeFormDay?.exercises.find((re) => re.exerciseId === exercise.id);
                     const selected = routineEx !== undefined;
                     return (
                       <div key={exercise.id} className="space-y-2">
@@ -472,7 +658,7 @@ export const RoutinesScreen: React.FC<Props> = ({
 
                         {selected && routineEx && (
                           <div className="rounded-2xl border border-app-border bg-app-surface-muted px-4 py-4">
-                            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                            <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
                               <div className="space-y-1">
                                 <label className="block text-xs font-medium text-app-text-muted">{t.labels.sets}</label>
                                 <Input compact type="text" inputMode="numeric" value={routineEx.sets} onChange={(e) => updateFormExerciseField(exercise.id, 'sets', e.target.value)} onBlur={(e) => commitSetsField(exercise.id, e.target.value)} className="text-center" />
@@ -480,6 +666,10 @@ export const RoutinesScreen: React.FC<Props> = ({
                               <div className="space-y-1">
                                 <label className="block text-xs font-medium text-app-text-muted">{t.labels.reps}</label>
                                 <Input compact type="text" inputMode="text" value={routineEx.reps} onChange={(e) => updateFormExerciseField(exercise.id, 'reps', e.target.value)} disabled={routineEx.toFailure} className="text-center disabled:opacity-30" placeholder="10" />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="block text-xs font-medium text-app-text-muted">{t.labels.rest}</label>
+                                <Input compact type="text" inputMode="numeric" value={routineEx.restSeconds ?? ''} onChange={(e) => updateFormExerciseField(exercise.id, 'restSeconds', e.target.value)} onBlur={(e) => commitRestField(exercise.id, e.target.value)} className="text-center" placeholder="90" />
                               </div>
                               <div className="space-y-1">
                                 <label className="block text-xs font-medium text-app-text-muted">{t.labels.dropset}</label>
@@ -504,7 +694,7 @@ export const RoutinesScreen: React.FC<Props> = ({
                                   <button onClick={() => setAlternative(exercise.id, undefined)} className="text-xs text-app-danger active:opacity-70">{t.labels.clearAlternative}</button>
                                 </div>
                               ) : (
-                                <button onClick={() => { setPickingAlternativeFor(exercise.id); setAlternativeSearch(''); }} className="flex items-center gap-1 text-xs font-medium text-app-text underline decoration-app-accent decoration-2 underline-offset-4 active:opacity-70">
+                                <button onClick={() => { setPickingAlternativeFor({ exerciseId: exercise.id, dayId: activeFormDay?.id ?? '' }); setAlternativeSearch(''); }} className="flex items-center gap-1 text-xs font-medium text-app-text underline decoration-app-accent decoration-2 underline-offset-4 active:opacity-70">
                                   <Shuffle size={12} />
                                   {t.labels.setAlternative}
                                 </button>
@@ -538,9 +728,9 @@ export const RoutinesScreen: React.FC<Props> = ({
           <div className="flex-1 overflow-y-auto px-6 py-5 pt-[env(safe-area-inset-top,1.25rem)]">
             <SearchInput value={alternativeSearch} onChange={(e) => setAlternativeSearch(e.target.value)} onClear={() => setAlternativeSearch('')} placeholder={t.labels.searchExercises} />
             <div className="mt-4 space-y-2">
-              {filteredAlternativeExercises.filter((ex) => ex.id !== pickingAlternativeFor).map((ex) => (
+              {filteredAlternativeExercises.filter((ex) => ex.id !== pickingAlternativeExerciseId).map((ex) => (
                 <ListRow key={ex.id} padded={false}>
-                  <button onClick={() => { if (pickingAlternativeFor) setAlternative(pickingAlternativeFor, ex.id); setPickingAlternativeFor(null); }} className="w-full px-4 py-4 text-left transition-colors active:bg-app-surface-muted sm:px-5 sm:py-5">
+                  <button onClick={() => { if (pickingAlternativeFor) setAlternative(pickingAlternativeFor.exerciseId, ex.id); setPickingAlternativeFor(null); }} className="w-full px-4 py-4 text-left transition-colors active:bg-app-surface-muted sm:px-5 sm:py-5">
                     <p className="text-sm font-semibold text-app-text">{ex.name}</p>
                     <p className="text-xs text-app-text-muted">{getTranslatedGroupName(ex.muscleGroup)}</p>
                   </button>
@@ -551,19 +741,19 @@ export const RoutinesScreen: React.FC<Props> = ({
         </div>
       </Modal>
 
-      {actionSheetExerciseId && (
+      {actionSheetExercise && (
         <ActionSheet
           title={actionSheetExerciseName}
           actions={[
-            { label: t.labels.move, onPress: () => { openMoveExercise(actionSheetExerciseId); setActionSheetExerciseId(null); } },
-            { label: t.labels.removeFromRoutine, destructive: true, onPress: () => { setConfirmRemoveExerciseId(actionSheetExerciseId); setActionSheetExerciseId(null); } },
+            { label: t.labels.move, onPress: () => { openMoveExercise(actionSheetExercise); setActionSheetExercise(null); } },
+            { label: t.labels.removeFromRoutine, destructive: true, onPress: () => { setConfirmRemoveExercise(actionSheetExercise); setActionSheetExercise(null); } },
           ]}
-          onClose={() => setActionSheetExerciseId(null)}
+          onClose={() => setActionSheetExercise(null)}
         />
       )}
 
-      <Modal open={!!movingExerciseId} onClose={closeMoveExercise} position="bottom" blurBackdrop={false}>
-        {movingExerciseId && activeRoutine && (
+      <Modal open={!!movingExercise} onClose={closeMoveExercise} position="bottom" blurBackdrop={false}>
+        {movingExercise && movingExerciseDay && (
           <div className="flex max-h-[calc(100dvh-1.5rem)] w-full flex-col">
             <div className="shrink-0 border-b border-app-border px-6 pb-4 pt-5">
               <div className="flex items-start justify-between gap-3">
@@ -578,33 +768,24 @@ export const RoutinesScreen: React.FC<Props> = ({
             </div>
 
             <div className="flex-1 overflow-y-auto px-6 py-5">
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
-                <div className="space-y-2">
-
-
-                </div>
-
-                <div className="flex gap-2">
-                  <Button
-                    variant="secondary"
-                    onClick={() => moveExerciseTarget(-1)}
-                    disabled={movingExerciseTargetIndex === 0}
-                    aria-label={t.labels.moveUp}
-                  >
-                    <ArrowUp size={16} />
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    onClick={() => moveExerciseTarget(1)}
-                    disabled={!activeRoutine.exercises.length || movingExerciseTargetIndex === activeRoutine.exercises.length - 1}
-                    aria-label={t.labels.moveDown}
-                  >
-                    <ArrowDown size={16} />
-                  </Button>
-                </div>
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="secondary"
+                  onClick={() => moveExerciseTarget(-1)}
+                  disabled={movingExercise.targetIndex === 0}
+                  aria-label={t.labels.moveUp}
+                >
+                  <ArrowUp size={16} />
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => moveExerciseTarget(1)}
+                  disabled={!movingExerciseDay.exercises.length || movingExercise.targetIndex === movingExerciseDay.exercises.length - 1}
+                  aria-label={t.labels.moveDown}
+                >
+                  <ArrowDown size={16} />
+                </Button>
               </div>
-
-
 
               <div className="mt-5 space-y-3">
                 <p className="text-sm font-medium text-app-text-muted">{t.labels.movePreview}</p>
@@ -714,8 +895,8 @@ export const RoutinesScreen: React.FC<Props> = ({
         <ConfirmModal title={t.prompts.confirmDelete} confirmLabel={t.actions.delete} destructive onConfirm={handleConfirmDeleteRoutine} onCancel={() => setConfirmDeleteRoutineId(null)} />
       )}
 
-      {confirmRemoveExerciseId && (
-        <ConfirmModal title={t.labels.removeFromRoutine} confirmLabel={t.actions.delete} destructive onConfirm={() => handleRemoveExerciseFromRoutine(confirmRemoveExerciseId)} onCancel={() => setConfirmRemoveExerciseId(null)} />
+      {confirmRemoveExercise && (
+        <ConfirmModal title={t.labels.removeFromRoutine} confirmLabel={t.actions.delete} destructive onConfirm={() => handleRemoveExerciseFromRoutine(confirmRemoveExercise)} onCancel={() => setConfirmRemoveExercise(null)} />
       )}
     </div>
   );
@@ -729,9 +910,10 @@ interface RoutineExerciseCardProps {
   form: LogFormState;
   onUpdateForm: (field: keyof LogFormState, value: string) => void;
   onLog: () => void;
-  onLongPress: () => void;
   onTap: () => void;
+  onMenu: () => void;
   onToggleAlternative: () => void;
+  onSetAlternative: () => void;
 }
 
 const RoutineExerciseCard: React.FC<RoutineExerciseCardProps> = ({
@@ -742,34 +924,34 @@ const RoutineExerciseCard: React.FC<RoutineExerciseCardProps> = ({
   form,
   onUpdateForm,
   onLog,
-  onLongPress,
   onTap,
+  onMenu,
   onToggleAlternative,
+  onSetAlternative,
 }) => {
   const t = useTranslations();
-  const handlers = useLongPress({ onLongPress, onTap });
 
   return (
-    <ListRow {...handlers} className="select-none p-5 flex flex-col gap-4">
-      <div className="flex items-start justify-between">
-        <div className="min-w-0 flex-1">
+    <ListRow className="select-none p-5 flex flex-col gap-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1" onClick={onTap}>
           <h3 className="text-lg font-bold text-app-text leading-tight">{exercise.name}</h3>
           <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-app-text-muted">
             {getTranslatedGroupName(exercise.muscleGroup)}
           </p>
         </div>
-        {alternativeExercise && (
-          <button
-            onClick={onToggleAlternative}
-            onMouseDown={(e) => e.stopPropagation()}
-            onTouchStart={(e) => e.stopPropagation()}
-            className="ml-2 flex-shrink-0 rounded-lg border border-app-border bg-app-surface-muted px-2.5 py-1.5 text-xs font-semibold text-app-text active:opacity-70 transition-colors"
-          >
-            <Shuffle size={12} className="inline-block mr-1" />
-            {isUsingAlternative ? t.labels.swapToMain : t.labels.swapToAlternative}
-          </button>
-        )}
+        <IconButton
+          onClick={(e) => { e.stopPropagation(); onMenu(); }}
+          aria-label="Menu"
+          className="shrink-0 -mr-2 -mt-2"
+        >
+          <MoreVertical size={18} />
+        </IconButton>
       </div>
+
+      {exercise.note && (
+        <p className="text-xs text-app-text-muted italic">{exercise.note}</p>
+      )}
 
       <div className="flex flex-wrap items-center gap-2">
         <Badge variant="accent" className="rounded-md px-2 py-1 text-[11px] font-black uppercase tracking-wider bg-app-accent text-app-accent-foreground shadow-sm border-none">
@@ -777,13 +959,36 @@ const RoutineExerciseCard: React.FC<RoutineExerciseCardProps> = ({
         </Badge>
         {routineExercise.toFailure && <Badge variant="danger">{t.labels.toFailure}</Badge>}
         {routineExercise.dropset && <Badge variant="warning">{t.labels.dropset}</Badge>}
+        {typeof routineExercise.restSeconds === 'number' && routineExercise.restSeconds > 0 && (
+          <Badge variant="neutral" className="text-[10px]">
+            {t.labels.rest}: {routineExercise.restSeconds}{t.labels.restSeconds}
+          </Badge>
+        )}
+        {alternativeExercise && (
+          <button
+            onClick={onToggleAlternative}
+            className="rounded-md border border-app-border bg-app-surface-muted px-2 py-1 text-xs font-semibold text-app-text active:opacity-70 transition-colors"
+          >
+            <Shuffle size={12} className="inline-block mr-1" />
+            {isUsingAlternative ? t.labels.swapToMain : t.labels.swapToAlternative}
+          </button>
+        )}
+        {!alternativeExercise && (
+          <button
+            onClick={onSetAlternative}
+            className="rounded-md border border-dashed border-app-border bg-app-surface px-2 py-1 text-xs font-semibold text-app-text-muted active:opacity-70 transition-colors"
+          >
+            <Shuffle size={12} className="inline-block mr-1" />
+            {t.labels.setAlternative}
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-3 gap-3 items-end">
         <div>
           <label className="mb-1.5 block text-[11px] font-bold uppercase text-app-text-muted">{t.labels.weightShort}</label>
           <Input
-            type="number"
+            type="text"
             inputMode="decimal"
             value={form.weight}
             onChange={(e) => onUpdateForm('weight', e.target.value)}
@@ -797,7 +1002,7 @@ const RoutineExerciseCard: React.FC<RoutineExerciseCardProps> = ({
         <div>
           <label className="mb-1.5 block text-[11px] font-bold uppercase text-app-text-muted">{t.labels.reps}</label>
           <Input
-            type="number"
+            type="text"
             inputMode="numeric"
             value={form.reps}
             onChange={(e) => onUpdateForm('reps', e.target.value)}

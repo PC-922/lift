@@ -13,18 +13,6 @@ vi.mock('../utils/translations', async () => {
   };
 });
 
-vi.mock('../hooks/useLongPress', () => ({
-  useLongPress: ({ onTap, onLongPress }: { onTap?: () => void; onLongPress?: () => void }) => ({
-    onClick: onTap,
-    onMouseDown: onLongPress,
-    onMouseUp: onTap,
-    onMouseLeave: vi.fn(),
-    onTouchStart: onLongPress,
-    onTouchEnd: onTap,
-    onTouchMove: vi.fn(),
-  }),
-}));
-
 vi.mock('./ActionSheet', () => ({
   ActionSheet: ({ title }: { title: string }) => <div data-testid="action-sheet">{title}</div>,
 }));
@@ -46,11 +34,8 @@ describe('ExerciseList', () => {
         exercises={exercises}
         muscleGroups={['Pecho', 'Espalda']}
         onSelectExercise={vi.fn()}
-        onRename={vi.fn()}
+        onEdit={vi.fn()}
         onDelete={vi.fn()}
-        onMove={vi.fn()}
-        onRenameGroup={vi.fn()}
-        onDeleteGroup={vi.fn()}
       />
     );
 
@@ -67,11 +52,8 @@ describe('ExerciseList', () => {
         exercises={exercises}
         muscleGroups={['Pecho', 'Espalda']}
         onSelectExercise={vi.fn()}
-        onRename={vi.fn()}
+        onEdit={vi.fn()}
         onDelete={vi.fn()}
-        onMove={vi.fn()}
-        onRenameGroup={vi.fn()}
-        onDeleteGroup={vi.fn()}
       />
     );
 
@@ -82,22 +64,19 @@ describe('ExerciseList', () => {
     expect(screen.queryByText('Squat')).toBeNull();
   });
 
-  it('opens group actions on long press', () => {
+  it('opens exercise actions menu on three-dot tap', () => {
     render(
       <ExerciseList
         exercises={exercises}
         muscleGroups={['Pecho', 'Espalda']}
         onSelectExercise={vi.fn()}
-        onRename={vi.fn()}
+        onEdit={vi.fn()}
         onDelete={vi.fn()}
-        onMove={vi.fn()}
-        onRenameGroup={vi.fn()}
-        onDeleteGroup={vi.fn()}
       />
     );
 
-    fireEvent.mouseDown(screen.getByRole('button', { name: 'Pecho' }));
+    fireEvent.click(screen.getAllByLabelText('Menu')[0]);
 
-    expect(screen.getByTestId('action-sheet').textContent).toBe('Pecho');
+    expect(screen.getByTestId('action-sheet').textContent).toBe('Bench Press');
   });
 });

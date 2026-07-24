@@ -1,7 +1,7 @@
 export interface ExerciseLog {
   date: string; // ISO Date String (YYYY-MM-DD)
-  weight: number;
-  reps: number;
+  weight: number | null;
+  reps: number | null;
 }
 
 export interface Exercise {
@@ -19,12 +19,19 @@ export interface RoutineExercise {
   reps: string;
   dropset: boolean;
   toFailure: boolean;
+  restSeconds?: number;
+}
+
+export interface RoutineDay {
+  id: string;
+  name: string;
+  exercises: RoutineExercise[];
 }
 
 export interface Routine {
   id: string;
   name: string;
-  exercises: RoutineExercise[];
+  days: RoutineDay[];
 }
 
 export type GroupSortField = 'progress' | 'weight';
@@ -36,25 +43,30 @@ export interface GroupSortPreference {
 }
 
 export interface StorageManagerInterface {
-  getExercises(): Exercise[];
-  saveExercise(exercise: Exercise): void;
-  deleteExercise(id: string): void;
-  updateExerciseDetails(id: string, name: string, muscleGroup: string): void;
-  logSession(exerciseId: string, weight: number, reps: number): void;
-  updateExerciseNote(id: string, note: string): void;
-  updateExerciseLog(exerciseId: string, originalDate: string, log: ExerciseLog): void;
-  deleteExerciseLog(exerciseId: string, date: string): void;
-  getMuscleGroups(): string[];
-  addMuscleGroup(group: string): void;
-  deleteMuscleGroup(group: string): void;
-  renameMuscleGroup(oldName: string, newName: string): void;
-  getGroupSortPreference(): GroupSortPreference;
-  saveGroupSortPreference(preference: GroupSortPreference): void;
-  getRoutines(): Routine[];
-  saveRoutine(routine: Routine): void;
-  deleteRoutine(id: string): void;
-  reorderRoutine(fromIndex: number, toIndex: number): void;
-  reorderRoutineExercise(routineId: string, fromIndex: number, toIndex: number): void;
+  getExercises(): Promise<Exercise[]>;
+  saveExercise(exercise: Exercise): Promise<void>;
+  deleteExercise(id: string): Promise<void>;
+  updateExerciseDetails(id: string, name: string, muscleGroup: string): Promise<void>;
+  logSession(exerciseId: string, weight: number | null, reps: number | null): Promise<void>;
+  updateExerciseNote(id: string, note: string): Promise<void>;
+  updateExerciseLog(exerciseId: string, originalDate: string, log: ExerciseLog): Promise<void>;
+  deleteExerciseLog(exerciseId: string, date: string): Promise<void>;
+  deleteAllLogs(exerciseId: string): Promise<void>;
+  deleteAllLogsExceptLatest(exerciseId: string): Promise<void>;
+  getMuscleGroups(): Promise<string[]>;
+  addMuscleGroup(group: string): Promise<void>;
+  deleteMuscleGroup(group: string): Promise<void>;
+  renameMuscleGroup(oldName: string, newName: string): Promise<void>;
+  getGroupSortPreference(): Promise<GroupSortPreference>;
+  saveGroupSortPreference(preference: GroupSortPreference): Promise<void>;
+  getRoutines(): Promise<Routine[]>;
+  saveRoutine(routine: Routine): Promise<void>;
+  deleteRoutine(id: string): Promise<void>;
+  reorderRoutine(fromIndex: number, toIndex: number): Promise<void>;
+  reorderRoutineExercise(routineId: string, dayId: string, fromIndex: number, toIndex: number): Promise<void>;
+  exportData(): Promise<string>;
+  importData(jsonString: string): Promise<boolean>;
+  resetData(): Promise<void>;
 }
 
 export interface RestTimerState {

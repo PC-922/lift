@@ -1,5 +1,6 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import { BrowserRouter } from 'react-router-dom';
 import { describe, it, expect, vi } from 'vitest';
 import App from './App';
 
@@ -18,36 +19,41 @@ vi.stubGlobal('matchMedia', () => ({
 
 vi.mock('./services/storageService', () => ({
   storageManager: {
-    getExercises: () => [],
-    getMuscleGroups: () => ['Pecho'],
-    getRoutines: () => [],
-    saveExercise: vi.fn(),
-    logSession: vi.fn(),
-    updateExerciseNote: vi.fn(),
-    updateExerciseLog: vi.fn(),
-    deleteExerciseLog: vi.fn(),
-    deleteAllLogs: vi.fn(),
-    deleteAllLogsExceptLatest: vi.fn(),
-    updateExerciseDetails: vi.fn(),
-    deleteExercise: vi.fn(),
-    reorderRoutine: vi.fn(),
-    reorderRoutineExercise: vi.fn(),
-    saveRoutine: vi.fn(),
-    deleteRoutine: vi.fn(),
-    exportData: vi.fn(() => '{}'),
-    importData: vi.fn(() => true),
-    addMuscleGroup: vi.fn(),
-    renameMuscleGroup: vi.fn(),
-    deleteMuscleGroup: vi.fn(),
+    getExercises: () => Promise.resolve([]),
+    getMuscleGroups: () => Promise.resolve(['Pecho']),
+    getRoutines: () => Promise.resolve([]),
+    saveExercise: vi.fn(() => Promise.resolve()),
+    logSession: vi.fn(() => Promise.resolve()),
+    updateExerciseNote: vi.fn(() => Promise.resolve()),
+    updateExerciseLog: vi.fn(() => Promise.resolve()),
+    deleteExerciseLog: vi.fn(() => Promise.resolve()),
+    deleteAllLogs: vi.fn(() => Promise.resolve()),
+    deleteAllLogsExceptLatest: vi.fn(() => Promise.resolve()),
+    updateExerciseDetails: vi.fn(() => Promise.resolve()),
+    deleteExercise: vi.fn(() => Promise.resolve()),
+    reorderRoutine: vi.fn(() => Promise.resolve()),
+    reorderRoutineExercise: vi.fn(() => Promise.resolve()),
+    saveRoutine: vi.fn(() => Promise.resolve()),
+    deleteRoutine: vi.fn(() => Promise.resolve()),
+    exportData: vi.fn(() => Promise.resolve('{}')),
+    importData: vi.fn(() => Promise.resolve(true)),
+    addMuscleGroup: vi.fn(() => Promise.resolve()),
+    renameMuscleGroup: vi.fn(() => Promise.resolve()),
+    deleteMuscleGroup: vi.fn(() => Promise.resolve()),
+    resetData: vi.fn(() => Promise.resolve()),
   },
   makeId: (prefix: string) => `${prefix}_id`,
+  setStorageUser: vi.fn(),
 }));
 
 vi.mock('./services/preferencesService', () => ({
   preferencesService: {
     getDefaultScreen: () => 'home',
     subscribe: () => () => undefined,
+    getPrefs: () => ({ onboardingDone: false, language: null, defaultScreen: 'home', authMode: 'guest' }),
+    savePrefs: () => undefined,
   },
+  AuthMode: undefined,
 }));
 
 vi.mock('./hooks/useToast', () => ({
@@ -101,17 +107,20 @@ vi.mock('./components/PromptModal', () => ({
 
 describe('App home layout', () => {
   it('renders the home actions before the list', async () => {
-    const { container } = render(<App />);
+    const { container } = render(
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    );
 
-    expect(screen.getByRole('button', { name: /New Exercise/i })).toBeTruthy();
-    expect(screen.getByRole('button', { name: /Add Group/i })).toBeTruthy();
-
-    const newExerciseButton = screen.getByRole('button', { name: /New Exercise/i });
-    const addGroupButton = screen.getByRole('button', { name: /Add Group/i });
+    const newExerciseButton = await screen.findByRole('button', { name: /New Exercise/i });
+    const addGroupButton = await screen.findByRole('button', { name: /Add Group/i });
     const list = container.querySelector('[data-testid="exercise-list"]');
 
-    expect(list).toBeTruthy();
-    expect(newExerciseButton.compareDocumentPosition(list as Node) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(addGroupButton.compareDocumentPosition(list as Node) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await waitFor(() => {
+      expect(list).toBeTruthy();
+      expect(newExerciseButton.compareDocumentPosition(list as Node) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(addGroupButton.compareDocumentPosition(list as Node) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
   });
 });

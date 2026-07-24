@@ -2,17 +2,19 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { RestTimerState } from '../types';
 
 interface RestTimerContextType extends RestTimerState {
-  startTimer: (seconds: number) => void;
+  selectDuration: (seconds: number) => void;
+  startTimer: () => void;
   stopTimer: () => void;
   resetTimer: () => void;
   addTime: (seconds: number) => void;
   setMinimized: (minimized: boolean) => void;
-  setDuration: (seconds: number) => void;
 }
 
 const RestTimerContext = createContext<RestTimerContextType | undefined>(undefined);
 
 const STORAGE_KEY = 'restTimerState';
+
+const DEFAULT_DURATION = 90;
 
 export const RestTimerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, setState] = useState<RestTimerState>(() => {
@@ -22,26 +24,20 @@ export const RestTimerProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         if (saved) {
           const parsed = JSON.parse(saved) as Partial<RestTimerState>;
           return {
-            ...parsed,
             remainingTime: parsed.remainingTime ?? 0,
-            duration: parsed.duration ?? 90,
+            duration: parsed.duration ?? DEFAULT_DURATION,
             isActive: false,
             isMinimized: true,
           };
         }
       }
     } catch {
-      return {
-        remainingTime: 0,
-        isActive: false,
-        duration: 90,
-        isMinimized: true,
-      };
+      // fall through
     }
     return {
       remainingTime: 0,
       isActive: false,
-      duration: 90,
+      duration: DEFAULT_DURATION,
       isMinimized: true,
     };
   });
@@ -124,14 +120,27 @@ export const RestTimerProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [syncTimer]);
 
-  const startTimer = useCallback((seconds: number) => {
-    endTimeRef.current = seconds > 0 ? Date.now() + seconds * 1000 : null;
+  const selectDuration = useCallback((seconds: number) => {
+    endTimeRef.current = null;
     setState((prev) => ({
+      ...prev,
       remainingTime: seconds,
-      isActive: seconds > 0,
       duration: seconds,
-      isMinimized: prev.isMinimized,
+      isActive: false,
+      isMinimized: false,
     }));
+  }, []);
+
+  const startTimer = useCallback(() => {
+    setState((prev) => {
+      if (prev.remainingTime <= 0) return prev;
+      endTimeRef.current = Date.now() + prev.remainingTime * 1000;
+      return {
+        ...prev,
+        isActive: true,
+        isMinimized: false,
+      };
+    });
   }, []);
 
   const stopTimer = useCallback(() => {
@@ -141,11 +150,11 @@ export const RestTimerProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const resetTimer = useCallback(() => {
     setState((prev) => {
-      endTimeRef.current = prev.duration > 0 ? Date.now() + prev.duration * 1000 : null;
+      endTimeRef.current = null;
       return {
         ...prev,
         remainingTime: prev.duration,
-        isActive: prev.duration > 0,
+        isActive: false,
         isMinimized: false,
       };
     });
@@ -156,7 +165,6 @@ export const RestTimerProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setState((prev) => ({
       ...prev,
       remainingTime: prev.remainingTime + seconds,
-      duration: prev.duration + seconds,
     }));
   }, []);
 
@@ -164,15 +172,8 @@ export const RestTimerProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setState((prev) => ({ ...prev, isMinimized }));
   }, []);
 
-  const setDuration = useCallback((duration: number) => {
-    setState((prev) => {
-      endTimeRef.current = prev.isActive && duration > 0 ? Date.now() + duration * 1000 : null;
-      return { ...prev, duration, remainingTime: duration };
-    });
-  }, []);
-
   return (
-    <RestTimerContext.Provider value={{ ...state, startTimer, stopTimer, resetTimer, addTime, setMinimized, setDuration }}>
+    <RestTimerContext.Provider value={{ ...state, selectDuration, startTimer, stopTimer, resetTimer, addTime, setMinimized }}>
       {children}
     </RestTimerContext.Provider>
   );

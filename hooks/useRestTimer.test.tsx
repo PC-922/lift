@@ -34,11 +34,24 @@ describe('useRestTimer', () => {
     <RestTimerProvider>{children}</RestTimerProvider>
   );
 
+  it('debe seleccionar duración sin iniciar', () => {
+    const { result } = renderHook(() => useRestTimer(), { wrapper });
+
+    act(() => {
+      result.current.selectDuration(60);
+    });
+
+    expect(result.current.remainingTime).toBe(60);
+    expect(result.current.duration).toBe(60);
+    expect(result.current.isActive).toBe(false);
+  });
+
   it('debe iniciar el temporizador correctamente', () => {
     const { result } = renderHook(() => useRestTimer(), { wrapper });
 
     act(() => {
-      result.current.startTimer(60);
+      result.current.selectDuration(60);
+      result.current.startTimer();
     });
 
     expect(result.current.remainingTime).toBe(60);
@@ -49,7 +62,8 @@ describe('useRestTimer', () => {
     const { result } = renderHook(() => useRestTimer(), { wrapper });
 
     act(() => {
-      result.current.startTimer(60);
+      result.current.selectDuration(60);
+      result.current.startTimer();
     });
 
     act(() => {
@@ -63,7 +77,8 @@ describe('useRestTimer', () => {
     const { result } = renderHook(() => useRestTimer(), { wrapper });
 
     act(() => {
-      result.current.startTimer(60);
+      result.current.selectDuration(60);
+      result.current.startTimer();
     });
 
     act(() => {
@@ -83,7 +98,8 @@ describe('useRestTimer', () => {
     const { result } = renderHook(() => useRestTimer(), { wrapper });
 
     act(() => {
-      result.current.startTimer(1);
+      result.current.selectDuration(1);
+      result.current.startTimer();
     });
 
     act(() => {
@@ -94,11 +110,12 @@ describe('useRestTimer', () => {
     expect(result.current.isActive).toBe(false);
   });
 
-  it('debe permitir añadir tiempo extra', () => {
+  it('debe permitir añadir tiempo extra sin cambiar la duración', () => {
     const { result } = renderHook(() => useRestTimer(), { wrapper });
 
     act(() => {
-      result.current.startTimer(60);
+      result.current.selectDuration(60);
+      result.current.startTimer();
     });
 
     act(() => {
@@ -106,6 +123,7 @@ describe('useRestTimer', () => {
     });
 
     expect(result.current.remainingTime).toBe(90);
+    expect(result.current.duration).toBe(60);
   });
 
   it('debe expandirse al resetear y permitir minimizarse', () => {
@@ -115,11 +133,13 @@ describe('useRestTimer', () => {
     expect(result.current.isMinimized).toBe(true);
 
     act(() => {
+      result.current.selectDuration(90);
       result.current.resetTimer();
     });
 
-    // Al resetear debe expandirse
+    // Al resetear debe expandirse y detenerse
     expect(result.current.isMinimized).toBe(false);
+    expect(result.current.isActive).toBe(false);
 
     act(() => {
       result.current.setMinimized(true);
@@ -140,5 +160,21 @@ describe('useRestTimer', () => {
     expect(result.current.duration).toBe(90);
     expect(result.current.isMinimized).toBe(true);
     expect(result.current.isActive).toBe(false);
+  });
+
+  it('debe poder minimizarse y expandirse', () => {
+    const { result } = renderHook(() => useRestTimer(), { wrapper });
+
+    act(() => {
+      result.current.setMinimized(true);
+    });
+
+    expect(result.current.isMinimized).toBe(true);
+
+    act(() => {
+      result.current.setMinimized(false);
+    });
+
+    expect(result.current.isMinimized).toBe(false);
   });
 });

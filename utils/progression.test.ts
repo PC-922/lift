@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { getLastProgressionDate, calculateProgression, getLatestLog, getRecentProgressions, calculateTimeSince } from './progression';
+import { getLastProgressionDate, calculateProgression, getLatestLog, getRecentProgressions, calculateTimeSince, getLastRegressionDate, calculateRegression, getRecentRegressions, getRegressionDetail, getLogFeedback } from './progression';
 import { ExerciseLog, Exercise } from '../types';
 import { t } from './translations';
 
@@ -339,6 +339,140 @@ describe('progression utilities', () => {
   describe('calculateTimeSince', () => {
     it('should calculate today correctly', () => {
       expect(calculateTimeSince('2026-02-02')).toBe(t.time.today);
+    });
+  });
+
+  describe('regression detection', () => {
+    it('should return null for empty logs', () => {
+      expect(getLastRegressionDate([])).toBeNull();
+      expect(calculateRegression([])).toBeNull();
+    });
+
+    it('should detect weight decrease as regression', () => {
+      const logs: ExerciseLog[] = [
+        { date: '2026-01-30', weight: 55, reps: 10 },
+        { date: '2026-02-01', weight: 50, reps: 10 },
+      ];
+      expect(getLastRegressionDate(logs)).toBe('2026-02-01');
+      const detail = getRegressionDetail(logs);
+      expect(detail?.type).toBe('weight');
+      expect(detail?.prevWeight).toBe(55);
+      expect(detail?.currWeight).toBe(50);
+    });
+
+    it('should detect reps decrease with same weight as regression', () => {
+      const logs: ExerciseLog[] = [
+        { date: '2026-01-30', weight: 50, reps: 12 },
+        { date: '2026-02-01', weight: 50, reps: 10 },
+      ];
+      expect(getLastRegressionDate(logs)).toBe('2026-02-01');
+      const detail = getRegressionDetail(logs);
+      expect(detail?.type).toBe('reps');
+    });
+
+    it('should NOT count weight increase as regression', () => {
+      const logs: ExerciseLog[] = [
+        { date: '2026-01-30', weight: 50, reps: 10 },
+        { date: '2026-02-01', weight: 55, reps: 10 },
+      ];
+      expect(getLastRegressionDate(logs)).toBeNull();
+    });
+
+    it('should NOT count reps increase with same weight as regression', () => {
+      const logs: ExerciseLog[] = [
+        { date: '2026-01-30', weight: 50, reps: 10 },
+        { date: '2026-02-01', weight: 50, reps: 12 },
+      ];
+      expect(getLastRegressionDate(logs)).toBeNull();
+    });
+
+    it('should detect weight decrease even if reps increase', () => {
+      const logs: ExerciseLog[] = [
+        { date: '2026-01-30', weight: 55, reps: 8 },
+        { date: '2026-02-01', weight: 50, reps: 10 },
+      ];
+      expect(getLastRegressionDate(logs)).toBe('2026-02-01');
+    });
+
+    it('should return the most recent regression even if earlier logs progressed', () => {
+      const logs: ExerciseLog[] = [
+        { date: '2026-01-28', weight: 50, reps: 10 },
+        { date: '2026-01-30', weight: 55, reps: 10 },
+        { date: '2026-02-01', weight: 50, reps: 10 },
+      ];
+      expect(getLastRegressionDate(logs)).toBe('2026-02-01');
+    });
+
+    it('should return recent regressions sorted by date', () => {
+      const exercises: Exercise[] = [
+        {
+          id: '1',
+          name: 'Bench',
+          muscleGroup: 'Pecho',
+          logs: [
+            { date: '2026-01-30', weight: 55, reps: 10 },
+            { date: '2026-02-01', weight: 50, reps: 10 },
+          ],
+        },
+        {
+          id: '2',
+          name: 'Squat',
+          muscleGroup: 'Pierna',
+          logs: [
+            { date: '2026-01-31', weight: 105, reps: 8 },
+            { date: '2026-02-01', weight: 100, reps: 8 },
+          ],
+        },
+      ];
+      const result = getRecentRegressions(exercises);
+      expect(result).toHaveLength(2);
+      expect(result[0].exerciseName).toBe('Bench');
+      expect(result[1].exerciseName).toBe('Squat');
+    });
+
+    it('should exclude exercises with only progressions', () => {
+      const exercises: Exercise[] = [
+        {
+          id: '1',
+          name: 'Bench',
+          muscleGroup: 'Pecho',
+          logs: [
+            { date: '2026-01-30', weight: 50, reps: 10 },
+            { date: '2026-02-01', weight: 55, reps: 10 },
+          ],
+        },
+      ];
+      expect(getRecentRegressions(exercises)).toEqual([]);
+    });
+  });
+
+  describe('getLogFeedback', () => {
+    it('should return first for the first log', () => {
+      expect(getLogFeedback(50, 10, null, null, true)).toEqual({ type: 'first' });
+    });
+
+    it('should return progress when weight increases', () => {
+      expect(getLogFeedback(55, 10, 50, 10, false)).toEqual({ type: 'progress', kind: 'weight' });
+    });
+
+    it('should return progress when reps increase with same weight', () => {
+      expect(getLogFeedback(50, 12, 50, 10, false)).toEqual({ type: 'progress', kind: 'reps' });
+    });
+
+    it('should return regression when weight decreases', () => {
+      expect(getLogFeedback(45, 10, 50, 10, false)).toEqual({ type: 'regression', kind: 'weight' });
+    });
+
+    it('should return regression when reps decrease with same weight', () => {
+      expect(getLogFeedback(50, 8, 50, 10, false)).toEqual({ type: 'regression', kind: 'reps' });
+    });
+
+    it('should return null when values stay the same', () => {
+      expect(getLogFeedback(50, 10, 50, 10, false)).toBeNull();
+    });
+
+    it('should return null when previous weight is missing', () => {
+      expect(getLogFeedback(50, 10, null, null, false)).toBeNull();
     });
   });
 });

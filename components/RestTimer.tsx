@@ -1,12 +1,23 @@
 import React, { useState } from 'react';
-import { Hourglass, Pause, Play, RotateCcw, Square, ChevronDown, ChevronUp } from 'lucide-react';
+import { Hourglass, Pause, Play, RotateCcw, Square, ChevronDown, ChevronUp, X } from 'lucide-react';
 import { useRestTimer } from '../hooks/useRestTimer';
 import { useTranslations } from '../utils/translations';
 import { Button } from './ui/Button';
 import { cn } from '../utils/cn';
 
 export const RestTimer: React.FC = () => {
-  const { remainingTime, isActive, stopTimer, resetTimer, startTimer, addTime, isMinimized, setMinimized, duration } = useRestTimer();
+  const {
+    remainingTime,
+    isActive,
+    stopTimer,
+    resetTimer,
+    startTimer,
+    addTime,
+    selectDuration,
+    isMinimized,
+    setMinimized,
+    duration,
+  } = useRestTimer();
   const t = useTranslations();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -24,6 +35,7 @@ export const RestTimer: React.FC = () => {
         <Button
           variant="primary"
           onClick={() => setMinimized(false)}
+          data-testid="rest-timer-minimized"
           className="h-14 w-14 rounded-full shadow-lg border-2 border-app-accent pointer-events-auto flex items-center justify-center p-0"
         >
           <div className="relative">
@@ -49,15 +61,24 @@ export const RestTimer: React.FC = () => {
         isCollapsed ? "gap-0 p-3" : "gap-5 p-5"
       )}>
         <div className="flex flex-col items-center relative">
-          <button 
+          <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="absolute -top-1 right-0 p-2 text-app-text-muted hover:text-app-text transition-colors"
+            className="absolute -top-1 left-0 p-2 text-app-text-muted hover:text-app-text transition-colors"
             aria-label={isCollapsed ? "Expand" : "Collapse"}
           >
             {isCollapsed ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
           </button>
 
-          <div 
+          <button
+            onClick={() => setMinimized(true)}
+            data-testid="rest-timer-close"
+            className="absolute -top-1 right-0 p-2 text-app-text-muted hover:text-app-danger transition-colors"
+            aria-label={t.actions.close}
+          >
+            <X size={20} />
+          </button>
+
+          <div
             className={cn(
               "flex flex-col items-center cursor-pointer active:opacity-70 transition-all",
               isCollapsed ? "flex-row gap-3" : "mt-1"
@@ -88,36 +109,39 @@ export const RestTimer: React.FC = () => {
                   <Pause className="w-4 h-4 mr-1 fill-current text-app-accent-foreground" />
                   {t.labels.restPause}
                 </Button>
-              ) : remainingTime > 0 ? (
+              ) : (
                 <Button
                   variant="primary"
                   size="lg"
                   className="w-32 h-12 rounded-full shadow-md font-black uppercase tracking-widest text-xs"
-                  onClick={() => startTimer(remainingTime)}
+                  onClick={startTimer}
+                  disabled={remainingTime <= 0}
                 >
                   <Play className="w-4 h-4 mr-1 fill-current text-app-accent-foreground" />
                   {t.labels.restResume}
                 </Button>
-              ) : (
-                <div className="grid grid-cols-4 gap-2 w-full px-2">
-                  {[60, 90, 120, 180].map((s) => (
-                    <Button
-                      key={s}
-                      variant="ghost"
-                      onClick={() => startTimer(s)}
-                      className={cn(
-                        "h-11 rounded-xl font-bold text-xs uppercase tracking-wider transition-all shadow-none w-full",
-                        duration === s
-                          ? "bg-app-accent text-app-accent-foreground"
-                          : "bg-app-surface-muted text-app-text-muted"
-                      )}
-                    >
-                      {s}s
-                    </Button>
-                  ))}
-                </div>
               )}
             </div>
+
+            {!isActive && (
+              <div className="grid grid-cols-4 gap-2 w-full px-2">
+                {[60, 90, 120, 180].map((s) => (
+                  <Button
+                    key={s}
+                    variant="ghost"
+                    onClick={() => selectDuration(s)}
+                    className={cn(
+                      "h-11 rounded-xl font-bold text-xs uppercase tracking-wider transition-all shadow-none w-full",
+                      duration === s && remainingTime === s && !isActive
+                        ? "bg-app-accent text-app-accent-foreground"
+                        : "bg-app-surface-muted text-app-text-muted"
+                    )}
+                  >
+                    {s}s
+                  </Button>
+                ))}
+              </div>
+            )}
 
             {remainingTime > 0 && (
               <div className="flex items-center justify-center gap-4">
@@ -142,7 +166,7 @@ export const RestTimer: React.FC = () => {
                 <Button
                   variant="destructive"
                   className="h-12 w-16 rounded-2xl p-0 flex items-center justify-center shadow-none active:scale-95"
-                  onClick={() => startTimer(0)}
+                  onClick={stopTimer}
                   aria-label={t.labels.restStop}
                 >
                   <Square className="w-4 h-4 fill-current text-white" />

@@ -1,8 +1,10 @@
 import React from 'react';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { BrowserRouter } from 'react-router-dom';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { SettingsScreen } from './SettingsScreen';
 import { preferencesService } from '../services/preferencesService';
+import { AuthProvider } from '../hooks/useAuth';
 
 const mockStorage: Record<string, string> = {};
 vi.stubGlobal('localStorage', {
@@ -14,12 +16,24 @@ vi.stubGlobal('localStorage', {
   key: vi.fn((index: number) => Object.keys(mockStorage)[index] || null),
 });
 
+vi.mock('../services/firebase', () => ({
+  isFirebaseAvailable: vi.fn(() => false),
+  auth: null,
+}));
+
 const defaultProps = {
   onExport: vi.fn(),
   onImport: vi.fn(() => true),
+  onResetData: vi.fn(() => Promise.resolve()),
 };
 
 const PREFS_KEY = 'lift_prefs_v1';
+
+const renderWithRouter = (ui: React.ReactElement) => render(
+  <BrowserRouter>
+    <AuthProvider>{ui}</AuthProvider>
+  </BrowserRouter>
+);
 
 describe('SettingsScreen selectors', () => {
   beforeEach(() => {
@@ -35,7 +49,7 @@ describe('SettingsScreen selectors', () => {
   it('renders selectors with persisted language and default screen values', () => {
     localStorage.setItem(PREFS_KEY, JSON.stringify({ language: 'en', defaultScreen: 'routines' }));
 
-    render(<SettingsScreen {...defaultProps} />);
+    renderWithRouter(<SettingsScreen {...defaultProps} />);
 
     const selectors = screen.getAllByRole('combobox') as HTMLSelectElement[];
     expect(selectors).toHaveLength(2);
@@ -46,7 +60,7 @@ describe('SettingsScreen selectors', () => {
   it('updates language selection and persists it through preferencesService', () => {
     localStorage.setItem(PREFS_KEY, JSON.stringify({ language: 'en' }));
 
-    render(<SettingsScreen {...defaultProps} />);
+    renderWithRouter(<SettingsScreen {...defaultProps} />);
 
     const [languageSelect] = screen.getAllByRole('combobox') as HTMLSelectElement[];
     fireEvent.change(languageSelect, { target: { value: 'es' } });
@@ -59,7 +73,7 @@ describe('SettingsScreen selectors', () => {
   it('updates default screen selection and persists it through preferencesService', () => {
     localStorage.setItem(PREFS_KEY, JSON.stringify({ defaultScreen: 'home' }));
 
-    render(<SettingsScreen {...defaultProps} />);
+    renderWithRouter(<SettingsScreen {...defaultProps} />);
 
     const selectors = screen.getAllByRole('combobox') as HTMLSelectElement[];
     const defaultScreenSelect = selectors[1];

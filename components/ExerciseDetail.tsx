@@ -2,7 +2,7 @@ import React, {useCallback, useEffect, useState} from 'react';
 import {Pencil, Trash2, X} from 'lucide-react';
 import {Exercise, ExerciseLog} from '../types';
 import {getTranslatedGroupName, useTranslations} from '../utils/translations';
-import {getLatestLog} from '../utils/progression';
+import {getLatestLog, getLogFeedback} from '../utils/progression';
 import {useToast} from '../hooks/useToast';
 import {useRestTimer} from '../hooks/useRestTimer';
 import ConfirmModal from './ConfirmModal';
@@ -24,7 +24,7 @@ interface Props {
   exercise: Exercise;
   muscleGroups: string[];
   onBack: () => void;
-  onLog: (weight: number, reps: number) => void;
+  onLog: (weight: number | null, reps: number | null) => void;
   onUpdateNote: (note: string) => void;
   onUpdateLog: (originalDate: string, log: ExerciseLog) => void;
   onDeleteLog: (date: string) => void;
@@ -69,8 +69,8 @@ export const ExerciseDetail: React.FC<Props> = ({
   const t = useTranslations();
   const latest = getLatestLog(exercise.logs);
 
-  const [weight, setWeight] = useState(() => latest?.weight.toString() ?? '');
-  const [reps, setReps] = useState(() => latest?.reps.toString() ?? '');
+  const [weight, setWeight] = useState(() => (latest?.weight ?? '').toString());
+  const [reps, setReps] = useState(() => (latest?.reps ?? '').toString());
   const [note, setNote] = useState(exercise.note ?? '');
 
   const [editableLogs, setEditableLogs] = useState<EditableLog[]>([]);
@@ -89,8 +89,8 @@ export const ExerciseDetail: React.FC<Props> = ({
   }, [exercise.note, exercise.name]);
 
   useEffect(() => {
-    setWeight(latest?.weight.toString() ?? '');
-    setReps(latest?.reps.toString() ?? '');
+    setWeight((latest?.weight ?? '').toString());
+    setReps((latest?.reps ?? '').toString());
   }, [latest?.weight, latest?.reps]);
 
   useEffect(() => {
@@ -101,28 +101,51 @@ export const ExerciseDetail: React.FC<Props> = ({
       sorted.map((log) => ({
         originalDate: log.date,
         date: log.date,
-        weight: log.weight.toString(),
-        reps: log.reps.toString(),
+        weight: log.weight === null ? '' : log.weight.toString(),
+        reps: log.reps === null ? '' : log.reps.toString(),
       }))
     );
   }, [exercise.logs]);
 
-  const handleLog = () => {
-    const w = parseFloat(weight);
-    const r = parseInt(reps, 10);
-    if (Number.isNaN(w) || Number.isNaN(r)) return;
+  const parseWeight = (value: string): number | null => {
+    const trimmed = value.trim();
+    if (trimmed === '') return null;
+    const parsed = parseFloat(trimmed);
+    return Number.isNaN(parsed) ? null : parsed;
+  };
 
-    const prevMax = latest?.weight ?? 0;
+  const parseReps = (value: string): number | null => {
+    const trimmed = value.trim();
+    if (trimmed === '') return null;
+    const parsed = parseInt(trimmed, 10);
+    return Number.isNaN(parsed) ? null : parsed;
+  };
+
+  const handleLog = () => {
+    const w = parseWeight(weight);
+    const r = parseReps(reps);
+    if (w === null && r === null) return;
+
+    const prevWeight = latest?.weight ?? null;
+    const prevReps = latest?.reps ?? null;
     const isFirst = exercise.logs.length === 0;
 
     onLog(w, r);
     setWeight('');
     setReps('');
 
-    if (isFirst) {
+    const feedback = getLogFeedback(w, r, prevWeight, prevReps, isFirst);
+    if (!feedback) return;
+
+    if (feedback.type === 'first') {
       showToast(t.labels.firstLog, 'achievement');
-    } else if (w > prevMax) {
-      showToast(t.labels.newWeightRecord, 'achievement');
+    } else if (feedback.type === 'progress') {
+      showToast(
+        feedback.kind === 'reps' ? t.labels.newRepsRecord : t.labels.newWeightRecord,
+        'achievement'
+      );
+    } else {
+      showToast(t.labels.regressionRecord, 'regression');
     }
   };
 
@@ -135,20 +158,15 @@ export const ExerciseDetail: React.FC<Props> = ({
   const handleLogBlur = useCallback(
     (index: number) => {
       const log = editableLogs[index];
-      const w = parseFloat(log.weight);
-      const r = parseInt(log.reps, 10);
-      if (!log.date || Number.isNaN(w) || Number.isNaN(r)) return;
+      const w = parseWeight(log.weight);
+      const r = parseReps(log.reps);
+      if (!log.date || (w === null && r === null)) return;
       onUpdateLog(log.originalDate, { date: log.date, weight: w, reps: r });
       setEditableLogs((prev) =>
         prev.map((item, i) => (i === index ? { ...item, originalDate: log.date } : item))
       );
-
-      const prevMax = Math.max(0, ...exercise.logs.map((l) => l.weight));
-      if (w > prevMax) {
-        showToast(t.labels.newWeightRecord, 'achievement');
-      }
     },
-    [editableLogs, onUpdateLog, exercise.logs, showToast]
+    [editableLogs, onUpdateLog]
   );
 
   const handleConfirm = () => {
@@ -224,11 +242,11 @@ export const ExerciseDetail: React.FC<Props> = ({
               />
             ) : (
               <button
-                className="flex items-center gap-2 group active:opacity-70"
+                className="flex min-w-0 items-center gap-2 group active:opacity-70"
                 onClick={() => setEditingName(true)}
               >
-                <h1 className="text-2xl font-bold text-app-text">{exercise.name}</h1>
-                <Pencil size={16} className="text-app-text-muted opacity-60 group-hover:opacity-100" />
+                <h1 className="min-w-0 flex-1 break-words text-2xl font-bold text-app-text">{exercise.name}</h1>
+                <Pencil size={16} className="shrink-0 text-app-text-muted opacity-60 group-hover:opacity-100" />
               </button>
             )}
 
@@ -307,21 +325,21 @@ export const ExerciseDetail: React.FC<Props> = ({
           <div className="flex-1">
             <label className="mb-1 block text-xs font-medium text-app-text-muted">{t.labels.weight}</label>
             <Input
-              type="number"
+              type="text"
               inputMode="decimal"
               value={weight}
               onChange={(e) => setWeight(e.target.value)}
-              placeholder={latest?.weight.toString() ?? '0'}
+              placeholder={latest?.weight === null ? '—' : latest?.weight.toString() ?? '0'}
             />
           </div>
           <div className="flex-1">
             <label className="mb-1 block text-xs font-medium text-app-text-muted">{t.labels.reps}</label>
             <Input
-              type="number"
+              type="text"
               inputMode="numeric"
               value={reps}
               onChange={(e) => setReps(e.target.value)}
-              placeholder={latest?.reps.toString() ?? '0'}
+              placeholder={latest?.reps === null ? '—' : latest?.reps.toString() ?? '0'}
             />
           </div>
           <div className="flex items-end">
@@ -373,7 +391,7 @@ export const ExerciseDetail: React.FC<Props> = ({
                     <div>
                       <label className="mb-1 block text-xs font-medium text-app-text-muted">{t.labels.weightShort}</label>
                       <Input
-                        type="number"
+                        type="text"
                         inputMode="decimal"
                         value={log.weight}
                         onChange={(e) => handleLogChange(index, 'weight', e.target.value)}
@@ -384,7 +402,7 @@ export const ExerciseDetail: React.FC<Props> = ({
                     <div>
                       <label className="mb-1 block text-xs font-medium text-app-text-muted">{t.labels.reps}</label>
                       <Input
-                        type="number"
+                        type="text"
                         inputMode="numeric"
                         value={log.reps}
                         onChange={(e) => handleLogChange(index, 'reps', e.target.value)}

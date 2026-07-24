@@ -31,6 +31,10 @@ coverage/
 .nyc_output/
 
 # Misc
+android/
+ios/
 .cache/
 .pnp
 .pnp.js
+
+.atl
