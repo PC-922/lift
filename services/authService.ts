@@ -1,6 +1,5 @@
 import {
   GoogleAuthProvider,
-  signInWithPopup,
   signInWithRedirect,
   getRedirectResult,
   signOut,
@@ -26,13 +25,8 @@ function setStoredAuthMode(mode: AuthMode): void {
   preferencesService.savePrefs({ authMode: mode });
 }
 
-function notify(user: AuthUser, mode: AuthMode): void {
+function notify(user: AuthUser, mode: AuthMode) {
   listeners.forEach((listener) => listener(user, mode));
-}
-
-function isMobile(): boolean {
-  if (typeof navigator === 'undefined') return false;
-  return /iPhone|iPad|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 }
 
 async function signInWithGoogle(): Promise<AuthUser> {
@@ -44,22 +38,9 @@ async function signInWithGoogle(): Promise<AuthUser> {
 
   const provider = new GoogleAuthProvider();
 
-  if (isMobile()) {
-    await signInWithRedirect(auth, provider);
-    return null;
-  }
-
-  try {
-    const result = await signInWithPopup(auth, provider);
-    setStoredAuthMode('google');
-    notify(result.user, 'google');
-    return result.user;
-  } catch (error) {
-    console.error('Google sign-in failed', error);
-    setStoredAuthMode(null);
-    notify(null, null);
-    return null;
-  }
+  setStoredAuthMode('google');
+  await signInWithRedirect(auth, provider);
+  return null;
 }
 
 function continueAsGuest(): void {
@@ -75,6 +56,8 @@ async function signOutUser(): Promise<void> {
   notify(null, null);
 }
 
+let redirectPromise: Promise<void> | null = null;
+
 function subscribe(callback: AuthListener): () => void {
   listeners.add(callback);
 
@@ -85,14 +68,21 @@ function subscribe(callback: AuthListener): () => void {
     };
   }
 
-  getRedirectResult(auth).catch((error) => {
-    // An unsupported environment or a missing redirect should fall through to
-    // onAuthStateChanged. Only log real redirect failures.
-    const code = (error as { code?: string }).code;
-    if (code !== 'auth/operation-not-supported-in-this-environment') {
-      console.error('Redirect result error', error);
-    }
-  });
+  if (!redirectPromise) {
+    redirectPromise = getRedirectResult(auth)
+      .then((result) => {
+        if (result?.user) {
+          setStoredAuthMode('google');
+          notify(result.user, 'google');
+        }
+      })
+      .catch((error) => {
+        const code = (error as { code?: string }).code;
+        if (code !== 'auth/operation-not-supported-in-this-environment') {
+          console.error('Redirect result error', error);
+        }
+      });
+  }
 
   const unsubscribe = onAuthStateChanged(auth, (user) => {
     if (user) {
