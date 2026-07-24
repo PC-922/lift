@@ -19,7 +19,6 @@ export const AppDataProvider: React.FC<{ children: ReactNode }> = ({ children })
   const [isLoading, setIsLoading] = useState(true);
 
   const refresh = useCallback(async () => {
-    setIsLoading(true);
     const [loadedExercises, loadedGroups, loadedRoutines] = await Promise.all([
       storageManager.getExercises(),
       storageManager.getMuscleGroups(),
@@ -32,6 +31,7 @@ export const AppDataProvider: React.FC<{ children: ReactNode }> = ({ children })
   }, []);
 
   useEffect(() => {
+    setIsLoading(true);
     refresh();
   }, [refresh]);
 

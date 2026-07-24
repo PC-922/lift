@@ -31,8 +31,6 @@ function notify(user: AuthUser, mode: AuthMode) {
 
 async function signInWithGoogle(): Promise<AuthUser> {
   if (!isFirebaseAvailable() || !auth) {
-    setStoredAuthMode('google');
-    notify(null, 'google');
     return null;
   }
 

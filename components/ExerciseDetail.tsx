@@ -4,7 +4,6 @@ import {Exercise, ExerciseLog} from '../types';
 import {getTranslatedGroupName, useTranslations} from '../utils/translations';
 import {getLatestLog, getLogFeedback} from '../utils/progression';
 import {useToast} from '../hooks/useToast';
-import {useRestTimer} from '../hooks/useRestTimer';
 import ConfirmModal from './ConfirmModal';
 import {BackButton} from './ui/BackButton';
 import {Button} from './ui/Button';
@@ -65,7 +64,6 @@ export const ExerciseDetail: React.FC<Props> = ({
   onUpdateRoutineExercise,
 }) => {
   const { showToast } = useToast();
-  const { startTimer } = useRestTimer();
   const t = useTranslations();
   const latest = getLatestLog(exercise.logs);
 
@@ -109,8 +107,8 @@ export const ExerciseDetail: React.FC<Props> = ({
 
   const parseWeight = (value: string): number | null => {
     const trimmed = value.trim();
-    if (trimmed === '') return null;
-    const parsed = parseFloat(trimmed);
+    if (trimmed === '' || trimmed === '-') return null;
+    const parsed = parseInt(trimmed, 10);
     return Number.isNaN(parsed) ? null : parsed;
   };
 
@@ -150,6 +148,9 @@ export const ExerciseDetail: React.FC<Props> = ({
   };
 
   const handleLogChange = useCallback((index: number, field: keyof EditableLog, value: string) => {
+    if (field === 'weight' || field === 'reps') {
+      if (value !== '' && value !== '-' && !/^-?\d+$/.test(value)) return;
+    }
     setEditableLogs((prev) =>
       prev.map((log, i) => (i === index ? { ...log, [field]: value } : log))
     );
@@ -286,7 +287,20 @@ export const ExerciseDetail: React.FC<Props> = ({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <label className="block text-xs font-medium text-app-text-muted">{t.labels.sets}</label>
-              <Input compact type="text" inputMode="numeric" value={routineSets} onChange={(e) => setRoutineSets(e.target.value)} onBlur={handleRoutineSetsBlur} className="text-center" />
+              <Input
+                compact
+                type="text"
+                inputMode="numeric"
+                value={routineSets}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === '' || /^\d+$/.test(val)) {
+                    setRoutineSets(val);
+                  }
+                }}
+                onBlur={handleRoutineSetsBlur}
+                className="text-center"
+              />
             </div>
             <div className="space-y-1">
               <label className="block text-xs font-medium text-app-text-muted">{t.labels.reps}</label>
@@ -326,9 +340,14 @@ export const ExerciseDetail: React.FC<Props> = ({
             <label className="mb-1 block text-xs font-medium text-app-text-muted">{t.labels.weight}</label>
             <Input
               type="text"
-              inputMode="decimal"
+              inputMode="text"
               value={weight}
-              onChange={(e) => setWeight(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === '' || val === '-' || /^-?\d+$/.test(val)) {
+                  setWeight(val);
+                }
+              }}
               placeholder={latest?.weight === null ? '—' : latest?.weight.toString() ?? '0'}
             />
           </div>
@@ -336,9 +355,14 @@ export const ExerciseDetail: React.FC<Props> = ({
             <label className="mb-1 block text-xs font-medium text-app-text-muted">{t.labels.reps}</label>
             <Input
               type="text"
-              inputMode="numeric"
+              inputMode="text"
               value={reps}
-              onChange={(e) => setReps(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === '' || val === '-' || /^-?\d+$/.test(val)) {
+                  setReps(val);
+                }
+              }}
               placeholder={latest?.reps === null ? '—' : latest?.reps.toString() ?? '0'}
             />
           </div>
@@ -392,7 +416,7 @@ export const ExerciseDetail: React.FC<Props> = ({
                       <label className="mb-1 block text-xs font-medium text-app-text-muted">{t.labels.weightShort}</label>
                       <Input
                         type="text"
-                        inputMode="decimal"
+                        inputMode="text"
                         value={log.weight}
                         onChange={(e) => handleLogChange(index, 'weight', e.target.value)}
                         onBlur={() => handleLogBlur(index)}
@@ -403,7 +427,7 @@ export const ExerciseDetail: React.FC<Props> = ({
                       <label className="mb-1 block text-xs font-medium text-app-text-muted">{t.labels.reps}</label>
                       <Input
                         type="text"
-                        inputMode="numeric"
+                        inputMode="text"
                         value={log.reps}
                         onChange={(e) => handleLogChange(index, 'reps', e.target.value)}
                         onBlur={() => handleLogBlur(index)}

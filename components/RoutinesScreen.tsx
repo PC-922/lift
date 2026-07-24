@@ -1,23 +1,23 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Pencil, X, ArrowUp, ArrowDown, Shuffle, Plus, MoreVertical, Trash2 } from 'lucide-react';
-import { Exercise, Routine, RoutineDay, RoutineExercise, ExerciseLog } from '../types';
-import { useTranslations, getTranslatedGroupName } from '../utils/translations';
-import { getLatestLog, getLogFeedback } from '../utils/progression';
-import { RoutineCard } from './RoutineCard';
-import { RoutineDayCard } from './RoutineDayCard';
-import { ActionSheet } from './ActionSheet';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import {ArrowDown, ArrowUp, MoreVertical, Pencil, Plus, Shuffle, Trash2, X} from 'lucide-react';
+import {Exercise, ExerciseLog, Routine, RoutineDay, RoutineExercise} from '../types';
+import {getTranslatedGroupName, useTranslations} from '../utils/translations';
+import {getLatestLog, getLogFeedback} from '../utils/progression';
+import {RoutineCard} from './RoutineCard';
+import {RoutineDayCard} from './RoutineDayCard';
+import {ActionSheet} from './ActionSheet';
 import ConfirmModal from './ConfirmModal';
-import { Modal } from './Modal';
-import { useToast } from '../hooks/useToast';
-import { makeId } from '../services/storageService';
-import { Button } from './ui/Button';
-import { Badge } from './ui/Badge';
-import { Input } from './ui/Input';
-import { SearchInput } from './ui/SearchInput';
-import { ListRow } from './ui/ListRow';
-import { BackButton } from './ui/BackButton';
-import { IconButton } from './ui/IconButton';
-import { cn } from '../utils/cn';
+import {Modal} from './Modal';
+import {useToast} from '../hooks/useToast';
+import {makeId} from '@/services/storage/id.ts';
+import {Button} from './ui/Button';
+import {Badge} from './ui/Badge';
+import {Input} from './ui/Input';
+import {SearchInput} from './ui/SearchInput';
+import {ListRow} from './ui/ListRow';
+import {BackButton} from './ui/BackButton';
+import {IconButton} from './ui/IconButton';
+import {cn} from '../utils/cn';
 
 interface Props {
   routines: Routine[];
@@ -79,12 +79,6 @@ export const RoutinesScreen: React.FC<Props> = ({
   onLogExercise,
   onReorderRoutine,
   onReorderRoutineExercise,
-  onUpdateNote,
-  onUpdateLog,
-  onDeleteLog,
-  onDeleteAllLogs,
-  onDeleteAllLogsExceptLatest,
-  onDeleteExercise,
   onNavigateToExercise,
   resetSignal,
 }) => {
@@ -180,10 +174,6 @@ export const RoutinesScreen: React.FC<Props> = ({
 
   const updateDayName = (index: number, name: string) => {
     setFormDays((prev) => prev.map((day, i) => (i === index ? { ...day, name } : day)));
-  };
-
-  const updateFormDays = (updater: (days: RoutineDay[]) => RoutineDay[]) => {
-    setFormDays((prev) => updater(prev.map((day) => ({ ...day, exercises: day.exercises.map((re) => ({ ...re })) }))));
   };
 
   const toggleExercise = (exerciseId: string) => {
@@ -300,13 +290,14 @@ export const RoutinesScreen: React.FC<Props> = ({
   );
 
   const updateLogForm = (exerciseId: string, field: keyof LogFormState, value: string) => {
+    if (value !== '' && value !== '-' && !/^-?\d+$/.test(value)) return;
     setLogForms((prev) => ({ ...prev, [exerciseId]: { ...getLogForm(exerciseId), [field]: value } }));
   };
 
   const handleLog = (targetId: string) => {
     const form = getLogForm(targetId);
-    const weightValue = form.weight.trim() === '' ? null : parseFloat(form.weight);
-    const repsValue = form.reps.trim() === '' ? null : parseInt(form.reps, 10);
+    const weightValue = form.weight.trim() === '' || form.weight === '-' ? null : parseInt(form.weight, 10);
+    const repsValue = form.reps.trim() === '' || form.reps === '-' ? null : parseInt(form.reps, 10);
     if (weightValue === null && repsValue === null) return;
     if ((weightValue !== null && Number.isNaN(weightValue)) || (repsValue !== null && Number.isNaN(repsValue))) return;
 
@@ -989,7 +980,7 @@ const RoutineExerciseCard: React.FC<RoutineExerciseCardProps> = ({
           <label className="mb-1.5 block text-[11px] font-bold uppercase text-app-text-muted">{t.labels.weightShort}</label>
           <Input
             type="text"
-            inputMode="decimal"
+            inputMode="text"
             value={form.weight}
             onChange={(e) => onUpdateForm('weight', e.target.value)}
             onMouseDown={(e) => e.stopPropagation()}
@@ -1003,7 +994,7 @@ const RoutineExerciseCard: React.FC<RoutineExerciseCardProps> = ({
           <label className="mb-1.5 block text-[11px] font-bold uppercase text-app-text-muted">{t.labels.reps}</label>
           <Input
             type="text"
-            inputMode="numeric"
+            inputMode="text"
             value={form.reps}
             onChange={(e) => onUpdateForm('reps', e.target.value)}
             onMouseDown={(e) => e.stopPropagation()}
