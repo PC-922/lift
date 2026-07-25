@@ -114,13 +114,22 @@ function subscribe(callback: AuthListener): () => void {
       });
   }
 
+  let initialResolved = false;
+
   const unsubscribe = onAuthStateChanged(auth, (user) => {
     if (user) {
+      initialResolved = true;
       setStoredAuthMode('google');
       callback(user, 'google');
+    } else if (initialResolved) {
+      callback(null, getStoredAuthMode());
     } else {
-      const mode = getStoredAuthMode();
-      callback(null, mode);
+      initialResolved = true;
+      const storedMode = getStoredAuthMode();
+      if (storedMode === 'google') {
+        return;
+      }
+      callback(null, storedMode);
     }
   });
 
