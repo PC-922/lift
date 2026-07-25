@@ -38,3 +38,5 @@ ios/
 .pnp.js
 
 .atl
+.agents
+skills-lock.json

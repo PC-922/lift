@@ -409,17 +409,17 @@ const AppLayout: React.FC = () => {
 const AppContent: React.FC = () => {
   const { user, mode: authMode } = useAuth();
 
-  useEffect(() => {
-    setStorageUser(user, authMode);
-  }, [user, authMode]);
+  setStorageUser(user, authMode);
 
   if (authMode === null) {
     return <OnboardingScreen />;
   }
 
+  const adapterKey = `${user?.uid ?? 'anon'}-${authMode}`;
+
   return (
     <ToastProvider>
-      <AppDataProvider>
+      <AppDataProvider key={adapterKey}>
         <AppLayout />
       </AppDataProvider>
     </ToastProvider>
