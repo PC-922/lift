@@ -1,12 +1,12 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { authService, AuthUser, AUTH_TIMEOUT_MS } from '../services/authService';
+import { authService, AuthUser, SignInResult, AUTH_TIMEOUT_MS } from '../services/authService';
 import { AuthMode } from '../services/preferencesService';
 
 interface AuthContextValue {
   user: AuthUser;
   mode: AuthMode;
   isLoading: boolean;
-  signInWithGoogle: () => Promise<AuthUser>;
+  signInWithGoogle: () => Promise<SignInResult>;
   continueAsGuest: () => void;
   signOut: () => Promise<void>;
 }

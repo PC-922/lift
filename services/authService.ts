@@ -1,5 +1,6 @@
 import {
   GoogleAuthProvider,
+  signInWithPopup,
   signInWithRedirect,
   getRedirectResult,
   signOut,
@@ -8,6 +9,7 @@ import {
 } from 'firebase/auth';
 import { auth, isFirebaseAvailable } from './firebase';
 import { preferencesService, AuthMode } from './preferencesService';
+import { ensureUserProfile } from './userProfileService';
 
 export type AuthUser = User | null;
 
@@ -15,7 +17,7 @@ type AuthListener = (user: AuthUser, mode: AuthMode) => void;
 
 const listeners = new Set<AuthListener>();
 
-const AUTH_TIMEOUT_MS = 5000;
+export const AUTH_TIMEOUT_MS = 5000;
 
 function getStoredAuthMode(): AuthMode {
   return preferencesService.getPrefs().authMode ?? null;
@@ -29,16 +31,41 @@ function notify(user: AuthUser, mode: AuthMode) {
   listeners.forEach((listener) => listener(user, mode));
 }
 
-async function signInWithGoogle(): Promise<AuthUser> {
+export interface SignInResult {
+  user: AuthUser;
+  isNewUser: boolean;
+}
+
+async function signInWithGoogle(): Promise<SignInResult> {
   if (!isFirebaseAvailable() || !auth) {
-    return null;
+    return { user: null, isNewUser: false };
   }
 
   const provider = new GoogleAuthProvider();
 
-  setStoredAuthMode('google');
-  await signInWithRedirect(auth, provider);
-  return null;
+  try {
+    const result = await signInWithPopup(auth, provider);
+    setStoredAuthMode('google');
+    const isNewUser = result.user.metadata?.creationTime === result.user.metadata?.lastSignInTime;
+    if (isNewUser) {
+      ensureUserProfile(result.user).catch(() => {});
+    }
+    notify(result.user, 'google');
+    return { user: result.user, isNewUser };
+  } catch (popupError) {
+    const code = (popupError as { code?: string }).code;
+    if (
+      code === 'auth/popup-blocked' ||
+      code === 'auth/popup-closed-by-user' ||
+      code === 'auth/cancelled-popup-request'
+    ) {
+      setStoredAuthMode('google');
+      await signInWithRedirect(auth, provider);
+      return { user: null, isNewUser: false };
+    }
+    setStoredAuthMode(null);
+    throw popupError;
+  }
 }
 
 function continueAsGuest(): void {
@@ -54,7 +81,7 @@ async function signOutUser(): Promise<void> {
   notify(null, null);
 }
 
-let redirectPromise: Promise<void> | null = null;
+let redirectHandled = false;
 
 function subscribe(callback: AuthListener): () => void {
   listeners.add(callback);
@@ -66,11 +93,16 @@ function subscribe(callback: AuthListener): () => void {
     };
   }
 
-  if (!redirectPromise) {
-    redirectPromise = getRedirectResult(auth)
+  if (!redirectHandled) {
+    redirectHandled = true;
+    getRedirectResult(auth)
       .then((result) => {
         if (result?.user) {
           setStoredAuthMode('google');
+          const isNewUser = result.user.metadata?.creationTime === result.user.metadata?.lastSignInTime;
+          if (isNewUser) {
+            ensureUserProfile(result.user).catch(() => {});
+          }
           notify(result.user, 'google');
         }
       })
@@ -104,5 +136,3 @@ export const authService = {
   signOut: signOutUser,
   subscribe,
 };
-
-export { AUTH_TIMEOUT_MS };
