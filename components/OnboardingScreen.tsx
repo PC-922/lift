@@ -3,7 +3,6 @@ import { Dumbbell } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslations } from '../utils/translations';
 import { Button } from './ui/Button';
-import { Surface } from './ui/Surface';
 
 export const OnboardingScreen: React.FC = () => {
   const t = useTranslations();
@@ -12,14 +11,14 @@ export const OnboardingScreen: React.FC = () => {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center px-6 py-12">
       <div className="mb-10 text-center">
-        <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-[2rem] bg-app-accent text-app-accent-foreground shadow-xl shadow-app-accent/20">
+        <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-[2rem] bg-app-accent text-app-accent-foreground">
           <Dumbbell size={48} strokeWidth={2.5} />
         </div>
-        <h1 className="text-5xl font-black tracking-tighter text-app-text uppercase italic">{t.appTitle}</h1>
+        <h1 className="text-5xl font-black italic text-app-text">{t.appTitle}</h1>
         <p className="mt-3 text-app-text-muted">{t.labels.onboardingTagline}</p>
       </div>
 
-      <Surface className="w-full max-w-sm space-y-3 p-5">
+      <div className="w-full max-w-sm space-y-3">
         <Button
           onClick={signInWithGoogle}
           size="lg"
@@ -36,13 +35,13 @@ export const OnboardingScreen: React.FC = () => {
 
         <Button
           onClick={continueAsGuest}
-          variant="secondary"
+          variant="ghost"
           size="lg"
           className="w-full"
         >
           {t.actions.continueAsGuest}
         </Button>
-      </Surface>
+      </div>
     </div>
   );
 };

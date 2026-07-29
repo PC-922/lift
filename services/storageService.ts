@@ -2,31 +2,33 @@ import { User } from 'firebase/auth';
 import { db } from './firebase';
 import { StorageManagerInterface } from '../types';
 import { LocalStorageAdapter, SCHEMA_VERSION } from './storage/localStorageAdapter';
-import { FirestoreAdapter } from './storage/firestoreAdapter';
+import { SyncAdapter } from './storage/syncAdapter';
+import { FirestoreGateway } from './storage/firestoreGateway';
 import { makeId } from './storage/id';
 
 export { makeId, SCHEMA_VERSION };
 
 let currentAdapter: StorageManagerInterface | null = null;
 let currentUid: string | null = null;
+let currentMode: 'google' | 'guest' | null = null;
 
-function getAdapterForUser(user: User | null, mode: 'google' | 'guest' | null): StorageManagerInterface {
-  const uid = user?.uid ?? `guest_${mode ?? 'anonymous'}`;
-  if (currentAdapter && currentUid === uid) {
-    return currentAdapter;
+function createAdapter(user: User | null, mode: 'google' | 'guest' | null): StorageManagerInterface {
+  if (mode === 'google' && user && db) {
+    const local = new LocalStorageAdapter();
+    const gateway = new FirestoreGateway(db);
+    return new SyncAdapter(local, gateway, user.uid);
   }
-
-  if (user && db && mode === 'google') {
-    currentAdapter = new FirestoreAdapter(db, user.uid);
-  } else {
-    currentAdapter = new LocalStorageAdapter();
-  }
-  currentUid = uid;
-  return currentAdapter;
+  return new LocalStorageAdapter();
 }
 
 export function setStorageUser(user: User | null, mode: 'google' | 'guest' | null): void {
-  currentAdapter = getAdapterForUser(user, mode);
+  const uid = user?.uid ?? `guest_${mode ?? 'anonymous'}`;
+  if (currentAdapter && currentUid === uid && currentMode === mode) {
+    return;
+  }
+  currentAdapter = createAdapter(user, mode);
+  currentUid = uid;
+  currentMode = mode;
 }
 
 export const storageManager: StorageManagerInterface = new Proxy({} as StorageManagerInterface, {

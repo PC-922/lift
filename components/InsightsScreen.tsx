@@ -127,7 +127,7 @@ export const InsightsScreen: React.FC<Props> = ({ exercises, onSelectExercise })
         <h2 className="text-lg font-semibold text-app-text">{t.labels.latestInsight}</h2>
         <ListRow
           onClick={() => onSelectExercise(data.exerciseId)}
-          className="cursor-pointer border-2 border-app-accent/20 bg-app-accent/5 transition-colors active:bg-app-accent/10"
+          className="cursor-pointer border border-app-border bg-app-surface transition-colors active:bg-app-surface-muted"
         >
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
@@ -143,7 +143,7 @@ export const InsightsScreen: React.FC<Props> = ({ exercises, onSelectExercise })
             {data.detail.type !== 'reps' && renderProgressMetric('kg', data.detail.prevWeight, data.detail.currWeight)}
             {data.detail.type !== 'weight' && renderProgressMetric('reps', data.detail.prevReps, data.detail.currReps)}
           </div>
-          <div className="mt-3 text-xs font-medium text-app-accent">{t.labels.viewDetail}</div>
+          <div className="mt-3 text-xs font-medium text-app-accent-text">{t.labels.viewDetail}</div>
         </ListRow>
       </section>
     );

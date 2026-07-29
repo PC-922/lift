@@ -1,6 +1,8 @@
 import { Exercise } from '../../types';
 import { getLanguage, translations } from '../../utils/translations';
 
+export const SEED_TIMESTAMP = '2000-01-01T00:00:00.000Z';
+
 /**
  * Default muscle groups. Edit this array to change the groups that are seeded
  * for new users or after a data reset.
@@ -71,5 +73,6 @@ export function getDefaultExercises(): Exercise[] {
     name: names[key],
     muscleGroup: group,
     logs: [],
+    updatedAt: SEED_TIMESTAMP,
   }));
 }

@@ -35,6 +35,18 @@ export const AppDataProvider: React.FC<{ children: ReactNode }> = ({ children })
     refresh();
   }, [refresh]);
 
+  useEffect(() => {
+    async function triggerSync() {
+      if (typeof navigator !== 'undefined' && navigator.onLine && typeof storageManager.sync === 'function') {
+        await storageManager.sync();
+        await refresh();
+      }
+    }
+    triggerSync();
+    window.addEventListener('online', triggerSync);
+    return () => window.removeEventListener('online', triggerSync);
+  }, [refresh]);
+
   return (
     <AppDataContext.Provider value={{ exercises, muscleGroups, routines, isLoading, refresh }}>
       {children}

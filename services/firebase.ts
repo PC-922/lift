@@ -1,6 +1,6 @@
 import { initializeApp, FirebaseApp } from 'firebase/app';
 import { getAuth, browserLocalPersistence, setPersistence, Auth } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore';
+import { getFirestore, persistentLocalCache, initializeFirestore, Firestore } from 'firebase/firestore';
 
 const requiredKeys = [
   'VITE_FIREBASE_API_KEY',
@@ -29,7 +29,7 @@ if (hasFirebaseConfig()) {
     appId: import.meta.env.VITE_FIREBASE_APP_ID,
   });
   auth = getAuth(app);
-  db = getFirestore(app);
+  db = initializeFirestore(app, { localCache: persistentLocalCache() });
   setPersistence(auth, browserLocalPersistence).catch((error) => {
     console.error('Failed to set auth persistence', error);
   });

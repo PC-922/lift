@@ -10,6 +10,7 @@ export interface Exercise {
   muscleGroup: string;
   logs: ExerciseLog[];
   note?: string;
+  updatedAt?: string;
 }
 
 export interface RoutineExercise {
@@ -32,6 +33,7 @@ export interface Routine {
   id: string;
   name: string;
   days: RoutineDay[];
+  updatedAt?: string;
 }
 
 export type GroupSortField = 'progress' | 'weight';
@@ -67,6 +69,13 @@ export interface StorageManagerInterface {
   exportData(): Promise<string>;
   importData(jsonString: string): Promise<boolean>;
   resetData(): Promise<void>;
+  sync?(): Promise<void>;
+  getTombstones?(): { exercises: Record<string, Tombstone>; routines: Record<string, Tombstone> };
+  replaceAllData?(exercises: Exercise[], routines: Routine[], groups: string[], tombstones: { exercises: Record<string, Tombstone>; routines: Record<string, Tombstone> }): Promise<void>;
+}
+
+export interface Tombstone {
+  deletedAt: string;
 }
 
 export interface RestTimerState {

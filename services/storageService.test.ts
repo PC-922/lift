@@ -101,7 +101,10 @@ describe('storageService — routines', () => {
     await storageManager.saveRoutine(routine);
     const routines = await storageManager.getRoutines();
     expect(routines).toHaveLength(1);
-    expect(routines[0]).toEqual(routine);
+    expect(routines[0].id).toBe('r1');
+    expect(routines[0].name).toBe('Push Day');
+    expect(routines[0].days[0].exercises[0].exerciseId).toBe('ex1');
+    expect(routines[0].updatedAt).toBeDefined();
   });
 
   it('saves multiple routines independently', async () => {
@@ -163,6 +166,24 @@ describe('storageService — routines', () => {
   });
 
   // --- migration from old formats ---
+
+  it('migrates schema v3 to v4 and stamps updatedAt', async () => {
+    localStorage.setItem('lift_meta_v2', JSON.stringify({ schemaVersion: 3 }));
+    localStorage.setItem('lift_data_v1', JSON.stringify([
+      { id: 'ex1', name: 'Bench', muscleGroup: 'Pecho', logs: [{ date: '2026-07-25', weight: 100, reps: 5 }] },
+    ]));
+    localStorage.setItem('lift_routines_v1', JSON.stringify([
+      { id: 'r1', name: 'Push', days: [] },
+    ]));
+
+    const adapter = new (await import('./storage/localStorageAdapter')).LocalStorageAdapter();
+    const exercises = await adapter.getExercises();
+    const routines = await adapter.getRoutines();
+
+    expect(exercises[0].updatedAt).toBe('2026-07-25');
+    expect(routines[0].updatedAt).toBeDefined();
+    expect(JSON.parse(localStorage.getItem('lift_meta_v2') ?? '').schemaVersion).toBe(4);
+  });
 
   it('migrates routines stored in old exerciseIds format', async () => {
     await storageManager.saveExercise(seedExercise('ex1'));

@@ -50,7 +50,7 @@ function buildLineChart(points: ChartPoint[], colorClass: string): React.ReactNo
 
       {points.map((point, index) => (
         <g key={point.date}>
-          <circle cx={xForIndex(index)} cy={yForValue(point.value)} r="4" className={`fill-app-surface ${colorClass}`} strokeWidth="2" />
+          <circle cx={xForIndex(index)} cy={yForValue(point.value)} r="4" className={`fill-app-surface stroke-2 ${colorClass}`} />
           <text x={xForIndex(index)} y={CHART_HEIGHT - 6} className="fill-app-text-muted text-[9px]" textAnchor="middle">
             {new Date(point.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
           </text>
@@ -174,7 +174,7 @@ export const InsightDetailScreen: React.FC = () => {
         <div className="space-y-3">
           <h3 className="text-sm font-semibold text-app-text">{t.labels.weightTrend}</h3>
           <div className="rounded-2xl border border-app-border bg-app-surface p-4">
-            {buildLineChart(weightPoints, 'stroke-app-accent')}
+            {buildLineChart(weightPoints, 'stroke-app-accent-text')}
           </div>
         </div>
       )}

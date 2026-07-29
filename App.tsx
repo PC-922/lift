@@ -65,7 +65,7 @@ const HomeScreen: React.FC = () => {
         <Button
           onClick={() => navigate('/exercises/new')}
           size="lg"
-          className="w-full rounded-2xl shadow-xl shadow-app-accent/10"
+          className="w-full"
         >
           <Plus size={24} strokeWidth={3} />
           {t.labels.newExercise}
@@ -298,7 +298,7 @@ const AppLayout: React.FC = () => {
 
   const showHeader = currentScreen === 'home' && !location.pathname.startsWith('/exercises/');
   const appHeaderClassName = 'px-4 pt-6 pb-4';
-  const appHeaderTitleClassName = 'text-center text-4xl font-black tracking-tighter text-app-text uppercase italic';
+  const appHeaderTitleClassName = 'text-xl font-bold text-app-text';
 
   if (isLoading) {
     return (
@@ -313,33 +313,29 @@ const AppLayout: React.FC = () => {
       <div className="min-h-screen pb-24 sm:mx-auto sm:max-w-md">
           {showHeader && (
             <header className={cn('sticky top-0 z-20 bg-app-bg', appHeaderClassName)}>
-              <div className="relative">
+              <div className="flex items-center justify-between gap-3">
                 <h1 className={appHeaderTitleClassName}>{t.appTitle}</h1>
-                <div className="absolute right-0 top-1/2 -translate-y-1/2">
-                  {!isStandalone && (
-                    <Button
-                      onClick={() => setIsInstallModalOpen(true)}
-                      size="sm"
-                      className="gap-1"
-                    >
-                      <Download size={14} />
-                      {t.actions.install}
-                    </Button>
-                  )}
-                </div>
+                {!isStandalone && (
+                  <Button
+                    onClick={() => setIsInstallModalOpen(true)}
+                    size="sm"
+                    className="gap-1"
+                  >
+                    <Download size={14} />
+                    {t.actions.install}
+                  </Button>
+                )}
               </div>
             </header>
           )}
 
           {currentScreen !== 'home' && !location.pathname.startsWith('/exercises/') && (
             <header className={cn('sticky top-0 z-20 bg-app-bg', appHeaderClassName)}>
-              <div className="relative">
-                <h1 className={appHeaderTitleClassName}>
-                  {currentScreen === 'insights' ? t.labels.insights
-                    : currentScreen === 'routines' ? t.labels.routines
-                    : t.labels.settings}
-                </h1>
-              </div>
+              <h1 className={appHeaderTitleClassName}>
+                {currentScreen === 'insights' ? t.labels.insights
+                  : currentScreen === 'routines' ? t.labels.routines
+                  : t.labels.settings}
+              </h1>
             </header>
           )}
 

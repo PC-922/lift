@@ -1,9 +1,9 @@
-import { Exercise, ExerciseLog, GroupSortPreference, Routine, RoutineDay, RoutineExercise, StorageManagerInterface } from '../../types';
+import { Exercise, ExerciseLog, GroupSortPreference, Routine, RoutineDay, RoutineExercise, StorageManagerInterface, Tombstone } from '../../types';
 import { DEFAULT_GROUP_SORT_PREFERENCE } from '../../utils/exerciseSorting';
 import { PREFS_KEY } from '../preferencesService';
 import { getDefaultMuscleGroups, getDefaultExercises } from './seedData';
 
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 function makeStorageId(prefix: string): string {
   return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
@@ -13,6 +13,7 @@ const STORAGE_KEY = 'lift_data_v1';
 const GROUPS_KEY = 'lift_groups_v1';
 const GROUP_SORT_KEY = 'lift_group_sort_v1';
 const ROUTINES_KEY = 'lift_routines_v1';
+const TOMBSTONES_KEY = 'lift_tombstones_v1';
 const META_KEY = 'lift_meta_v2';
 
 function safeParse<T>(raw: string | null, fallback: T): T {
@@ -73,17 +74,69 @@ function clearAllLiftKeys(): void {
   keysToRemove.forEach((key) => localStorage.removeItem(key));
 }
 
+function nowIso(): string {
+  return new Date().toISOString();
+}
+
+function deriveExerciseUpdatedAt(exercise: Exercise): string {
+  const latestLog = [...exercise.logs].sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+  )[0];
+  return latestLog?.date ?? nowIso();
+}
+
+function migrateV3ToV4(): void {
+  const exercises = safeParse<unknown[]>(localStorage.getItem(STORAGE_KEY), []);
+  const migratedExercises = Array.isArray(exercises)
+    ? exercises.map((item) => ({
+        ...(item as Exercise),
+        updatedAt: deriveExerciseUpdatedAt(item as Exercise),
+      }))
+    : [];
+
+  const routines = safeParse<unknown[]>(localStorage.getItem(ROUTINES_KEY), []);
+  const migratedRoutines = Array.isArray(routines)
+    ? routines.map((item) => ({
+        ...(item as Routine),
+        updatedAt: nowIso(),
+      }))
+    : [];
+
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(migratedExercises));
+  localStorage.setItem(ROUTINES_KEY, JSON.stringify(migratedRoutines));
+  localStorage.setItem(TOMBSTONES_KEY, JSON.stringify({ exercises: {}, routines: {} }));
+}
+
 function validateSchema(): void {
   const meta = safeParse<{ schemaVersion?: number }>(localStorage.getItem(META_KEY), {});
-  if (meta.schemaVersion !== SCHEMA_VERSION) {
-    clearAllLiftKeys();
-    localStorage.setItem(META_KEY, JSON.stringify({ schemaVersion: SCHEMA_VERSION }));
+  if (meta.schemaVersion === SCHEMA_VERSION) {
+    return;
   }
+
+  if (meta.schemaVersion === 3) {
+    migrateV3ToV4();
+    localStorage.setItem(META_KEY, JSON.stringify({ schemaVersion: SCHEMA_VERSION }));
+    return;
+  }
+
+  clearAllLiftKeys();
+  localStorage.setItem(META_KEY, JSON.stringify({ schemaVersion: SCHEMA_VERSION }));
 }
 
 export class LocalStorageAdapter implements StorageManagerInterface {
   constructor() {
     validateSchema();
+  }
+
+  getTombstones(): { exercises: Record<string, Tombstone>; routines: Record<string, Tombstone> } {
+    return this.loadTombstones();
+  }
+
+  async replaceAllData(exercises: Exercise[], routines: Routine[], groups: string[], tombstones: { exercises: Record<string, Tombstone>; routines: Record<string, Tombstone> }): Promise<void> {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(exercises));
+    localStorage.setItem(ROUTINES_KEY, JSON.stringify(routines));
+    localStorage.setItem(GROUPS_KEY, JSON.stringify(groups));
+    await this.saveTombstones(tombstones);
   }
 
   private loadData(): Exercise[] {
@@ -93,6 +146,15 @@ export class LocalStorageAdapter implements StorageManagerInterface {
 
   private saveData(data: Exercise[]): Promise<void> {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    return Promise.resolve();
+  }
+
+  private loadTombstones(): { exercises: Record<string, Tombstone>; routines: Record<string, Tombstone> } {
+    return safeParse(localStorage.getItem(TOMBSTONES_KEY), { exercises: {}, routines: {} });
+  }
+
+  private saveTombstones(tombstones: { exercises: Record<string, Tombstone>; routines: Record<string, Tombstone> }): Promise<void> {
+    localStorage.setItem(TOMBSTONES_KEY, JSON.stringify(tombstones));
     return Promise.resolve();
   }
 
@@ -109,11 +171,12 @@ export class LocalStorageAdapter implements StorageManagerInterface {
 
   async saveExercise(exercise: Exercise): Promise<void> {
     const exercises = this.loadData();
-    const index = exercises.findIndex((e) => e.id === exercise.id);
+    const stamped = { ...exercise, updatedAt: nowIso() };
+    const index = exercises.findIndex((e) => e.id === stamped.id);
     if (index >= 0) {
-      exercises[index] = exercise;
+      exercises[index] = stamped;
     } else {
-      exercises.push(exercise);
+      exercises.push(stamped);
     }
     await this.saveData(exercises);
   }
@@ -122,6 +185,10 @@ export class LocalStorageAdapter implements StorageManagerInterface {
     let exercises = this.loadData();
     exercises = exercises.filter((e) => e.id !== id);
     await this.saveData(exercises);
+
+    const tombstones = this.loadTombstones();
+    tombstones.exercises[id] = { deletedAt: nowIso() };
+    await this.saveTombstones(tombstones);
 
     const routines = await this.getRoutines();
     let routinesChanged = false;
@@ -394,12 +461,12 @@ export class LocalStorageAdapter implements StorageManagerInterface {
           ...day,
           exercises: migrateLegacyExercises(day.exercises),
         }));
-        return [{ id: raw.id, name: raw.name, days: migratedDays }];
+        return [{ id: raw.id, name: raw.name, days: migratedDays, updatedAt: (item as Routine).updatedAt }];
       }
 
       if (Array.isArray(raw.exercises) && raw.exercises.every(isRoutineExerciseLike)) {
         const migrated = migrateLegacyExercises(raw.exercises);
-        return [{ id: raw.id, name: raw.name, days: [{ id: makeStorageId('day'), name: 'Día 1', exercises: migrated }] }];
+        return [{ id: raw.id, name: raw.name, days: [{ id: makeStorageId('day'), name: 'Día 1', exercises: migrated }], updatedAt: (item as Routine).updatedAt }];
       }
 
       const legacyExerciseIds = Array.isArray(raw.exerciseIds) ? raw.exerciseIds.filter((id): id is string => typeof id === 'string') : [];
@@ -412,17 +479,18 @@ export class LocalStorageAdapter implements StorageManagerInterface {
           dropset: false,
           toFailure: false,
         }));
-      return [{ id: raw.id, name: raw.name, days: [{ id: makeStorageId('day'), name: 'Día 1', exercises: migrated }] }];
+      return [{ id: raw.id, name: raw.name, days: [{ id: makeStorageId('day'), name: 'Día 1', exercises: migrated }], updatedAt: (item as Routine).updatedAt }];
     });
   }
 
   async saveRoutine(routine: Routine): Promise<void> {
     const routines = await this.getRoutines();
-    const index = routines.findIndex((r) => r.id === routine.id);
+    const stamped = { ...routine, updatedAt: nowIso() };
+    const index = routines.findIndex((r) => r.id === stamped.id);
     if (index >= 0) {
-      routines[index] = routine;
+      routines[index] = stamped;
     } else {
-      routines.push(routine);
+      routines.push(stamped);
     }
     localStorage.setItem(ROUTINES_KEY, JSON.stringify(routines));
   }
@@ -430,6 +498,10 @@ export class LocalStorageAdapter implements StorageManagerInterface {
   async deleteRoutine(id: string): Promise<void> {
     const routines = await this.getRoutines().then((r) => r.filter((r) => r.id !== id));
     localStorage.setItem(ROUTINES_KEY, JSON.stringify(routines));
+
+    const tombstones = this.loadTombstones();
+    tombstones.routines[id] = { deletedAt: nowIso() };
+    await this.saveTombstones(tombstones);
   }
 
   async reorderRoutine(fromIndex: number, toIndex: number): Promise<void> {
@@ -437,7 +509,7 @@ export class LocalStorageAdapter implements StorageManagerInterface {
     if (fromIndex < 0 || fromIndex >= routines.length || toIndex < 0 || toIndex >= routines.length) return;
     const [moved] = routines.splice(fromIndex, 1);
     routines.splice(toIndex, 0, moved);
-    localStorage.setItem(ROUTINES_KEY, JSON.stringify(routines));
+    localStorage.setItem(ROUTINES_KEY, JSON.stringify(routines.map((r) => ({ ...r, updatedAt: nowIso() }))));
   }
 
   async reorderRoutineExercise(routineId: string, dayId: string, fromIndex: number, toIndex: number): Promise<void> {
@@ -450,7 +522,7 @@ export class LocalStorageAdapter implements StorageManagerInterface {
     const [moved] = exercises.splice(fromIndex, 1);
     exercises.splice(toIndex, 0, moved);
     day.exercises = exercises;
-    localStorage.setItem(ROUTINES_KEY, JSON.stringify(routines));
+    localStorage.setItem(ROUTINES_KEY, JSON.stringify(routines.map((r) => ({ ...r, updatedAt: nowIso() }))));
   }
 
   async exportData(): Promise<string> {

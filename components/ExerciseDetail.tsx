@@ -1,16 +1,18 @@
-import React, {useCallback, useEffect, useState} from 'react';
-import {Pencil, Trash2, X} from 'lucide-react';
-import {Exercise, ExerciseLog} from '../types';
-import {getTranslatedGroupName, useTranslations} from '../utils/translations';
-import {getLatestLog, getLogFeedback} from '../utils/progression';
-import {useToast} from '../hooks/useToast';
+import React, { useCallback, useEffect, useState } from 'react';
+import { MoreVertical, Pencil, Trash2, X } from 'lucide-react';
+import { Exercise, ExerciseLog } from '../types';
+import { getTranslatedGroupName, useTranslations } from '../utils/translations';
+import { getLatestLog, getLogFeedback } from '../utils/progression';
+import { useToast } from '../hooks/useToast';
 import ConfirmModal from './ConfirmModal';
-import {BackButton} from './ui/BackButton';
-import {Button} from './ui/Button';
-import {Input} from './ui/Input';
-import {Surface} from './ui/Surface';
-import {MuscleGroupPicker} from './ui/MuscleGroupPicker';
-import {cn} from '../utils/cn';
+import { ActionSheet } from './ActionSheet';
+import { BackButton } from './ui/BackButton';
+import { Button } from './ui/Button';
+import { Input } from './ui/Input';
+import { Surface } from './ui/Surface';
+import { MuscleGroupPicker } from './ui/MuscleGroupPicker';
+import { Badge } from './ui/Badge';
+import { cn } from '../utils/cn';
 
 interface RoutineExerciseSettings {
   sets: number;
@@ -73,6 +75,7 @@ export const ExerciseDetail: React.FC<Props> = ({
 
   const [editableLogs, setEditableLogs] = useState<EditableLog[]>([]);
   const [confirmAction, setConfirmAction] = useState<{ action: ConfirmAction; logIndex?: number } | null>(null);
+  const [showHistoryActions, setShowHistoryActions] = useState(false);
 
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState(exercise.name);
@@ -227,59 +230,59 @@ export const ExerciseDetail: React.FC<Props> = ({
         <BackButton label={backLabel ?? t.labels.home} onClick={onBack} />
       </div>
 
-
-      <div className="mb-6">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0 flex-1">
-            {editingName ? (
-              <input
-                autoFocus
-                type="text"
-                value={nameValue}
-                onChange={(e) => setNameValue(e.target.value)}
-                onBlur={handleNameBlur}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleNameBlur(); if (e.key === 'Escape') setEditingName(false); }}
-                className="w-full border-b-2 border-app-accent bg-transparent pb-1 text-2xl font-bold text-app-text outline-none"
-              />
-            ) : (
-              <button
-                className="flex min-w-0 items-center gap-2 group active:opacity-70"
-                onClick={() => setEditingName(true)}
-              >
-                <h1 className="min-w-0 flex-1 break-words text-2xl font-bold text-app-text">{exercise.name}</h1>
-                <Pencil size={16} className="shrink-0 text-app-text-muted opacity-60 group-hover:opacity-100" />
-              </button>
-            )}
-
+      <div className="mb-6 flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          {editingName ? (
+            <input
+              autoFocus
+              type="text"
+              value={nameValue}
+              onChange={(e) => setNameValue(e.target.value)}
+              onBlur={handleNameBlur}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleNameBlur(); if (e.key === 'Escape') setEditingName(false); }}
+              className="w-full border-b-2 border-app-text bg-transparent pb-1 text-xl font-bold text-app-text outline-none"
+            />
+          ) : (
             <button
-              onClick={() => setShowGroupPicker((v) => !v)}
-              className="mt-1 text-sm text-app-text underline decoration-app-accent decoration-2 underline-offset-4 active:opacity-70"
+              className="flex min-w-0 items-center gap-2 group active:opacity-70"
+              onClick={() => setEditingName(true)}
             >
-              {getTranslatedGroupName(exercise.muscleGroup)}
+              <h1 className="min-w-0 flex-1 break-words text-xl font-bold text-app-text">{exercise.name}</h1>
+              <Pencil size={16} className="shrink-0 text-app-text-muted opacity-60 group-hover:opacity-100" />
             </button>
-          </div>
+          )}
 
           <button
-            onClick={() => setConfirmAction({ action: 'deleteExercise' })}
-            className="flex h-10 w-10 shrink-0 items-center justify-center text-app-danger active:opacity-60"
+            onClick={() => setShowGroupPicker((v) => !v)}
+            className="mt-2 active:opacity-70"
           >
-            <Trash2 size={20} />
+            <Badge variant="neutral" className="text-xs font-medium">
+              {getTranslatedGroupName(exercise.muscleGroup)}
+            </Badge>
           </button>
         </div>
 
-        {showGroupPicker && (
-          <div className="mt-3">
-            <MuscleGroupPicker
-              groups={muscleGroups}
-              selected={exercise.muscleGroup}
-              onSelect={(group) => {
-                onChangeGroup(group);
-                setShowGroupPicker(false);
-              }}
-            />
-          </div>
-        )}
+        <button
+          onClick={() => setConfirmAction({ action: 'deleteExercise' })}
+          className="flex h-10 w-10 shrink-0 items-center justify-center text-app-danger active:opacity-60"
+          aria-label={t.actions.delete}
+        >
+          <Trash2 size={20} />
+        </button>
       </div>
+
+      {showGroupPicker && (
+        <div className="mb-6">
+          <MuscleGroupPicker
+            groups={muscleGroups}
+            selected={exercise.muscleGroup}
+            onSelect={(group) => {
+              onChangeGroup(group);
+              setShowGroupPicker(false);
+            }}
+          />
+        </div>
+      )}
 
       {routineExercise && (
         <Surface className="mb-4">
@@ -299,22 +302,22 @@ export const ExerciseDetail: React.FC<Props> = ({
                   }
                 }}
                 onBlur={handleRoutineSetsBlur}
-                className="text-center"
+                className="text-center tabular-nums"
               />
             </div>
             <div className="space-y-1">
               <label className="block text-xs font-medium text-app-text-muted">{t.labels.reps}</label>
-              <Input compact type="text" inputMode="text" value={routineReps} onChange={(e) => setRoutineReps(e.target.value)} onBlur={handleRoutineRepsBlur} disabled={routineExercise.toFailure} className="text-center disabled:opacity-30" />
+              <Input compact type="text" inputMode="text" value={routineReps} onChange={(e) => setRoutineReps(e.target.value)} onBlur={handleRoutineRepsBlur} disabled={routineExercise.toFailure} className="text-center tabular-nums disabled:opacity-30" />
             </div>
             <div className="space-y-1">
               <label className="block text-xs font-medium text-app-text-muted">{t.labels.dropset}</label>
-              <button onClick={handleToggleDropset} className={cn('w-full rounded-xl border px-3 py-3 text-sm font-semibold transition-colors active:opacity-70', routineExercise.dropset ? 'border-app-warning bg-app-warning text-white' : 'border-app-border bg-app-surface text-app-text-muted')}>
+              <button onClick={handleToggleDropset} className={cn('w-full rounded-lg border px-3 py-3 text-sm font-semibold transition-colors active:opacity-70', routineExercise.dropset ? 'border-app-warning bg-app-warning text-white' : 'border-app-border bg-app-surface text-app-text-muted')}>
                 {routineExercise.dropset ? 'Yes' : 'No'}
               </button>
             </div>
             <div className="space-y-1">
               <label className="block text-xs font-medium text-app-text-muted">{t.labels.toFailure}</label>
-              <button onClick={handleToggleToFailure} className={cn('w-full rounded-xl border px-3 py-3 text-sm font-semibold transition-colors active:opacity-70', routineExercise.toFailure ? 'border-app-danger bg-app-danger text-white' : 'border-app-border bg-app-surface text-app-text-muted')}>
+              <button onClick={handleToggleToFailure} className={cn('w-full rounded-lg border px-3 py-3 text-sm font-semibold transition-colors active:opacity-70', routineExercise.toFailure ? 'border-app-danger bg-app-danger text-white' : 'border-app-border bg-app-surface text-app-text-muted')}>
                 {routineExercise.toFailure ? 'Yes' : 'No'}
               </button>
             </div>
@@ -334,7 +337,7 @@ export const ExerciseDetail: React.FC<Props> = ({
       </Surface>
 
       <Surface className="mb-6">
-        <p className="mb-3 text-xs font-medium uppercase tracking-wide text-app-text-muted">{t.labels.newExercise.replace('Nuevo ', '').replace('New ', '')}</p>
+        <p className="mb-3 text-xs font-medium uppercase tracking-wide text-app-text-muted">{t.labels.newSet}</p>
         <div className="flex gap-3">
           <div className="flex-1">
             <label className="mb-1 block text-xs font-medium text-app-text-muted">{t.labels.weight}</label>
@@ -349,6 +352,7 @@ export const ExerciseDetail: React.FC<Props> = ({
                 }
               }}
               placeholder={latest?.weight === null ? '—' : latest?.weight.toString() ?? '0'}
+              className="text-center tabular-nums"
             />
           </div>
           <div className="flex-1">
@@ -364,6 +368,7 @@ export const ExerciseDetail: React.FC<Props> = ({
                 }
               }}
               placeholder={latest?.reps === null ? '—' : latest?.reps.toString() ?? '0'}
+              className="text-center tabular-nums"
             />
           </div>
           <div className="flex items-end">
@@ -375,80 +380,76 @@ export const ExerciseDetail: React.FC<Props> = ({
       </Surface>
 
       {editableLogs.length > 0 && (
-        <div className="mb-2">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-xs font-medium uppercase tracking-wide text-app-text-muted">{t.labels.history}</p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setConfirmAction({ action: 'deleteAllExceptLatest' })}
-                className="text-xs text-app-danger active:opacity-70"
-              >
-                {t.actions.deleteAllExceptLatest}
-              </button>
-              <span className="text-app-border">|</span>
-              <button
-                onClick={() => setConfirmAction({ action: 'deleteAll' })}
-                className="text-xs text-app-danger active:opacity-70"
-              >
-                {t.actions.deleteAll}
-              </button>
-            </div>
+        <div className="mb-2 pb-24">
+          <div className="mb-3 flex items-center justify-between">
+            <p className="text-sm font-bold text-app-text">{t.labels.history}</p>
+            <button
+              onClick={() => setShowHistoryActions(true)}
+              className="flex h-8 w-8 items-center justify-center rounded-full text-app-text-muted active:opacity-70"
+              aria-label={t.labels.history}
+            >
+              <MoreVertical size={20} />
+            </button>
           </div>
 
-          <div className="space-y-3">
+          <div className="divide-y divide-app-border border-t border-app-border">
             {editableLogs.map((log, index) => (
-              <Surface key={log.originalDate}>
-                <div className="space-y-3">
-                  <div className="min-w-0">
-                    <label className="mb-1 block text-xs font-medium text-app-text-muted">{t.labels.date}</label>
-                    <Input
-                      type="text"
-                      value={log.date}
-                      onChange={(e) => handleLogChange(index, 'date', e.target.value)}
-                      onBlur={() => handleLogBlur(index)}
-                      compact
-                      placeholder="YYYY-MM-DD"
-                      className="w-full text-xs"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-app-text-muted">{t.labels.weightShort}</label>
-                      <Input
-                        type="text"
-                        inputMode="text"
-                        value={log.weight}
-                        onChange={(e) => handleLogChange(index, 'weight', e.target.value)}
-                        onBlur={() => handleLogBlur(index)}
-                        compact
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-app-text-muted">{t.labels.reps}</label>
-                      <Input
-                        type="text"
-                        inputMode="text"
-                        value={log.reps}
-                        onChange={(e) => handleLogChange(index, 'reps', e.target.value)}
-                        onBlur={() => handleLogBlur(index)}
-                        compact
-                      />
-                    </div>
-                  </div>
+              <div
+                key={log.originalDate}
+                className="flex items-center gap-3 py-3"
+              >
+                <Input
+                  type="text"
+                  value={log.date}
+                  onChange={(e) => handleLogChange(index, 'date', e.target.value)}
+                  onBlur={() => handleLogBlur(index)}
+                  compact
+                  placeholder="YYYY-MM-DD"
+                  className="w-28 text-xs text-app-text-muted tabular-nums"
+                />
+                <div className="flex flex-1 items-center gap-2">
+                  <Input
+                    type="text"
+                    inputMode="text"
+                    value={log.weight}
+                    onChange={(e) => handleLogChange(index, 'weight', e.target.value)}
+                    onBlur={() => handleLogBlur(index)}
+                    compact
+                    className="w-16 text-center text-sm font-semibold tabular-nums"
+                  />
+                  <span className="text-sm text-app-text-muted">×</span>
+                  <Input
+                    type="text"
+                    inputMode="text"
+                    value={log.reps}
+                    onChange={(e) => handleLogChange(index, 'reps', e.target.value)}
+                    onBlur={() => handleLogBlur(index)}
+                    compact
+                    className="w-16 text-center text-sm font-semibold tabular-nums"
+                  />
                 </div>
-                <div className="mt-3 flex justify-end">
-                  <button
-                    onClick={() => setConfirmAction({ action: 'deleteLog', logIndex: index })}
-                    className="flex items-center gap-1 text-xs text-app-danger active:opacity-70"
-                  >
-                    <X size={12} />
-                    {t.actions.delete}
-                  </button>
-                </div>
-              </Surface>
-        ))}
-      </div>
+                <button
+                  onClick={() => setConfirmAction({ action: 'deleteLog', logIndex: index })}
+                  className="flex h-8 w-8 shrink-0 items-center justify-center text-app-text-muted active:text-app-danger"
+                  aria-label={t.actions.delete}
+                >
+                  <Trash2 size={18} />
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
+      )}
+
+      {showHistoryActions && (
+        <ActionSheet
+          title={t.labels.history}
+          actions={[
+            { label: t.actions.deleteAllExceptLatest, destructive: true, onPress: () => setConfirmAction({ action: 'deleteAllExceptLatest' }) },
+            { label: t.actions.deleteAll, destructive: true, onPress: () => setConfirmAction({ action: 'deleteAll' }) },
+          ]}
+          onClose={() => setShowHistoryActions(false)}
+        />
       )}
 
       {confirmAction && (

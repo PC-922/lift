@@ -8,6 +8,14 @@ import { ToastProvider } from '../hooks/useToast';
 
 const renderWithToast = (ui: React.ReactElement) => render(<ToastProvider>{ui}</ToastProvider>);
 
+function dispatchPointer(element: Element | Window, type: string, clientY: number, pointerId = 1) {
+  const init: PointerEventInit = { bubbles: true, cancelable: true, pointerId, clientY };
+  const event = typeof window.PointerEvent !== 'undefined'
+    ? new PointerEvent(type, init)
+    : new MouseEvent(type, init);
+  element.dispatchEvent(event);
+}
+
 const dayId = 'd1';
 
 const exercises: Exercise[] = [
@@ -367,11 +375,11 @@ describe('RoutinesScreen', () => {
     await act(() => vi.runAllTimersAsync());
 
     expect(screen.getByText('Bench Press', { selector: 'p' })).toBeTruthy();
-    expect(screen.getByText(t.labels.move)).toBeTruthy();
+    expect(screen.queryByText(t.labels.move)).toBeNull();
     expect(screen.getByText(t.labels.removeFromRoutine)).toBeTruthy();
   });
 
-  it('opens a dedicated move modal and reorders an exercise to the selected position', async () => {
+  it('reorders an exercise by dragging the handle', async () => {
     const onReorderRoutineExercise = vi.fn();
     const multiExRoutine: Routine[] = [
       {
@@ -395,18 +403,20 @@ describe('RoutinesScreen', () => {
     );
     openDay();
 
-    const menus = screen.getAllByRole('button', { name: 'Menu' });
-    fireEvent.click(menus[0]);
-    await act(() => vi.runAllTimersAsync());
+    const handles = screen.getAllByRole('button', { name: t.labels.dragToReorder });
+    const items = screen.getAllByText('Bench Press', { selector: 'h3' }).map((heading) => heading.closest('div.rounded-2xl'));
+    const rects = [
+      { top: 0, height: 50, bottom: 50, left: 0, right: 100, width: 100, x: 0, y: 0 },
+      { top: 50, height: 50, bottom: 100, left: 0, right: 100, width: 100, x: 0, y: 50 },
+    ];
+    items.forEach((item, index) => {
+      if (item) item.getBoundingClientRect = vi.fn(() => rects[index] as DOMRect);
+    });
+    handles[0].setPointerCapture = vi.fn();
 
-    fireEvent.click(screen.getByText(t.labels.move));
-    await act(() => vi.runAllTimersAsync());
-
-    expect(screen.getByText(t.labels.moveExercise, { selector: 'h2' })).toBeTruthy();
-    expect(screen.getByText(t.labels.movePreview)).toBeTruthy();
-
-    fireEvent.click(screen.getByRole('button', { name: t.labels.moveDown }));
-    fireEvent.click(screen.getByRole('button', { name: t.actions.save }));
+    act(() => dispatchPointer(handles[0], 'pointerdown', 25));
+    act(() => dispatchPointer(window, 'pointermove', 75));
+    act(() => dispatchPointer(window, 'pointerup', 75));
     await act(() => vi.runAllTimersAsync());
 
     expect(onReorderRoutineExercise).toHaveBeenCalledWith('r5', dayId, 0, 1);
