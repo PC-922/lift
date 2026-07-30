@@ -72,7 +72,20 @@ export const SettingsScreen: React.FC<Props> = ({ onExport, onImport, onResetDat
     <div className="space-y-6">
       <p className="-mt-2 mb-2 text-center text-sm text-app-text-muted">{t.labels.settingsDesc}</p>
 
-      {!isSignedIn && (
+      {isSignedIn ? (
+        <div className="rounded-2xl border border-app-border bg-app-surface p-4">
+          <div className="flex items-center gap-3">
+            <Badge variant="neutral" className="rounded-xl px-3 py-3 bg-app-surface-muted text-app-text-muted border-none"><LogOut size={20} /></Badge>
+            <div className="min-w-0 flex-1">
+              <div className="font-semibold text-app-text">Cerrar sesión y parar de sincronizar</div>
+              <div className="text-xs text-app-text-muted">{t.labels.signOutDesc}</div>
+            </div>
+          </div>
+          <Button onClick={signOut} variant="destructive" className="mt-3 w-full">
+            {t.actions.signOut}
+          </Button>
+        </div>
+      ) : (
         <div className="rounded-2xl border border-app-accent/30 bg-app-accent/5 p-4">
           <div className="flex items-center gap-3">
             <Badge variant="accent" className="rounded-xl px-3 py-3"><LogIn size={20} /></Badge>
@@ -152,16 +165,6 @@ export const SettingsScreen: React.FC<Props> = ({ onExport, onImport, onResetDat
 
       <div className="space-y-3">
         <p className="ml-1 text-xs font-semibold uppercase tracking-wide text-app-text-muted">{t.labels.account}</p>
-        <ListRow padded={false}>
-          <button onClick={() => (isSignedIn ? signOut() : signInWithGoogle())} className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors active:bg-app-surface-muted sm:px-5 sm:py-5">
-            <Badge variant="neutral" className="rounded-xl px-3 py-3 bg-app-surface-muted text-app-text-muted border-none">{isSignedIn ? <LogOut size={20} /> : <LogIn size={20} />}</Badge>
-            <div className="text-left">
-              <div className="font-semibold text-app-text">{isSignedIn ? t.actions.signOut : t.actions.signIn}</div>
-              <div className="text-xs text-app-text-muted">{isSignedIn ? t.labels.signOutDesc : t.labels.signInDesc}</div>
-            </div>
-          </button>
-        </ListRow>
-
         <ListRow padded={false}>
           <button onClick={() => setShowResetConfirm(true)} disabled={isResetting} className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors active:bg-app-surface-muted sm:px-5 sm:py-5">
             <Badge variant="neutral" className="rounded-xl px-3 py-3 bg-app-surface-muted text-app-danger border-none"><Trash2 size={20} /></Badge>

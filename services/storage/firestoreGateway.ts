@@ -14,6 +14,18 @@ import {
 } from 'firebase/firestore';
 import { Exercise, Routine, Tombstone } from '../../types';
 
+function deepClean(obj: unknown): unknown {
+  if (obj === null || obj === undefined) return obj;
+  if (Array.isArray(obj)) return obj.map(deepClean);
+  if (typeof obj !== 'object') return obj;
+  if ((obj as Record<string, unknown>).constructor !== Object) return obj;
+  const cleaned: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
+    if (v !== undefined) cleaned[k] = deepClean(v);
+  }
+  return cleaned;
+}
+
 export interface PulledData {
   exercises: Exercise[];
   routines: Routine[];
@@ -95,11 +107,11 @@ export class FirestoreGateway {
   async pushExercise(uid: string, exercise: Exercise): Promise<void> {
     await setDoc(
       doc(this.exercisesRef(uid), exercise.id),
-      {
+      deepClean({
         ...exercise,
         ownerId: uid,
         updatedAt: serverTimestamp(),
-      },
+      }) as Record<string, unknown>,
       { merge: true }
     );
   }
@@ -107,11 +119,11 @@ export class FirestoreGateway {
   async pushRoutine(uid: string, routine: Routine): Promise<void> {
     await setDoc(
       doc(this.routinesRef(uid), routine.id),
-      {
+      deepClean({
         ...routine,
         ownerId: uid,
         updatedAt: serverTimestamp(),
-      },
+      }) as Record<string, unknown>,
       { merge: true }
     );
   }
@@ -171,7 +183,7 @@ export class FirestoreGateway {
     exercises.forEach((exercise) => {
       batch.set(
         doc(this.exercisesRef(uid), exercise.id),
-        { ...exercise, ownerId: uid, updatedAt: serverTimestamp() },
+        deepClean({ ...exercise, ownerId: uid, updatedAt: serverTimestamp() }) as Record<string, unknown>,
         setOptions
       );
     });
@@ -179,7 +191,7 @@ export class FirestoreGateway {
     routines.forEach((routine) => {
       batch.set(
         doc(this.routinesRef(uid), routine.id),
-        { ...routine, ownerId: uid, updatedAt: serverTimestamp() },
+        deepClean({ ...routine, ownerId: uid, updatedAt: serverTimestamp() }) as Record<string, unknown>,
         setOptions
       );
     });

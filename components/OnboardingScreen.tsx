@@ -7,14 +7,16 @@ import { Button } from './ui/Button';
 export const OnboardingScreen: React.FC = () => {
   const t = useTranslations();
   const { signInWithGoogle, continueAsGuest } = useAuth();
-  const [offlineHint, setOfflineHint] = useState(false);
+  const [guestError, setGuestError] = useState<string | null>(null);
 
   const handleContinueAsGuest = async () => {
     const result = await continueAsGuest();
-    if (!result.success && result.needsNetwork) {
-      setOfflineHint(true);
+    if (result.success) {
+      setGuestError(null);
+    } else if (result.needsNetwork) {
+      setGuestError('network');
     } else {
-      setOfflineHint(false);
+      setGuestError('config');
     }
   };
 
@@ -52,9 +54,14 @@ export const OnboardingScreen: React.FC = () => {
           {t.actions.continueAsGuest}
         </Button>
 
-        {offlineHint && (
+        {guestError === 'network' && (
           <p className="text-center text-sm text-app-text-muted">
             Necesitas conexión para preparar el primer uso offline. Conecta la red e inténtalo de nuevo.
+          </p>
+        )}
+        {guestError === 'config' && (
+          <p className="text-center text-sm text-app-text-muted">
+            No se pudo iniciar sesión anónima. Verifica tu conexión e inténtalo de nuevo.
           </p>
         )}
       </div>

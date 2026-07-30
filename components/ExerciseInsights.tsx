@@ -1,7 +1,9 @@
 import React, { useMemo } from 'react';
+import { TrendingUp, TrendingDown } from 'lucide-react';
 import { Exercise } from '../types';
 import { useTranslations, getTranslatedGroupName } from '../utils/translations';
 import { getProgressionDetail, getRegressionDetail } from '../utils/progression';
+import { Badge } from './ui/Badge';
 import { ListRow } from './ui/ListRow';
 
 const CHART_WIDTH = 320;
@@ -123,41 +125,42 @@ export const ExerciseInsights: React.FC<Props> = ({ exercise }) => {
         </ListRow>
       )}
 
-      {progression && (
+      {(progression || regression) && (
         <div className="space-y-2">
           <h3 className="text-sm font-semibold text-app-text">{t.labels.recentProgress}</h3>
-          <ListRow className="border border-app-success/30 bg-app-success/5">
-            <div className="space-y-1">
-              <p className="text-sm text-app-text">{progression.timeSince}</p>
-              <div className="flex gap-4 text-sm">
-                {progression.type !== 'reps' && (
-                  <span className="text-app-text-muted">{progression.prevWeight} kg → <span className="font-semibold text-app-success">{progression.currWeight} kg</span></span>
-                )}
-                {progression.type !== 'weight' && (
-                  <span className="text-app-text-muted">{progression.prevReps} reps → <span className="font-semibold text-app-success">{progression.currReps} reps</span></span>
-                )}
-              </div>
-            </div>
-          </ListRow>
-        </div>
-      )}
-
-      {regression && (
-        <div className="space-y-2">
-          <h3 className="text-sm font-semibold text-app-text">{t.labels.recentRegressions}</h3>
-          <ListRow className="border border-app-danger/30 bg-app-danger/5">
-            <div className="space-y-1">
-              <p className="text-sm text-app-text">{regression.timeSince}</p>
-              <div className="flex gap-4 text-sm">
-                {regression.type !== 'reps' && (
-                  <span className="text-app-text-muted">{regression.prevWeight} kg → <span className="font-semibold text-app-danger">{regression.currWeight} kg</span></span>
-                )}
-                {regression.type !== 'weight' && (
-                  <span className="text-app-text-muted">{regression.prevReps} reps → <span className="font-semibold text-app-danger">{regression.currReps} reps</span></span>
-                )}
-              </div>
-            </div>
-          </ListRow>
+          <div className="space-y-2">
+            {[progression, regression]
+              .filter(Boolean)
+              .sort((a, b) => new Date(b!.date).getTime() - new Date(a!.date).getTime())
+              .map((change) => {
+                const isRegression = change === regression;
+                const Icon = isRegression ? TrendingDown : TrendingUp;
+                return (
+                  <ListRow
+                    key={change!.date}
+                    className={`border ${isRegression ? 'border-app-danger/30 bg-app-danger/5' : 'border-app-success/30 bg-app-success/5'}`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm text-app-text">{change!.timeSince}</p>
+                        <div className="mt-2 flex gap-4 text-sm">
+                          {change!.type !== 'reps' && (
+                            <span className="text-app-text-muted">{change!.prevWeight} kg → <span className={`font-semibold ${isRegression ? 'text-app-danger' : 'text-app-success'}`}>{change!.currWeight} kg</span></span>
+                          )}
+                          {change!.type !== 'weight' && (
+                            <span className="text-app-text-muted">{change!.prevReps} reps → <span className={`font-semibold ${isRegression ? 'text-app-danger' : 'text-app-success'}`}>{change!.currReps} reps</span></span>
+                          )}
+                        </div>
+                      </div>
+                      <Badge variant={isRegression ? 'danger' : 'success'} className="flex-shrink-0 whitespace-nowrap px-3 py-1.5 text-xs">
+                        <Icon size={12} className="mr-1 inline" />
+                        {change!.timeSince}
+                      </Badge>
+                    </div>
+                  </ListRow>
+                );
+              })}
+          </div>
         </div>
       )}
 

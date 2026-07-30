@@ -398,17 +398,19 @@ export const ExerciseDetail: React.FC<Props> = ({
             </button>
           </div>
 
-          <div className="mb-1 flex items-center gap-3 px-1 text-[10px] font-semibold uppercase tracking-wide text-app-text-muted">
-            <span className="w-28">{t.labels.date}</span>
-            <span className="w-16 text-center">{t.labels.weight}</span>
-            <span className="w-16 text-center">{t.labels.reps}</span>
+          <div className="mb-1 grid grid-cols-[7rem_4rem_1rem_4rem_2rem] items-center gap-3 px-1 text-[10px] font-semibold uppercase tracking-wide text-app-text-muted">
+            <span>{t.labels.date}</span>
+            <span className="text-center">{t.labels.weight}</span>
+            <span />
+            <span className="text-center">{t.labels.reps}</span>
+            <span />
           </div>
 
           <div className="divide-y divide-app-border border-t border-app-border">
             {editableLogs.map((log, index) => (
               <div
                 key={log.originalDate}
-                className="flex items-center gap-3 py-3"
+                className="grid grid-cols-[7rem_4rem_1rem_4rem_2rem] items-center gap-3 py-3"
               >
                 <Input
                   type="text"
@@ -417,32 +419,32 @@ export const ExerciseDetail: React.FC<Props> = ({
                   onBlur={() => handleLogBlur(index)}
                   compact
                   placeholder="YYYY-MM-DD"
-                  className="w-28 text-xs text-app-text-muted tabular-nums"
+                  className="text-xs text-app-text-muted tabular-nums"
                 />
-                <div className="flex flex-1 items-center gap-2">
-                  <Input
-                    type="text"
-                    inputMode="text"
-                    value={log.weight}
-                    onChange={(e) => handleLogChange(index, 'weight', e.target.value)}
-                    onBlur={() => handleLogBlur(index)}
-                    compact
-                    className="w-16 text-center text-sm font-semibold tabular-nums"
-                  />
-                  <span className="text-sm text-app-text-muted">×</span>
-                  <Input
-                    type="text"
-                    inputMode="text"
-                    value={log.reps}
-                    onChange={(e) => handleLogChange(index, 'reps', e.target.value)}
-                    onBlur={() => handleLogBlur(index)}
-                    compact
-                    className="w-16 text-center text-sm font-semibold tabular-nums"
-                  />
-                </div>
+                <Input
+                  type="text"
+                  inputMode="text"
+                  value={log.weight}
+                  onChange={(e) => handleLogChange(index, 'weight', e.target.value)}
+                  onBlur={() => handleLogBlur(index)}
+                  compact
+                  placeholder={log.weight === '' ? '—' : undefined}
+                  className="text-center text-sm font-semibold tabular-nums"
+                />
+                <span className="text-center text-sm text-app-text-muted">×</span>
+                <Input
+                  type="text"
+                  inputMode="text"
+                  value={log.reps}
+                  onChange={(e) => handleLogChange(index, 'reps', e.target.value)}
+                  onBlur={() => handleLogBlur(index)}
+                  compact
+                  placeholder={log.reps === '' ? '—' : undefined}
+                  className="text-center text-sm font-semibold tabular-nums"
+                />
                 <button
                   onClick={() => setConfirmAction({ action: 'deleteLog', logIndex: index })}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center text-app-text-muted active:text-app-danger"
+                  className="flex h-8 w-8 items-center justify-center text-app-text-muted active:text-app-danger"
                   aria-label={t.actions.delete}
                 >
                   <Trash2 size={18} />

@@ -58,6 +58,7 @@ export type ProgressionType = 'weight' | 'reps' | 'both';
 
 export interface ProgressionDetail {
   type: ProgressionType;
+  date: string;
   timeSince: string;
   prevWeight: number;
   currWeight: number;
@@ -88,6 +89,7 @@ export const getProgressionDetail = (logs: ExerciseLog[]): ProgressionDetail | n
 
       return {
         type,
+        date: current.date,
         timeSince: calculateTimeSince(current.date),
         prevWeight: previous.weight ?? 0,
         currWeight: current.weight ?? 0,
@@ -199,6 +201,7 @@ export const getRegressionDetail = (logs: ExerciseLog[]): ProgressionDetail | nu
 
       return {
         type,
+        date: current.date,
         timeSince: calculateTimeSince(current.date),
         prevWeight: previous.weight ?? 0,
         currWeight: current.weight ?? 0,
