@@ -11,6 +11,7 @@ export interface Exercise {
   logs: ExerciseLog[];
   note?: string;
   updatedAt?: string;
+  deletedAt?: string | null;
 }
 
 export interface RoutineExercise {
@@ -34,6 +35,7 @@ export interface Routine {
   name: string;
   days: RoutineDay[];
   updatedAt?: string;
+  deletedAt?: string | null;
 }
 
 export type GroupSortField = 'progress' | 'weight';

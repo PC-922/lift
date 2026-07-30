@@ -4,6 +4,8 @@ import { Exercise, ExerciseLog } from '../types';
 import { getTranslatedGroupName, useTranslations } from '../utils/translations';
 import { getLatestLog, getLogFeedback } from '../utils/progression';
 import { useToast } from '../hooks/useToast';
+import { useRestTimer } from '../hooks/useRestTimer';
+import { ExerciseInsights } from './ExerciseInsights';
 import ConfirmModal from './ConfirmModal';
 import { ActionSheet } from './ActionSheet';
 import { BackButton } from './ui/BackButton';
@@ -67,6 +69,7 @@ export const ExerciseDetail: React.FC<Props> = ({
 }) => {
   const { showToast } = useToast();
   const t = useTranslations();
+  const { selectDuration, startTimer } = useRestTimer();
   const latest = getLatestLog(exercise.logs);
 
   const [weight, setWeight] = useState(() => (latest?.weight ?? '').toString());
@@ -136,6 +139,9 @@ export const ExerciseDetail: React.FC<Props> = ({
     setReps('');
 
     const feedback = getLogFeedback(w, r, prevWeight, prevReps, isFirst);
+    selectDuration(90);
+    startTimer();
+
     if (!feedback) return;
 
     if (feedback.type === 'first') {
@@ -392,6 +398,12 @@ export const ExerciseDetail: React.FC<Props> = ({
             </button>
           </div>
 
+          <div className="mb-1 flex items-center gap-3 px-1 text-[10px] font-semibold uppercase tracking-wide text-app-text-muted">
+            <span className="w-28">{t.labels.date}</span>
+            <span className="w-16 text-center">{t.labels.weight}</span>
+            <span className="w-16 text-center">{t.labels.reps}</span>
+          </div>
+
           <div className="divide-y divide-app-border border-t border-app-border">
             {editableLogs.map((log, index) => (
               <div
@@ -440,6 +452,8 @@ export const ExerciseDetail: React.FC<Props> = ({
           </div>
         </div>
       )}
+
+      <ExerciseInsights exercise={exercise} />
 
       {showHistoryActions && (
         <ActionSheet

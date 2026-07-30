@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ExerciseDetail } from './ExerciseDetail';
 import { Exercise } from '../types';
+import { RestTimerProvider } from '../hooks/useRestTimer';
 
 vi.mock('../utils/translations', async () => {
   const actual = await vi.importActual<typeof import('../utils/translations')>('../utils/translations');
@@ -45,13 +46,15 @@ const exercise: Exercise = {
   note: '',
 };
 
+const renderWithTimer = (ui: React.ReactElement) => render(<RestTimerProvider>{ui}</RestTimerProvider>);
+
 describe('ExerciseDetail', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('renders exercise name, category chip, and log inputs', () => {
-    render(
+    renderWithTimer(
       <ExerciseDetail
         exercise={exercise}
         muscleGroups={['Pecho', 'Espalda']}
@@ -69,7 +72,7 @@ describe('ExerciseDetail', () => {
     );
 
     expect(screen.getByText('Bench Press')).toBeTruthy();
-    expect(screen.getByText('Pecho')).toBeTruthy();
+    expect(screen.getAllByText('Pecho').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('History')).toBeTruthy();
     expect(screen.getAllByDisplayValue('80').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByDisplayValue('8').length).toBeGreaterThanOrEqual(1);
@@ -77,7 +80,7 @@ describe('ExerciseDetail', () => {
 
   it('opens history actions and triggers delete all logs', () => {
     const onDeleteAllLogs = vi.fn();
-    render(
+    renderWithTimer(
       <ExerciseDetail
         exercise={exercise}
         muscleGroups={['Pecho', 'Espalda']}

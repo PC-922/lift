@@ -5,8 +5,14 @@ import { RoutinesScreen } from './RoutinesScreen';
 import { Exercise, Routine } from '../types';
 import { t } from '../utils/translations';
 import { ToastProvider } from '../hooks/useToast';
+import { RestTimerProvider } from '../hooks/useRestTimer';
 
-const renderWithToast = (ui: React.ReactElement) => render(<ToastProvider>{ui}</ToastProvider>);
+const renderWithToast = (ui: React.ReactElement) =>
+  render(
+    <RestTimerProvider>
+      <ToastProvider>{ui}</ToastProvider>
+    </RestTimerProvider>
+  );
 
 function dispatchPointer(element: Element | Window, type: string, clientY: number, pointerId = 1) {
   const init: PointerEventInit = { bubbles: true, cancelable: true, pointerId, clientY };

@@ -1,5 +1,5 @@
 import React, { forwardRef, useState } from 'react';
-import { ChevronRight, GripVertical, MoreVertical } from 'lucide-react';
+import { GripVertical, MoreVertical } from 'lucide-react';
 import { Routine } from '../types';
 import { useTranslations } from '../utils/translations';
 import { ActionSheet, ActionSheetAction } from './ActionSheet';
@@ -36,29 +36,28 @@ export const RoutineCard = forwardRef<HTMLDivElement, Props>(
           className="select-none transition-colors active:bg-app-surface-muted"
           style={isDragging ? { opacity: 0.5 } : undefined}
         >
-          <button
-            onPointerDown={onDragHandlePointerDown}
-            className="touch-none p-2 text-app-text-muted active:text-app-text"
-            aria-label={t.labels.dragToReorder}
-          >
-            <GripVertical size={18} />
-          </button>
-          <div className="min-w-0 flex-1" onClick={onClick}>
-            <div className="flex items-center justify-between gap-3">
+          <div className="flex w-full items-center gap-3">
+            <button
+              onPointerDown={onDragHandlePointerDown}
+              className="touch-none shrink-0 p-2 text-app-text-muted active:text-app-text"
+              aria-label={t.labels.dragToReorder}
+            >
+              <GripVertical size={18} />
+            </button>
+            <div className="min-w-0 flex-1" onClick={onClick}>
               <h3 className="break-words text-lg font-semibold text-app-text">{routine.name}</h3>
-              <ChevronRight size={18} className="text-app-text-muted flex-shrink-0" />
+              <p className="mt-0.5 break-words text-xs text-app-text-muted">
+                {totalExercises} {t.labels.exercises} · {routine.days.length} {t.labels.days}
+              </p>
             </div>
-            <p className="mt-1 break-words text-xs text-app-text-muted">
-              {totalExercises} {t.labels.exercises} · {routine.days.length} {t.labels.days}
-            </p>
+            <IconButton
+              onClick={(e) => { e.stopPropagation(); setShowActions(true); }}
+              aria-label="Menu"
+              className="shrink-0 -mr-2"
+            >
+              <MoreVertical size={18} />
+            </IconButton>
           </div>
-          <IconButton
-            onClick={(e) => { e.stopPropagation(); setShowActions(true); }}
-            aria-label="Menu"
-            className="shrink-0 -mr-2 self-start"
-          >
-            <MoreVertical size={18} />
-          </IconButton>
         </ListRow>
 
         {showActions && (

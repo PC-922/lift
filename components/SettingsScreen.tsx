@@ -1,12 +1,12 @@
 import pkg from '../package.json';
 import React, { useState, useRef, useSyncExternalStore } from 'react';
-import { Download, Upload, AlertCircle, CheckCircle2, Layers, LogOut, Trash2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Download, Upload, AlertCircle, CheckCircle2, LogIn, LogOut, Trash2 } from 'lucide-react';
 import { useTranslations, useLanguage } from '../utils/translations';
 import { preferencesService } from '../services/preferencesService';
 import { useAuth } from '../hooks/useAuth';
 import type { ScreenType } from './BottomNav';
 import { Badge } from './ui/Badge';
+import { Button } from './ui/Button';
 import { ListRow } from './ui/ListRow';
 import { Select } from './ui/Select';
 import ConfirmModal from './ConfirmModal';
@@ -21,8 +21,8 @@ const SCREEN_ORDER: ScreenType[] = ['home', 'insights', 'routines', 'settings'];
 
 export const SettingsScreen: React.FC<Props> = ({ onExport, onImport, onResetData }) => {
   const t = useTranslations();
-  const navigate = useNavigate();
-  const { signOut } = useAuth();
+  const { signOut, signInWithGoogle, mode } = useAuth();
+  const isSignedIn = mode === 'google';
   const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [isResetting, setIsResetting] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -72,6 +72,21 @@ export const SettingsScreen: React.FC<Props> = ({ onExport, onImport, onResetDat
     <div className="space-y-6">
       <p className="-mt-2 mb-2 text-center text-sm text-app-text-muted">{t.labels.settingsDesc}</p>
 
+      {!isSignedIn && (
+        <div className="rounded-2xl border border-app-accent/30 bg-app-accent/5 p-4">
+          <div className="flex items-center gap-3">
+            <Badge variant="accent" className="rounded-xl px-3 py-3"><LogIn size={20} /></Badge>
+            <div className="min-w-0 flex-1">
+              <div className="font-semibold text-app-text">{t.labels.signInToSync}</div>
+              <div className="text-xs text-app-text-muted">{t.labels.signInDesc}</div>
+            </div>
+          </div>
+          <Button onClick={signInWithGoogle} className="mt-3 w-full">
+            {t.actions.signInWithGoogle}
+          </Button>
+        </div>
+      )}
+
       <div className="space-y-3">
         <p className="ml-1 text-xs font-semibold uppercase tracking-wide text-app-text-muted">{t.labels.language}</p>
         <Select
@@ -95,19 +110,6 @@ export const SettingsScreen: React.FC<Props> = ({ onExport, onImport, onResetDat
             <option key={screen} value={screen}>{screenLabel(screen)}</option>
           ))}
         </Select>
-      </div>
-
-      <div className="space-y-3">
-        <p className="ml-1 text-xs font-semibold uppercase tracking-wide text-app-text-muted">{t.actions.addGroup}</p>
-        <ListRow padded={false}>
-          <button onClick={() => navigate('/settings/muscle-groups')} className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors active:bg-app-surface-muted sm:px-5 sm:py-5">
-            <Badge variant="neutral" className="rounded-xl px-3 py-3 bg-app-surface-muted text-app-text-muted border-none"><Layers size={20} /></Badge>
-            <div className="text-left">
-              <div className="font-semibold text-app-text">{t.actions.addGroup}</div>
-              <div className="text-xs text-app-text-muted">{t.labels.routinesDesc}</div>
-            </div>
-          </button>
-        </ListRow>
       </div>
 
       <div className="space-y-3">
@@ -151,11 +153,11 @@ export const SettingsScreen: React.FC<Props> = ({ onExport, onImport, onResetDat
       <div className="space-y-3">
         <p className="ml-1 text-xs font-semibold uppercase tracking-wide text-app-text-muted">{t.labels.account}</p>
         <ListRow padded={false}>
-          <button onClick={() => signOut()} className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors active:bg-app-surface-muted sm:px-5 sm:py-5">
-            <Badge variant="neutral" className="rounded-xl px-3 py-3 bg-app-surface-muted text-app-text-muted border-none"><LogOut size={20} /></Badge>
+          <button onClick={() => (isSignedIn ? signOut() : signInWithGoogle())} className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors active:bg-app-surface-muted sm:px-5 sm:py-5">
+            <Badge variant="neutral" className="rounded-xl px-3 py-3 bg-app-surface-muted text-app-text-muted border-none">{isSignedIn ? <LogOut size={20} /> : <LogIn size={20} />}</Badge>
             <div className="text-left">
-              <div className="font-semibold text-app-text">{t.actions.signOut}</div>
-              <div className="text-xs text-app-text-muted">{t.labels.signOutDesc}</div>
+              <div className="font-semibold text-app-text">{isSignedIn ? t.actions.signOut : t.actions.signIn}</div>
+              <div className="text-xs text-app-text-muted">{isSignedIn ? t.labels.signOutDesc : t.labels.signInDesc}</div>
             </div>
           </button>
         </ListRow>
@@ -187,8 +189,7 @@ export const SettingsScreen: React.FC<Props> = ({ onExport, onImport, onResetDat
       )}
 
       <div className="border-t border-app-border pt-6 pb-2">
-        <p className="text-center text-xs leading-relaxed text-app-text-muted">{t.labels.settingsInfo}</p>
-        <p className="mt-4 text-center text-[10px] font-medium tracking-widest text-app-text-muted/50 uppercase">v{pkg.version}</p>
+        <p className="text-center text-[10px] font-medium tracking-widest text-app-text-muted/50 uppercase">v{pkg.version}</p>
       </div>
     </div>
   );

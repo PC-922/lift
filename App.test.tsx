@@ -41,9 +41,12 @@ vi.mock('./services/storageService', () => ({
     renameMuscleGroup: vi.fn(() => Promise.resolve()),
     deleteMuscleGroup: vi.fn(() => Promise.resolve()),
     resetData: vi.fn(() => Promise.resolve()),
+    sync: vi.fn(() => Promise.resolve()),
   },
   makeId: (prefix: string) => `${prefix}_id`,
   setStorageUser: vi.fn(),
+  getCurrentSyncAdapter: () => null,
+  getCurrentAdapter: () => null,
 }));
 
 vi.mock('./services/preferencesService', () => ({

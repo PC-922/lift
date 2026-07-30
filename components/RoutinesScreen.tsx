@@ -9,6 +9,7 @@ import {ActionSheet} from './ActionSheet';
 import ConfirmModal from './ConfirmModal';
 import {Modal} from './Modal';
 import {useToast} from '../hooks/useToast';
+import {useRestTimer} from '../hooks/useRestTimer';
 import {useDragReorder} from '../hooks/useDragReorder';
 import {makeId} from '@/services/storage/id.ts';
 import {Button} from './ui/Button';
@@ -109,6 +110,7 @@ export const RoutinesScreen: React.FC<Props> = ({
   }, [activeRoutineId]);
 
   const { showToast } = useToast();
+  const { selectDuration, startTimer } = useRestTimer();
 
   const activeRoutine = useMemo(() => routines.find((r) => r.id === activeRoutineId) ?? null, [routines, activeRoutineId]);
   const exerciseById = useMemo(() => new Map(exercises.map((exercise) => [exercise.id, exercise] as const)), [exercises]);
@@ -302,7 +304,7 @@ export const RoutinesScreen: React.FC<Props> = ({
     setLogForms((prev) => ({ ...prev, [exerciseId]: { ...getLogForm(exerciseId), [field]: value } }));
   };
 
-  const handleLog = (targetId: string) => {
+  const handleLog = (targetId: string, restSeconds?: number) => {
     const form = getLogForm(targetId);
     const weightValue = form.weight.trim() === '' || form.weight === '-' ? null : parseInt(form.weight, 10);
     const repsValue = form.reps.trim() === '' || form.reps === '-' ? null : parseInt(form.reps, 10);
@@ -316,6 +318,8 @@ export const RoutinesScreen: React.FC<Props> = ({
     const prevReps = latest?.reps ?? null;
 
     onLogExercise(targetId, weightValue, repsValue);
+    selectDuration(restSeconds && restSeconds > 0 ? restSeconds : 90);
+    startTimer();
     setLogForms((prev) => {
       const next = { ...prev };
       delete next[targetId];
@@ -411,7 +415,7 @@ export const RoutinesScreen: React.FC<Props> = ({
                       isDragging={exercisesDrag.draggingId === exerciseId}
                       form={form}
                       onUpdateForm={(field, value) => updateLogForm(displayExercise.id, field, value)}
-                      onLog={() => handleLog(displayExercise.id)}
+                      onLog={() => handleLog(displayExercise.id, routineExercise.restSeconds)}
                       onMenu={() => setActionSheetExercise({ exerciseId, dayId: selectedDay.id })}
                       onDragHandlePointerDown={exercisesDrag.handleStart(exerciseId)}
                       onTap={() => onNavigateToExercise(displayExercise.id, activeRoutine.id)}

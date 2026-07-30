@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Exercise } from '../types';
-import { getRecentProgressions, getRecentRegressions, RecentProgression, RecentRegression } from '../utils/progression';
+import { getRecentProgressions, getRecentRegressions, RecentProgression, RecentRegression, ProgressionDetail } from '../utils/progression';
 import { getTopWeightExercises } from '../utils/insights';
 import { useTranslations, getTranslatedGroupName } from '../utils/translations';
 import { BarChart3, TrendingUp, TrendingDown } from 'lucide-react';
@@ -30,11 +30,45 @@ type FeaturedInsight =
   | { kind: 'progression'; data: RecentProgression }
   | { kind: 'regression'; data: RecentRegression };
 
+interface RecentChange {
+  type: 'progress' | 'regression';
+  date: string;
+  exerciseId: string;
+  exerciseName: string;
+  muscleGroup: string;
+  text: string;
+  detail: ProgressionDetail;
+}
+
 export const InsightsScreen: React.FC<Props> = ({ exercises, onSelectExercise }) => {
   const t = useTranslations();
   const recentProgressions = getRecentProgressions(exercises, 3);
   const recentRegressions = getRecentRegressions(exercises, 3);
   const topWeightExercises = getTopWeightExercises(exercises, 3);
+
+  const recentChanges = useMemo<RecentChange[]>(() => {
+    const progress = recentProgressions.map<RecentChange>((item) => ({
+      type: 'progress',
+      date: item.lastProgressionDate,
+      exerciseId: item.exerciseId,
+      exerciseName: item.exerciseName,
+      muscleGroup: item.muscleGroup,
+      text: item.progressionText,
+      detail: item.detail,
+    }));
+    const regress = recentRegressions.map<RecentChange>((item) => ({
+      type: 'regression',
+      date: item.lastRegressionDate,
+      exerciseId: item.exerciseId,
+      exerciseName: item.exerciseName,
+      muscleGroup: item.muscleGroup,
+      text: item.regressionText,
+      detail: item.detail,
+    }));
+    return [...progress, ...regress]
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 5);
+  }, [recentProgressions, recentRegressions]);
 
   const featuredInsight: FeaturedInsight | null = useMemo(() => {
     const progression = recentProgressions[0] ?? null;
@@ -47,7 +81,7 @@ export const InsightsScreen: React.FC<Props> = ({ exercises, onSelectExercise })
       : { kind: 'regression', data: regression };
   }, [recentProgressions, recentRegressions]);
 
-  const hasInsights = recentProgressions.length > 0 || recentRegressions.length > 0 || topWeightExercises.length > 0;
+  const hasInsights = recentChanges.length > 0 || topWeightExercises.length > 0;
 
   const renderProgressMetric = (label: string, previous: number, current: number) => (
     <div className="flex items-center gap-2">
@@ -75,22 +109,18 @@ export const InsightsScreen: React.FC<Props> = ({ exercises, onSelectExercise })
     </div>
   );
 
-  const renderList = (
-    items: (RecentProgression | RecentRegression)[],
-    title: string,
-    variant: 'success' | 'danger'
-  ) => {
+  const renderList = (items: RecentChange[]) => {
     if (items.length === 0) return null;
-    const Icon = variant === 'danger' ? TrendingDown : TrendingUp;
 
     return (
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-app-text">{title}</h2>
+        <h2 className="text-lg font-semibold text-app-text">{t.labels.recentProgress}</h2>
         <div className="space-y-3">
           {items.map((item) => {
-            const badgeText = 'progressionText' in item ? item.progressionText : item.regressionText;
+            const variant = item.type === 'regression' ? 'danger' : 'success';
+            const Icon = item.type === 'regression' ? TrendingDown : TrendingUp;
             return (
-              <ListRow key={item.exerciseId} onClick={() => onSelectExercise(item.exerciseId)} className="cursor-pointer transition-colors active:bg-app-surface-muted">
+              <ListRow key={`${item.exerciseId}-${item.date}`} onClick={() => onSelectExercise(item.exerciseId)} className="cursor-pointer transition-colors active:bg-app-surface-muted">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <h3 className="text-base font-semibold text-app-text">{item.exerciseName}</h3>
@@ -98,7 +128,7 @@ export const InsightsScreen: React.FC<Props> = ({ exercises, onSelectExercise })
                   </div>
                   <Badge variant={variant} className="flex-shrink-0 whitespace-nowrap px-3 py-1.5 text-xs">
                     <Icon size={12} className="mr-1 inline" />
-                    {badgeText}
+                    {item.text}
                   </Badge>
                 </div>
                 <div className="mt-3 flex flex-col gap-1.5">
@@ -143,7 +173,6 @@ export const InsightsScreen: React.FC<Props> = ({ exercises, onSelectExercise })
             {data.detail.type !== 'reps' && renderProgressMetric('kg', data.detail.prevWeight, data.detail.currWeight)}
             {data.detail.type !== 'weight' && renderProgressMetric('reps', data.detail.prevReps, data.detail.currReps)}
           </div>
-          <div className="mt-3 text-xs font-medium text-app-accent-text">{t.labels.viewDetail}</div>
         </ListRow>
       </section>
     );
@@ -180,8 +209,7 @@ export const InsightsScreen: React.FC<Props> = ({ exercises, onSelectExercise })
       {hasInsights ? (
         <>
           {renderFeaturedCard()}
-          {renderList(recentProgressions, t.labels.recentProgress, 'success')}
-          {renderList(recentRegressions, t.labels.recentRegressions, 'danger')}
+          {renderList(recentChanges)}
           {renderTopWeightList()}
         </>
       ) : (

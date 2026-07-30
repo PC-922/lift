@@ -7,7 +7,6 @@ import { ExerciseDetail } from './components/ExerciseDetail';
 import { ExerciseFormScreen } from './components/ExerciseFormScreen';
 import { SettingsScreen } from './components/SettingsScreen';
 import { InsightsScreen } from './components/InsightsScreen';
-import { InsightDetailScreen } from './components/InsightDetailScreen';
 import { RoutinesScreen } from './components/RoutinesScreen';
 import { MuscleGroupsScreen } from './components/MuscleGroupsScreen';
 import { OnboardingScreen } from './components/OnboardingScreen';
@@ -21,6 +20,7 @@ import { AuthProvider, useAuth } from './hooks/useAuth';
 import { AppDataProvider, useAppData } from './hooks/useAppData';
 import { storageManager } from './services/storageService';
 import { useTranslations } from './utils/translations';
+import { useSyncStatus } from './hooks/useSyncStatus';
 import { Download, MoreVertical, Plus, PlusSquare, Share } from 'lucide-react';
 import { Button } from './components/ui/Button';
 import { Surface } from './components/ui/Surface';
@@ -72,7 +72,7 @@ const HomeScreen: React.FC = () => {
         </Button>
 
         <Button
-          onClick={() => navigate('/settings/muscle-groups')}
+          onClick={() => navigate('/exercises/groups')}
           variant="secondary"
           size="md"
           className="w-full border-2 border-dashed rounded-2xl border-app-border/50 text-app-text-muted"
@@ -173,7 +173,7 @@ const InsightsRoute: React.FC = () => {
   return (
     <InsightsScreen
       exercises={exercises}
-      onSelectExercise={(id) => navigate(`/insights/${id}`)}
+      onSelectExercise={(id) => navigate(`/exercises/${id}`)}
     />
   );
 };
@@ -270,6 +270,26 @@ const SettingsRoute: React.FC = () => {
   );
 };
 
+const SyncIndicator: React.FC = () => {
+  const { state } = useSyncStatus();
+  const dotClass =
+    state === 'synced'
+      ? 'bg-app-success'
+      : state === 'syncing' || state === 'pending'
+      ? 'bg-app-warning'
+      : state === 'offline'
+      ? 'bg-app-text-muted'
+      : 'bg-app-danger';
+
+  return (
+    <span
+      className={`inline-block h-2 w-2 rounded-full ${dotClass}`}
+      title={state}
+      aria-hidden="true"
+    />
+  );
+};
+
 const AppLayout: React.FC = () => {
   const t = useTranslations();
   const location = useLocation();
@@ -314,7 +334,10 @@ const AppLayout: React.FC = () => {
           {showHeader && (
             <header className={cn('sticky top-0 z-20 bg-app-bg', appHeaderClassName)}>
               <div className="flex items-center justify-between gap-3">
-                <h1 className={appHeaderTitleClassName}>{t.appTitle}</h1>
+                <h1 className={cn(appHeaderTitleClassName, 'flex items-center gap-2')}>
+                  {t.appTitle}
+                  <SyncIndicator />
+                </h1>
                 {!isStandalone && (
                   <Button
                     onClick={() => setIsInstallModalOpen(true)}
@@ -345,11 +368,11 @@ const AppLayout: React.FC = () => {
               <Route path="/exercises/new" element={<ExerciseFormScreen />} />
               <Route path="/exercises/:id/edit" element={<ExerciseFormScreen />} />
               <Route path="/exercises/:id" element={<ExerciseDetailRoute />} />
+              <Route path="/exercises/groups" element={<MuscleGroupsScreen />} />
               <Route path="/insights" element={<InsightsRoute />} />
-              <Route path="/insights/:id" element={<InsightDetailScreen />} />
               <Route path="/routines" element={<RoutinesRoute />} />
               <Route path="/settings" element={<SettingsRoute />} />
-              <Route path="/settings/muscle-groups" element={<MuscleGroupsScreen />} />
+              <Route path="/settings/muscle-groups" element={<Navigate to="/exercises/groups" replace />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </main>

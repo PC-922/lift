@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Dumbbell } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslations } from '../utils/translations';
@@ -7,6 +7,16 @@ import { Button } from './ui/Button';
 export const OnboardingScreen: React.FC = () => {
   const t = useTranslations();
   const { signInWithGoogle, continueAsGuest } = useAuth();
+  const [offlineHint, setOfflineHint] = useState(false);
+
+  const handleContinueAsGuest = async () => {
+    const result = await continueAsGuest();
+    if (!result.success && result.needsNetwork) {
+      setOfflineHint(true);
+    } else {
+      setOfflineHint(false);
+    }
+  };
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center px-6 py-12">
@@ -34,13 +44,19 @@ export const OnboardingScreen: React.FC = () => {
         </Button>
 
         <Button
-          onClick={continueAsGuest}
+          onClick={handleContinueAsGuest}
           variant="ghost"
           size="lg"
           className="w-full"
         >
           {t.actions.continueAsGuest}
         </Button>
+
+        {offlineHint && (
+          <p className="text-center text-sm text-app-text-muted">
+            Necesitas conexión para preparar el primer uso offline. Conecta la red e inténtalo de nuevo.
+          </p>
+        )}
       </div>
     </div>
   );

@@ -62,7 +62,7 @@ describe('InsightsScreen', () => {
     expect(getProgressVariant('same')).toBe('neutral');
     expect(getProgressVariant('down')).toBe('danger');
 
-    expect(screen.getByText('Your recent progressions')).toBeTruthy();
+    expect(screen.getByText('Your recent changes')).toBeTruthy();
     expect(screen.getByText('Top weight')).toBeTruthy();
     expect(screen.getAllByText('100 → 120')).toHaveLength(2);
     expect(screen.getAllByText('6 → 8')).toHaveLength(2);
@@ -75,18 +75,18 @@ describe('InsightsScreen', () => {
     expect(screen.getAllByText('8 reps', { selector: 'span' })).toHaveLength(2);
   });
 
-  it('renders regression section for exercises with performance drops', () => {
+  it('renders regressions mixed into the recent changes list', () => {
     render(<InsightsScreen exercises={exercises} onSelectExercise={vi.fn()} />);
 
-    expect(screen.getByText('Performance drops')).toBeTruthy();
-    expect(screen.getAllByText('Reps Down')).toHaveLength(2);
+    expect(screen.getByText('Your recent changes')).toBeTruthy();
+    expect(screen.getAllByText('Reps Down').length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders featured card with the latest insight', () => {
     render(<InsightsScreen exercises={exercises} onSelectExercise={vi.fn()} />);
 
     expect(screen.getByText('Latest change')).toBeTruthy();
-    expect(screen.getByText('View detail')).toBeTruthy();
+    expect(screen.queryByText('View detail')).toBeNull();
   });
 
   it('calls onSelectExercise when a progression card is clicked', () => {
@@ -103,8 +103,9 @@ describe('InsightsScreen', () => {
     const onSelectExercise = vi.fn();
     render(<InsightsScreen exercises={exercises} onSelectExercise={onSelectExercise} />);
 
-    const featured = screen.getByText('View detail').closest('div[class*="rounded-2xl"]') ?? screen.getByText('View detail').closest('section');
-    if (featured) fireEvent.click(featured);
+    const featured = screen.getByText('Latest change').closest('section');
+    const card = featured?.querySelector('[class*="rounded-2xl"]');
+    if (card) fireEvent.click(card);
 
     expect(onSelectExercise).toHaveBeenCalled();
   });

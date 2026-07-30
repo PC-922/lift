@@ -12,8 +12,12 @@ let currentAdapter: StorageManagerInterface | null = null;
 let currentUid: string | null = null;
 let currentMode: 'google' | 'guest' | null = null;
 
+function isSyncAdapter(adapter: StorageManagerInterface): adapter is SyncAdapter {
+  return adapter instanceof SyncAdapter;
+}
+
 function createAdapter(user: User | null, mode: 'google' | 'guest' | null): StorageManagerInterface {
-  if (mode === 'google' && user && db) {
+  if (user && db) {
     const local = new LocalStorageAdapter();
     const gateway = new FirestoreGateway(db);
     return new SyncAdapter(local, gateway, user.uid);
@@ -22,13 +26,26 @@ function createAdapter(user: User | null, mode: 'google' | 'guest' | null): Stor
 }
 
 export function setStorageUser(user: User | null, mode: 'google' | 'guest' | null): void {
-  const uid = user?.uid ?? `guest_${mode ?? 'anonymous'}`;
+  const uid = user?.uid ?? `local_${mode ?? 'anonymous'}`;
   if (currentAdapter && currentUid === uid && currentMode === mode) {
     return;
   }
+
+  if (currentAdapter && isSyncAdapter(currentAdapter)) {
+    currentAdapter.dispose();
+  }
+
   currentAdapter = createAdapter(user, mode);
   currentUid = uid;
   currentMode = mode;
+}
+
+export function getCurrentAdapter(): StorageManagerInterface | null {
+  return currentAdapter;
+}
+
+export function getCurrentSyncAdapter(): SyncAdapter | null {
+  return currentAdapter && isSyncAdapter(currentAdapter) ? currentAdapter : null;
 }
 
 export const storageManager: StorageManagerInterface = new Proxy({} as StorageManagerInterface, {

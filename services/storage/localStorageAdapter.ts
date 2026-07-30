@@ -163,6 +163,7 @@ export class LocalStorageAdapter implements StorageManagerInterface {
     if (data.length > 0) return data;
     if (localStorage.getItem(STORAGE_KEY)) {
       await this.saveData([]);
+      return [];
     }
     const seed = getDefaultExercises();
     await this.saveData(seed);

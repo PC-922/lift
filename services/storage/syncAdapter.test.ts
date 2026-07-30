@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { LocalStorageAdapter } from './localStorageAdapter';
 import { SyncAdapter } from './syncAdapter';
-import { FirestoreGateway, PulledData } from './firestoreGateway';
+import { PulledData, SyncStatusSnapshot } from './firestoreGateway';
 import { Exercise, Routine, Tombstone } from '../../types';
 
 const mockStorage: Record<string, string> = {};
@@ -23,7 +23,7 @@ function makeRoutine(id: string, name: string, updatedAt: string): Routine {
   return { id, name, days: [], updatedAt };
 }
 
-class FakeFirestoreGateway extends FirestoreGateway {
+class FakeFirestoreGateway {
   public pulled: PulledData = {
     exercises: [],
     routines: [],
@@ -32,27 +32,23 @@ class FakeFirestoreGateway extends FirestoreGateway {
   };
   public pushed: PulledData | null = null;
 
-  constructor() {
-    super(null as unknown as import('firebase/firestore').Firestore);
-  }
-
-  override async pullData(): Promise<PulledData> {
+  async pullData(): Promise<PulledData> {
     return JSON.parse(JSON.stringify(this.pulled)) as PulledData;
   }
 
-  override async pushData(
+  async pushData(
     _uid: string,
     exercises: Exercise[],
     routines: Routine[],
     groups: string[],
     tombstones: { exercises: Record<string, Tombstone>; routines: Record<string, Tombstone> },
-    previousRemote: PulledData
+    _previousRemote: PulledData
   ): Promise<void> {
     this.pushed = { exercises, routines, groups, tombstones };
     this.pulled = { exercises, routines, groups, tombstones };
   }
 
-  override async pushExercise(_uid: string, exercise: Exercise): Promise<void> {
+  async pushExercise(_uid: string, exercise: Exercise): Promise<void> {
     const existing = this.pulled.exercises.findIndex((e) => e.id === exercise.id);
     if (existing >= 0) {
       this.pulled.exercises[existing] = exercise;
@@ -61,13 +57,44 @@ class FakeFirestoreGateway extends FirestoreGateway {
     }
   }
 
-  override async pushRoutine(_uid: string, routine: Routine): Promise<void> {
+  async pushRoutine(_uid: string, routine: Routine): Promise<void> {
     const existing = this.pulled.routines.findIndex((r) => r.id === routine.id);
     if (existing >= 0) {
       this.pulled.routines[existing] = routine;
     } else {
       this.pulled.routines.push(routine);
     }
+  }
+
+  async markExerciseDeleted(_uid: string, id: string): Promise<void> {
+    const existing = this.pulled.exercises.findIndex((e) => e.id === id);
+    if (existing >= 0) {
+      this.pulled.exercises[existing] = { ...this.pulled.exercises[existing], deletedAt: new Date().toISOString() };
+    }
+  }
+
+  async markRoutineDeleted(_uid: string, id: string): Promise<void> {
+    const existing = this.pulled.routines.findIndex((r) => r.id === id);
+    if (existing >= 0) {
+      this.pulled.routines[existing] = { ...this.pulled.routines[existing], deletedAt: new Date().toISOString() };
+    }
+  }
+
+  async pushGroups(_uid: string, groups: string[]): Promise<void> {
+    this.pulled.groups = groups;
+  }
+
+  async pushTombstones(_uid: string, tombstones: { exercises: Record<string, Tombstone>; routines: Record<string, Tombstone> }): Promise<void> {
+    this.pulled.tombstones = tombstones;
+  }
+
+  subscribe(
+    _uid: string,
+    _onData: (data: PulledData) => void,
+    onStatus: (status: SyncStatusSnapshot) => void
+  ): () => void {
+    onStatus({ hasPendingWrites: false, fromCache: false });
+    return vi.fn();
   }
 }
 
@@ -78,9 +105,13 @@ describe('SyncAdapter', () => {
 
   beforeEach(() => {
     localStorage.clear();
+    localStorage.setItem('lift_meta_v2', JSON.stringify({ schemaVersion: 4 }));
+    localStorage.setItem('lift_data_v1', '[]');
+    localStorage.setItem('lift_routines_v1', '[]');
+    localStorage.setItem('lift_groups_v1', '[]');
     local = new LocalStorageAdapter();
     gateway = new FakeFirestoreGateway();
-    adapter = new SyncAdapter(local, gateway, 'test-user');
+    adapter = new SyncAdapter(local, gateway as unknown as import('./firestoreGateway').FirestoreGateway, 'test-user');
     vi.stubGlobal('navigator', { onLine: true, language: 'en' } as Navigator);
   });
 
