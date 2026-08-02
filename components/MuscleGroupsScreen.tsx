@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { MoreVertical, Plus, Trash2, Pencil } from 'lucide-react';
 import { useAppData } from '../hooks/useAppData';
-import { storageManager } from '../services/storageService';
 import { useTranslations, getTranslatedGroupName } from '../utils/translations';
 import { BackButton } from './ui/BackButton';
 import { Button } from './ui/Button';
@@ -15,7 +14,7 @@ import PromptModal from './PromptModal';
 
 export const MuscleGroupsScreen: React.FC = () => {
   const t = useTranslations();
-  const { muscleGroups, refresh } = useAppData();
+  const { muscleGroups, addMuscleGroup, renameMuscleGroup, deleteMuscleGroup } = useAppData();
 
   const [isAdding, setIsAdding] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
@@ -28,10 +27,9 @@ export const MuscleGroupsScreen: React.FC = () => {
     e.preventDefault();
     const name = newGroupName.trim();
     if (!name) return;
-    await storageManager.addMuscleGroup(name);
+    await addMuscleGroup(name);
     setNewGroupName('');
     setIsAdding(false);
-    await refresh();
   };
 
   const handleRename = async (newName: string) => {
@@ -39,16 +37,14 @@ export const MuscleGroupsScreen: React.FC = () => {
       setRenamingGroup(null);
       return;
     }
-    await storageManager.renameMuscleGroup(renamingGroup, newName.trim());
+    await renameMuscleGroup(renamingGroup, newName.trim());
     setRenamingGroup(null);
-    await refresh();
   };
 
   const handleDelete = async () => {
     if (!deletingGroup) return;
-    await storageManager.deleteMuscleGroup(deletingGroup);
+    await deleteMuscleGroup(deletingGroup);
     setDeletingGroup(null);
-    await refresh();
   };
 
   return (

@@ -3,7 +3,6 @@ import {
   linkWithPopup,
   signInAnonymously,
   signInWithPopup,
-  signInWithRedirect,
   getRedirectResult,
   signOut,
   onAuthStateChanged,
@@ -62,53 +61,77 @@ function inferAuthMode(user: AuthUser): AuthMode {
   return user.isAnonymous ? 'guest' : 'google';
 }
 
+function isPopupDismissError(code: string): boolean {
+  return (
+    code === 'auth/popup-blocked' ||
+    code === 'auth/popup-closed-by-user' ||
+    code === 'auth/cancelled-popup-request'
+  );
+}
+
+function completeGoogleSignIn(user: User): SignInResult {
+  setStoredAuthMode('google');
+  const isNewUser = user.metadata?.creationTime === user.metadata?.lastSignInTime;
+  if (isNewUser) {
+    ensureUserProfile(user).catch(() => {});
+  }
+  notify(user, 'google');
+  return { user, isNewUser };
+}
+
 async function signInWithGoogle(): Promise<SignInResult> {
   if (!isFirebaseAvailable() || !auth) {
-    return { user: null, isNewUser: false };
+    return {
+      user: null,
+      isNewUser: false,
+      error: { code: 'auth/unavailable', message: 'Firebase authentication is unavailable' },
+    };
   }
 
   const provider = new GoogleAuthProvider();
 
-  try {
-    if (auth.currentUser?.isAnonymous) {
-      const result = await linkWithPopup(auth.currentUser, provider);
-      setStoredAuthMode('google');
-      const isNewUser = result.user.metadata?.creationTime === result.user.metadata?.lastSignInTime;
-      if (isNewUser) {
-        ensureUserProfile(result.user).catch(() => {});
-      }
-      notify(result.user, 'google');
-      return { user: result.user, isNewUser };
-    }
-
+  async function performPopupSignIn(): Promise<User> {
     const result = await signInWithPopup(auth, provider);
-    setStoredAuthMode('google');
-    const isNewUser = result.user.metadata?.creationTime === result.user.metadata?.lastSignInTime;
-    if (isNewUser) {
-      ensureUserProfile(result.user).catch(() => {});
-    }
-    notify(result.user, 'google');
-    return { user: result.user, isNewUser };
-  } catch (popupError) {
-    const normalized = normalizeError(popupError);
+    return result.user;
+  }
 
-    if (normalized.code === 'auth/credential-already-in-use') {
-      setStoredAuthMode(null);
-      return { user: auth.currentUser, isNewUser: false, error: normalized };
+  async function performLinkOrSignIn(): Promise<User | null> {
+    if (!auth.currentUser?.isAnonymous) {
+      return performPopupSignIn();
     }
 
-    if (
-      normalized.code === 'auth/popup-blocked' ||
-      normalized.code === 'auth/popup-closed-by-user' ||
-      normalized.code === 'auth/cancelled-popup-request'
-    ) {
-      setStoredAuthMode('google');
-      await signInWithRedirect(auth, provider);
-      return { user: null, isNewUser: false };
+    try {
+      const result = await linkWithPopup(auth.currentUser, provider);
+      return result.user;
+    } catch (linkError) {
+      const normalized = normalizeError(linkError);
+      if (normalized.code === 'auth/credential-already-in-use') {
+        return performPopupSignIn();
+      }
+      if (isPopupDismissError(normalized.code)) {
+        return null;
+      }
+      throw linkError;
     }
+  }
 
+  try {
+    const user = await performLinkOrSignIn();
+    if (!user) {
+      return {
+        user: null,
+        isNewUser: false,
+        error: { code: 'auth/popup-closed-by-user', message: 'Popup was closed before completing sign-in' },
+      };
+    }
+    return completeGoogleSignIn(user);
+  } catch (error) {
+    const normalized = normalizeError(error);
+    if (isPopupDismissError(normalized.code)) {
+      return { user: null, isNewUser: false, error: normalized };
+    }
     setStoredAuthMode(null);
-    throw popupError;
+    return { user: null, isNewUser: false, error: normalized };
   }
 }
 

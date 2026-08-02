@@ -37,7 +37,6 @@ vi.mock('firebase/auth', () => ({
   signInWithPopup: vi.fn(),
   linkWithPopup: vi.fn(),
   signInAnonymously: vi.fn(),
-  signInWithRedirect: vi.fn(() => Promise.resolve()),
   getRedirectResult: vi.fn(() => Promise.resolve(null)),
   signOut: vi.fn(),
   onAuthStateChanged: vi.fn((_auth, cb) => {
@@ -61,7 +60,7 @@ describe('authService', () => {
   });
 
   it('uses signInWithPopup for Google login', async () => {
-    const { signInWithPopup, signInWithRedirect } = await import('firebase/auth');
+    const { signInWithPopup } = await import('firebase/auth');
     const mockUser = {
       uid: '123',
       email: 'test@example.com',
@@ -75,7 +74,6 @@ describe('authService', () => {
     const result = await authService.signInWithGoogle();
 
     expect(signInWithPopup).toHaveBeenCalled();
-    expect(signInWithRedirect).not.toHaveBeenCalled();
     expect(result.user).toBe(mockUser);
     expect(result.isNewUser).toBe(false);
     expect(preferencesService.getPrefs().authMode).toBe('google');
@@ -118,43 +116,74 @@ describe('authService', () => {
     expect(preferencesService.getPrefs().authMode).toBe('google');
   });
 
-  it('falls back to signInWithRedirect when popup is blocked', async () => {
-    const { signInWithPopup, signInWithRedirect } = await import('firebase/auth');
-    vi.mocked(signInWithPopup).mockRejectedValue({ code: 'auth/popup-blocked' });
+  it('falls back to signInWithPopup when the Google credential is already in use', async () => {
+    const { linkWithPopup, signInWithPopup } = await import('firebase/auth');
+    const mockUser = {
+      uid: 'existing-uid',
+      isAnonymous: false,
+      metadata: {
+        creationTime: '2024-01-01T00:00:00Z',
+        lastSignInTime: '2024-01-02T00:00:00Z',
+      },
+    };
+    vi.mocked(linkWithPopup).mockRejectedValue({ code: 'auth/credential-already-in-use', message: 'Already in use' } as any);
+    vi.mocked(signInWithPopup).mockResolvedValue({ user: mockUser } as any);
+
+    const authModule = await import('./firebase');
+    vi.mocked(authModule.isFirebaseAvailable).mockReturnValue(true);
+    Object.defineProperty(authModule, 'auth', { value: { currentUser: { uid: 'anonymous-uid', isAnonymous: true } }, configurable: true });
 
     const result = await authService.signInWithGoogle();
 
+    expect(linkWithPopup).toHaveBeenCalled();
     expect(signInWithPopup).toHaveBeenCalled();
-    expect(signInWithRedirect).toHaveBeenCalled();
-    expect(result.user).toBeNull();
+    expect(result.user).toBe(mockUser);
     expect(result.isNewUser).toBe(false);
     expect(preferencesService.getPrefs().authMode).toBe('google');
   });
 
-  it('falls back on popup-closed-by-user', async () => {
-    const { signInWithPopup, signInWithRedirect } = await import('firebase/auth');
-    vi.mocked(signInWithPopup).mockRejectedValue({ code: 'auth/popup-closed-by-user' });
+  it('returns an error when popup is blocked', async () => {
+    const { signInWithPopup } = await import('firebase/auth');
+    vi.mocked(signInWithPopup).mockRejectedValue({ code: 'auth/popup-blocked', message: 'Popup blocked' } as any);
 
-    await authService.signInWithGoogle();
+    const result = await authService.signInWithGoogle();
 
-    expect(signInWithRedirect).toHaveBeenCalled();
+    expect(signInWithPopup).toHaveBeenCalled();
+    expect(result.error).toEqual({ code: 'auth/popup-blocked', message: 'Popup blocked' });
+    expect(result.user).toBeNull();
+    expect(result.isNewUser).toBe(false);
+    expect(preferencesService.getPrefs().authMode).toBeNull();
   });
 
-  it('falls back on cancelled-popup-request', async () => {
-    const { signInWithPopup, signInWithRedirect } = await import('firebase/auth');
-    vi.mocked(signInWithPopup).mockRejectedValue({ code: 'auth/cancelled-popup-request' });
+  it('returns an error when popup is closed by user', async () => {
+    const { signInWithPopup } = await import('firebase/auth');
+    vi.mocked(signInWithPopup).mockRejectedValue({ code: 'auth/popup-closed-by-user', message: 'Closed' } as any);
 
-    await authService.signInWithGoogle();
+    const result = await authService.signInWithGoogle();
 
-    expect(signInWithRedirect).toHaveBeenCalled();
+    expect(result.error?.code).toBe('auth/popup-closed-by-user');
+    expect(result.user).toBeNull();
   });
 
-  it('throws on non-recoverable popup errors', async () => {
+  it('returns an error when popup request is cancelled', async () => {
+    const { signInWithPopup } = await import('firebase/auth');
+    vi.mocked(signInWithPopup).mockRejectedValue({ code: 'auth/cancelled-popup-request', message: 'Cancelled' } as any);
+
+    const result = await authService.signInWithGoogle();
+
+    expect(result.error?.code).toBe('auth/cancelled-popup-request');
+    expect(result.user).toBeNull();
+  });
+
+  it('returns an error on non-recoverable popup errors', async () => {
     const { signInWithPopup } = await import('firebase/auth');
     const error = { code: 'auth/unauthorized-domain', message: 'Bad domain' };
     vi.mocked(signInWithPopup).mockRejectedValue(error);
 
-    await expect(authService.signInWithGoogle()).rejects.toEqual(error);
+    const result = await authService.signInWithGoogle();
+
+    expect(result.error).toEqual(error);
+    expect(result.user).toBeNull();
     expect(preferencesService.getPrefs().authMode).toBeNull();
   });
 

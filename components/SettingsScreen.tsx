@@ -4,6 +4,7 @@ import { Download, Upload, AlertCircle, CheckCircle2, LogIn, LogOut, Trash2 } fr
 import { useTranslations, useLanguage } from '../utils/translations';
 import { preferencesService } from '../services/preferencesService';
 import { useAuth } from '../hooks/useAuth';
+import { useToast } from '../hooks/useToast';
 import type { ScreenType } from './BottomNav';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
@@ -21,10 +22,12 @@ const SCREEN_ORDER: ScreenType[] = ['home', 'insights', 'routines', 'settings'];
 
 export const SettingsScreen: React.FC<Props> = ({ onExport, onImport, onResetData }) => {
   const t = useTranslations();
+  const { showToast } = useToast();
   const { signOut, signInWithGoogle, mode } = useAuth();
   const isSignedIn = mode === 'google';
   const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [isResetting, setIsResetting] = useState(false);
+  const [isSigningIn, setIsSigningIn] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const currentLang = useLanguage();
   const currentDefaultScreen = useSyncExternalStore(
@@ -36,6 +39,15 @@ export const SettingsScreen: React.FC<Props> = ({ onExport, onImport, onResetDat
 
   const handleImportClick = () => {
     fileInputRef.current?.click();
+  };
+
+  const handleSignIn = async () => {
+    setIsSigningIn(true);
+    const result = await signInWithGoogle();
+    setIsSigningIn(false);
+    if (result.error) {
+      showToast(t.labels.googleSignInError, 'regression');
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -94,7 +106,7 @@ export const SettingsScreen: React.FC<Props> = ({ onExport, onImport, onResetDat
               <div className="text-xs text-app-text-muted">{t.labels.signInDesc}</div>
             </div>
           </div>
-          <Button onClick={signInWithGoogle} className="mt-3 w-full">
+          <Button onClick={handleSignIn} disabled={isSigningIn} className="mt-3 w-full">
             {t.actions.signInWithGoogle}
           </Button>
         </div>
@@ -126,7 +138,7 @@ export const SettingsScreen: React.FC<Props> = ({ onExport, onImport, onResetDat
       </div>
 
       <div className="space-y-3">
-        <p className="ml-1 text-xs font-semibold uppercase tracking-wide text-app-text-muted">Backup</p>
+        <p className="ml-1 text-xs font-semibold uppercase tracking-wide text-app-text-muted">{t.labels.backup}</p>
         <ListRow padded={false}>
           <button onClick={onExport} className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors active:bg-app-surface-muted sm:px-5 sm:py-5">
             <Badge variant="neutral" className="rounded-xl px-3 py-3 bg-app-surface-muted text-app-text-muted border-none"><Download size={20} /></Badge>

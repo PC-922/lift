@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAppData } from '../hooks/useAppData';
-import { storageManager } from '../services/storageService';
 import { makeId } from '../services/storageService';
 import { useTranslations } from '../utils/translations';
 import { BackButton } from './ui/BackButton';
@@ -13,7 +12,7 @@ export const ExerciseFormScreen: React.FC = () => {
   const t = useTranslations();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const { exercises, muscleGroups, refresh } = useAppData();
+  const { exercises, muscleGroups, saveExercise, updateExerciseDetails } = useAppData();
 
   const existingExercise = id ? exercises.find((e) => e.id === id) : undefined;
   const isEdit = !!existingExercise;
@@ -40,8 +39,7 @@ export const ExerciseFormScreen: React.FC = () => {
     if (!trimmedName) return;
 
     if (isEdit && existingExercise) {
-      await storageManager.updateExerciseDetails(existingExercise.id, trimmedName, group);
-      await refresh();
+      await updateExerciseDetails(existingExercise.id, trimmedName, group);
       navigate(`/exercises/${existingExercise.id}`, { replace: true });
     } else {
       const newExercise = {
@@ -50,8 +48,7 @@ export const ExerciseFormScreen: React.FC = () => {
         muscleGroup: group,
         logs: [],
       };
-      await storageManager.saveExercise(newExercise);
-      await refresh();
+      await saveExercise(newExercise);
       navigate(`/exercises/${newExercise.id}`);
     }
   };

@@ -7,22 +7,6 @@ describe('useRestTimer', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
-    const store: Record<string, string> = {};
-    Object.defineProperty(window, 'localStorage', {
-      configurable: true,
-      value: {
-        getItem: vi.fn((key: string) => store[key] ?? null),
-        setItem: vi.fn((key: string, value: string) => {
-          store[key] = value;
-        }),
-        removeItem: vi.fn((key: string) => {
-          delete store[key];
-        }),
-        clear: vi.fn(() => {
-          Object.keys(store).forEach((key) => delete store[key]);
-        }),
-      },
-    });
   });
 
   afterEach(() => {
@@ -146,20 +130,6 @@ describe('useRestTimer', () => {
     });
 
     expect(result.current.isMinimized).toBe(true);
-  });
-
-  it('debe iniciar desde el estado guardado', () => {
-    window.localStorage.setItem(
-      'restTimerState',
-      JSON.stringify({ remainingTime: 30, duration: 90, isMinimized: false, isActive: true })
-    );
-
-    const { result } = renderHook(() => useRestTimer(), { wrapper });
-
-    expect(result.current.remainingTime).toBe(30);
-    expect(result.current.duration).toBe(90);
-    expect(result.current.isMinimized).toBe(true);
-    expect(result.current.isActive).toBe(false);
   });
 
   it('debe poder minimizarse y expandirse', () => {

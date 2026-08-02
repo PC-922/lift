@@ -1,13 +1,25 @@
 import React, { useState } from 'react';
 import { Dumbbell } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { useToast } from '../hooks/useToast';
 import { useTranslations } from '../utils/translations';
 import { Button } from './ui/Button';
 
 export const OnboardingScreen: React.FC = () => {
   const t = useTranslations();
+  const { showToast } = useToast();
   const { signInWithGoogle, continueAsGuest } = useAuth();
   const [guestError, setGuestError] = useState<string | null>(null);
+  const [isSigningIn, setIsSigningIn] = useState(false);
+
+  const handleSignIn = async () => {
+    setIsSigningIn(true);
+    const result = await signInWithGoogle();
+    setIsSigningIn(false);
+    if (result.error) {
+      showToast(t.labels.googleSignInError, 'regression');
+    }
+  };
 
   const handleContinueAsGuest = async () => {
     const result = await continueAsGuest();
@@ -32,7 +44,8 @@ export const OnboardingScreen: React.FC = () => {
 
       <div className="w-full max-w-sm space-y-3">
         <Button
-          onClick={signInWithGoogle}
+          onClick={handleSignIn}
+          disabled={isSigningIn}
           size="lg"
           className="w-full justify-center gap-3"
         >

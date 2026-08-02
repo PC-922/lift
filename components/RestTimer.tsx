@@ -29,10 +29,6 @@ export const RestTimer: React.FC = () => {
 
   const openExpanded = () => setMinimized(false);
   const closeExpanded = () => setMinimized(true);
-  const dismissTimer = () => {
-    stopTimer();
-    selectDuration(0);
-  };
 
   if (!hasTimer) {
     return null;
@@ -80,13 +76,6 @@ export const RestTimer: React.FC = () => {
                 <Play className="h-5 w-5 fill-current" />
               </button>
             )}
-            <button
-              onClick={dismissTimer}
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-app-surface-muted text-app-text-muted active:opacity-70"
-              aria-label={t.actions.close}
-            >
-              <X className="h-5 w-5" />
-            </button>
           </div>
         </div>
       </div>

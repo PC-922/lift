@@ -1,5 +1,5 @@
 import React, {forwardRef, useCallback, useEffect, useMemo, useState} from 'react';
-import {GripVertical, MoreVertical, Pencil, Plus, Shuffle, Trash2, X} from 'lucide-react';
+import {GripVertical, MoreVertical, Pencil, Plus, Shuffle, Trash2, Upload, X} from 'lucide-react';
 import {Exercise, ExerciseLog, Routine, RoutineDay, RoutineExercise} from '../types';
 import {getTranslatedGroupName, useTranslations} from '../utils/translations';
 import {getLatestLog, getLogFeedback} from '../utils/progression';
@@ -39,6 +39,8 @@ interface Props {
   onDeleteAllLogsExceptLatest: (exerciseId: string) => void;
   onDeleteExercise: (exerciseId: string) => void;
   onNavigateToExercise: (exerciseId: string, routineId: string) => void;
+  onShareRoutine: (routine: Routine) => void;
+  onImportRoutine: (file: File) => Promise<boolean>;
   resetSignal?: number;
 }
 
@@ -82,6 +84,8 @@ export const RoutinesScreen: React.FC<Props> = ({
   onReorderRoutine,
   onReorderRoutineExercise,
   onNavigateToExercise,
+  onShareRoutine,
+  onImportRoutine,
   resetSignal,
 }) => {
   const t = useTranslations();
@@ -99,6 +103,7 @@ export const RoutinesScreen: React.FC<Props> = ({
   const [pickingAlternativeFor, setPickingAlternativeFor] = useState<ExerciseDayRef | null>(null);
   const [alternativeSearch, setAlternativeSearch] = useState('');
   const [selectedDayId, setSelectedDayId] = useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setModalMode(null);
@@ -290,6 +295,23 @@ export const RoutinesScreen: React.FC<Props> = ({
     onSaveRoutine({ id: makeId('routine'), name: `${routine.name} (2)`, days: routine.days.map((day) => ({ ...day, id: makeId('day'), exercises: day.exercises.map((re) => ({ ...re })) })) });
   };
 
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    const success = await onImportRoutine(file);
+    if (success) {
+      showToast(t.labels.importRoutineSuccess, 'achievement');
+    } else {
+      showToast(t.labels.importRoutineError, 'regression');
+    }
+  };
+
   const getLogForm = useCallback(
     (exerciseId: string): LogFormState => {
       if (logForms[exerciseId]) return logForms[exerciseId];
@@ -447,10 +469,25 @@ export const RoutinesScreen: React.FC<Props> = ({
         <div className="space-y-6">
           <p className="-mt-2 mb-2 text-center text-sm text-app-text-muted">{t.labels.routinesDesc}</p>
 
-          <Button onClick={openCreate} className="w-full">
-            <Plus size={18} />
-            {t.labels.newRoutine}
-          </Button>
+          <div className="flex gap-3">
+            <Button onClick={openCreate} className="flex-1">
+              <Plus size={18} />
+              {t.labels.newRoutine}
+            </Button>
+            <Button onClick={handleImportClick} variant="secondary" aria-label={t.actions.importRoutine}>
+              <Upload size={18} />
+            </Button>
+          </div>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json,application/json"
+            className="hidden"
+            onChange={handleFileSelected}
+            aria-label={t.actions.importRoutine}
+            data-testid="import-routine-input"
+          />
 
           {routines.length === 0 ? (
             <div className="py-20 text-center opacity-60">
@@ -472,6 +509,7 @@ export const RoutinesScreen: React.FC<Props> = ({
                     onEdit={() => openEdit(routine)}
                     onDelete={() => handleDelete(routine.id)}
                     onDuplicate={() => handleDuplicate(routine)}
+                    onShare={() => onShareRoutine(routine)}
                     onDragHandlePointerDown={routinesDrag.handleStart(routine.id)}
                   />
                 </React.Fragment>

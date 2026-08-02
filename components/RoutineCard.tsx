@@ -1,5 +1,5 @@
 import React, { forwardRef, useState } from 'react';
-import { GripVertical, MoreVertical } from 'lucide-react';
+import { GripVertical, MoreVertical, Share2 } from 'lucide-react';
 import { Routine } from '../types';
 import { useTranslations } from '../utils/translations';
 import { ActionSheet, ActionSheetAction } from './ActionSheet';
@@ -13,11 +13,12 @@ interface Props {
   onEdit: () => void;
   onDelete: () => void;
   onDuplicate: () => void;
+  onShare: () => void;
   onDragHandlePointerDown: (event: React.PointerEvent) => void;
 }
 
 export const RoutineCard = forwardRef<HTMLDivElement, Props>(
-  ({ routine, isDragging, onClick, onEdit, onDelete, onDuplicate, onDragHandlePointerDown }, ref) => {
+  ({ routine, isDragging, onClick, onEdit, onDelete, onDuplicate, onShare, onDragHandlePointerDown }, ref) => {
     const t = useTranslations();
     const [showActions, setShowActions] = useState(false);
 
@@ -25,6 +26,7 @@ export const RoutineCard = forwardRef<HTMLDivElement, Props>(
 
     const actions: ActionSheetAction[] = [
       { label: t.actions.edit, onPress: onEdit },
+      { label: t.actions.share, onPress: onShare },
       { label: t.actions.duplicate, onPress: onDuplicate },
       { label: t.actions.delete, destructive: true, onPress: onDelete },
     ];

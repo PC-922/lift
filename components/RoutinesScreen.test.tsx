@@ -71,6 +71,8 @@ const defaultProps = {
   onDeleteAllLogsExceptLatest: vi.fn(),
   onDeleteExercise: vi.fn(),
   onNavigateToExercise: vi.fn(),
+  onShareRoutine: vi.fn(),
+  onImportRoutine: vi.fn(() => Promise.resolve(true)),
 };
 
 describe('RoutinesScreen', () => {
@@ -101,6 +103,32 @@ describe('RoutinesScreen', () => {
     renderWithToast(<RoutinesScreen {...defaultProps} />);
     const counts = screen.getAllByText(`1 ${t.labels.exercises} · 1 ${t.labels.days}`);
     expect(counts).toHaveLength(2);
+  });
+
+  it('calls onShareRoutine when share action is selected', async () => {
+    const onShareRoutine = vi.fn();
+    renderWithToast(<RoutinesScreen {...defaultProps} onShareRoutine={onShareRoutine} />);
+
+    const menus = screen.getAllByRole('button', { name: 'Menu' });
+    fireEvent.click(menus[0]);
+    await act(() => vi.runAllTimersAsync());
+
+    fireEvent.click(screen.getByText(t.actions.share));
+    await act(() => vi.runAllTimersAsync());
+
+    expect(onShareRoutine).toHaveBeenCalledWith(routines[0]);
+  });
+
+  it('calls onImportRoutine when a file is selected', async () => {
+    const onImportRoutine = vi.fn(() => Promise.resolve(true));
+    renderWithToast(<RoutinesScreen {...defaultProps} onImportRoutine={onImportRoutine} />);
+
+    const file = new File(['{}'], 'routine.json', { type: 'application/json' });
+    const input = screen.getByTestId('import-routine-input');
+    fireEvent.change(input, { target: { files: [file] } });
+    await act(() => vi.runAllTimersAsync());
+
+    expect(onImportRoutine).toHaveBeenCalledWith(file);
   });
 
   // --- Create modal ---
