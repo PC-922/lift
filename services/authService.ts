@@ -1,6 +1,5 @@
 import {
   GoogleAuthProvider,
-  linkWithPopup,
   signInAnonymously,
   signInWithPopup,
   getRedirectResult,
@@ -95,28 +94,15 @@ async function signInWithGoogle(): Promise<SignInResult> {
     return result.user;
   }
 
-  async function performLinkOrSignIn(): Promise<User | null> {
-    if (!auth.currentUser?.isAnonymous) {
+  async function performPopupSignInFromCurrentUser(): Promise<User | null> {
+    if (auth.currentUser?.isAnonymous) {
       return performPopupSignIn();
     }
-
-    try {
-      const result = await linkWithPopup(auth.currentUser, provider);
-      return result.user;
-    } catch (linkError) {
-      const normalized = normalizeError(linkError);
-      if (normalized.code === 'auth/credential-already-in-use') {
-        return performPopupSignIn();
-      }
-      if (isPopupDismissError(normalized.code)) {
-        return null;
-      }
-      throw linkError;
-    }
+    return performPopupSignIn();
   }
 
   try {
-    const user = await performLinkOrSignIn();
+    const user = await performPopupSignInFromCurrentUser();
     if (!user) {
       return {
         user: null,
@@ -156,11 +142,23 @@ async function continueAsGuest(): Promise<GuestResult> {
 }
 
 async function signOutUser(): Promise<void> {
-  if (isFirebaseAvailable() && auth) {
-    await signOut(auth);
+  if (!isFirebaseAvailable() || !auth) {
+    setStoredAuthMode(null);
+    notify(null, null);
+    return;
   }
-  setStoredAuthMode(null);
-  notify(null, null);
+
+  await signOut(auth);
+
+  try {
+    const result = await signInAnonymously(auth);
+    setStoredAuthMode('guest');
+    notify(result.user, 'guest');
+  } catch (error) {
+    console.error('Failed to return to guest mode after sign-out', error);
+    setStoredAuthMode(null);
+    notify(null, null);
+  }
 }
 
 let redirectHandled = false;

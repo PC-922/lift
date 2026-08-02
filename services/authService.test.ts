@@ -35,7 +35,6 @@ Object.defineProperty(window, 'navigator', {
 vi.mock('firebase/auth', () => ({
   GoogleAuthProvider: vi.fn(),
   signInWithPopup: vi.fn(),
-  linkWithPopup: vi.fn(),
   signInAnonymously: vi.fn(),
   getRedirectResult: vi.fn(() => Promise.resolve(null)),
   signOut: vi.fn(),
@@ -99,34 +98,16 @@ describe('authService', () => {
     expect(ensureUserProfile).toHaveBeenCalledWith(mockUser);
   });
 
-  it('links Google to an anonymous session keeping the same uid', async () => {
-    const { linkWithPopup, signInWithPopup } = await import('firebase/auth');
-    const mockUser = { uid: 'anonymous-uid', isAnonymous: false };
-    vi.mocked(linkWithPopup).mockResolvedValue({ user: mockUser } as any);
-
-    const authModule = await import('./firebase');
-    vi.mocked(authModule.isFirebaseAvailable).mockReturnValue(true);
-    Object.defineProperty(authModule, 'auth', { value: { currentUser: { uid: 'anonymous-uid', isAnonymous: true } }, configurable: true });
-
-    const result = await authService.signInWithGoogle();
-
-    expect(linkWithPopup).toHaveBeenCalled();
-    expect(signInWithPopup).not.toHaveBeenCalled();
-    expect(result.user).toBe(mockUser);
-    expect(preferencesService.getPrefs().authMode).toBe('google');
-  });
-
-  it('falls back to signInWithPopup when the Google credential is already in use', async () => {
-    const { linkWithPopup, signInWithPopup } = await import('firebase/auth');
+  it('uses signInWithPopup directly from an anonymous session', async () => {
+    const { signInWithPopup } = await import('firebase/auth');
     const mockUser = {
-      uid: 'existing-uid',
+      uid: 'google-uid',
       isAnonymous: false,
       metadata: {
         creationTime: '2024-01-01T00:00:00Z',
         lastSignInTime: '2024-01-02T00:00:00Z',
       },
     };
-    vi.mocked(linkWithPopup).mockRejectedValue({ code: 'auth/credential-already-in-use', message: 'Already in use' } as any);
     vi.mocked(signInWithPopup).mockResolvedValue({ user: mockUser } as any);
 
     const authModule = await import('./firebase');
@@ -135,10 +116,8 @@ describe('authService', () => {
 
     const result = await authService.signInWithGoogle();
 
-    expect(linkWithPopup).toHaveBeenCalled();
     expect(signInWithPopup).toHaveBeenCalled();
     expect(result.user).toBe(mockUser);
-    expect(result.isNewUser).toBe(false);
     expect(preferencesService.getPrefs().authMode).toBe('google');
   });
 
@@ -224,12 +203,19 @@ describe('authService', () => {
     Object.defineProperty(window, 'navigator', { value: { onLine: true }, configurable: true });
   });
 
-  it('calls signOut on firebase when signing out', async () => {
-    const { signOut } = await import('firebase/auth');
+  it('returns to guest mode after signing out', async () => {
+    const { signOut, signInAnonymously } = await import('firebase/auth');
+    const mockUser = { uid: 'guest-uid', isAnonymous: true };
+    vi.mocked(signInAnonymously).mockResolvedValue({ user: mockUser } as any);
+
+    const listener = vi.fn();
+    authService.subscribe(listener);
 
     await authService.signOut();
 
     expect(signOut).toHaveBeenCalled();
-    expect(preferencesService.getPrefs().authMode).toBeNull();
+    expect(signInAnonymously).toHaveBeenCalled();
+    expect(preferencesService.getPrefs().authMode).toBe('guest');
+    expect(listener).toHaveBeenLastCalledWith(mockUser, 'guest');
   });
 });
