@@ -10,8 +10,7 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['JetBrains Mono Variable', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
-        mono: ['JetBrains Mono Variable', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+        sans: ['-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', '"Helvetica Neue"', 'Arial', 'sans-serif'],
       },
       colors: {
         app: {
@@ -23,18 +22,12 @@ export default {
           border: 'var(--color-border)',
           accent: 'var(--color-accent)',
           'accent-foreground': 'var(--color-accent-foreground)',
+          'accent-text': 'var(--color-accent-text)',
+          'chip-bg': 'var(--color-chip-bg)',
+          'chip-text': 'var(--color-chip-text)',
           danger: 'var(--color-danger)',
           success: 'var(--color-success)',
           warning: 'var(--color-warning)',
-        },
-        ios: {
-          bg: 'var(--color-bg)',
-          card: 'var(--color-surface)',
-          text: 'var(--color-text)',
-          blue: 'var(--color-accent)',
-          gray: 'var(--color-text-muted)',
-          red: 'var(--color-danger)',
-          separator: 'var(--color-border)',
         },
       },
     },

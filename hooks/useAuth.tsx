@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { authService, AuthUser, SignInResult, AUTH_TIMEOUT_MS } from '../services/authService';
+import { authService, AuthUser, SignInResult, GuestResult, AUTH_TIMEOUT_MS } from '../services/authService';
 import { AuthMode } from '../services/preferencesService';
 
 interface AuthContextValue {
@@ -7,7 +7,7 @@ interface AuthContextValue {
   mode: AuthMode;
   isLoading: boolean;
   signInWithGoogle: () => Promise<SignInResult>;
-  continueAsGuest: () => void;
+  continueAsGuest: () => Promise<GuestResult>;
   signOut: () => Promise<void>;
 }
 

@@ -1,27 +1,51 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Dumbbell } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { useToast } from '../hooks/useToast';
 import { useTranslations } from '../utils/translations';
 import { Button } from './ui/Button';
-import { Surface } from './ui/Surface';
 
 export const OnboardingScreen: React.FC = () => {
   const t = useTranslations();
+  const { showToast } = useToast();
   const { signInWithGoogle, continueAsGuest } = useAuth();
+  const [guestError, setGuestError] = useState<string | null>(null);
+  const [isSigningIn, setIsSigningIn] = useState(false);
+
+  const handleSignIn = async () => {
+    setIsSigningIn(true);
+    const result = await signInWithGoogle();
+    setIsSigningIn(false);
+    if (result.error) {
+      showToast(t.labels.googleSignInError, 'regression');
+    }
+  };
+
+  const handleContinueAsGuest = async () => {
+    const result = await continueAsGuest();
+    if (result.success) {
+      setGuestError(null);
+    } else if (result.needsNetwork) {
+      setGuestError('network');
+    } else {
+      setGuestError('config');
+    }
+  };
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center px-6 py-12">
       <div className="mb-10 text-center">
-        <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-[2rem] bg-app-accent text-app-accent-foreground shadow-xl shadow-app-accent/20">
+        <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-[2rem] bg-app-accent text-app-accent-foreground">
           <Dumbbell size={48} strokeWidth={2.5} />
         </div>
-        <h1 className="text-5xl font-black tracking-tighter text-app-text uppercase italic">{t.appTitle}</h1>
+        <h1 className="text-5xl font-black italic text-app-text">{t.appTitle}</h1>
         <p className="mt-3 text-app-text-muted">{t.labels.onboardingTagline}</p>
       </div>
 
-      <Surface className="w-full max-w-sm space-y-3 p-5">
+      <div className="w-full max-w-sm space-y-3">
         <Button
-          onClick={signInWithGoogle}
+          onClick={handleSignIn}
+          disabled={isSigningIn}
           size="lg"
           className="w-full justify-center gap-3"
         >
@@ -35,14 +59,25 @@ export const OnboardingScreen: React.FC = () => {
         </Button>
 
         <Button
-          onClick={continueAsGuest}
-          variant="secondary"
+          onClick={handleContinueAsGuest}
+          variant="ghost"
           size="lg"
           className="w-full"
         >
           {t.actions.continueAsGuest}
         </Button>
-      </Surface>
+
+        {guestError === 'network' && (
+          <p className="text-center text-sm text-app-text-muted">
+            Necesitas conexión para preparar el primer uso offline. Conecta la red e inténtalo de nuevo.
+          </p>
+        )}
+        {guestError === 'config' && (
+          <p className="text-center text-sm text-app-text-muted">
+            No se pudo iniciar sesión anónima. Verifica tu conexión e inténtalo de nuevo.
+          </p>
+        )}
+      </div>
     </div>
   );
 };

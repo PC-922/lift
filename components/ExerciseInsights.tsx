@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { useAppData } from '../hooks/useAppData';
+import { TrendingUp, TrendingDown } from 'lucide-react';
+import { Exercise } from '../types';
 import { useTranslations, getTranslatedGroupName } from '../utils/translations';
 import { getProgressionDetail, getRegressionDetail } from '../utils/progression';
-import { BackButton } from './ui/BackButton';
+import { Badge } from './ui/Badge';
 import { ListRow } from './ui/ListRow';
 
 const CHART_WIDTH = 320;
@@ -60,17 +60,16 @@ function buildLineChart(points: ChartPoint[], colorClass: string): React.ReactNo
   );
 }
 
-export const InsightDetailScreen: React.FC = () => {
+interface Props {
+  exercise: Exercise;
+}
+
+export const ExerciseInsights: React.FC<Props> = ({ exercise }) => {
   const t = useTranslations();
-  const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
-  const { exercises } = useAppData();
-  const exercise = id ? exercises.find((e) => e.id === id) : undefined;
 
   const sortedLogs = useMemo(() => {
-    if (!exercise) return [];
     return [...exercise.logs].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  }, [exercise]);
+  }, [exercise.logs]);
 
   const weightPoints: ChartPoint[] = useMemo(() =>
     sortedLogs
@@ -86,32 +85,28 @@ export const InsightDetailScreen: React.FC = () => {
     [sortedLogs]
   );
 
-  const progression = useMemo(() => exercise ? getProgressionDetail(exercise.logs) : null, [exercise]);
-  const regression = useMemo(() => exercise ? getRegressionDetail(exercise.logs) : null, [exercise]);
+  const progression = useMemo(() => getProgressionDetail(exercise.logs), [exercise.logs]);
+  const regression = useMemo(() => getRegressionDetail(exercise.logs), [exercise.logs]);
 
-  if (!exercise) {
+  const latestLog = sortedLogs.length > 0 ? sortedLogs[sortedLogs.length - 1] : null;
+
+  if (sortedLogs.length < 2) {
     return (
-      <div className="animate-fadeIn space-y-6">
-        <BackButton label={t.labels.insights} onClick={() => navigate('/insights')} />
-        <p className="text-app-text-muted">{t.labels.noExercisesFound}</p>
+      <div className="space-y-1">
+        <h2 className="text-sm font-semibold text-app-text">{t.labels.insights}</h2>
+        <p className="text-sm text-app-text-muted">{t.labels.noInsightsDesc}</p>
       </div>
     );
   }
 
-  const latestLog = sortedLogs.length > 0 ? sortedLogs[sortedLogs.length - 1] : null;
-
   return (
-    <div className="animate-fadeIn space-y-6 pb-20">
-      <div className="mb-6">
-        <BackButton label={t.labels.insights} onClick={() => navigate('/insights')} />
-      </div>
-
+    <div className="space-y-6 pb-8">
       <div className="space-y-1">
-        <h2 className="text-2xl font-bold text-app-text">{exercise.name}</h2>
-        <p className="text-sm text-app-text-muted uppercase tracking-wide">{getTranslatedGroupName(exercise.muscleGroup)}</p>
+        <h2 className="text-lg font-semibold text-app-text">{t.labels.insights}</h2>
+        <p className="text-xs uppercase tracking-wide text-app-text-muted">{getTranslatedGroupName(exercise.muscleGroup)}</p>
       </div>
 
-      {latestLog ? (
+      {latestLog && (
         <ListRow>
           <div className="flex items-center justify-between">
             <div>
@@ -128,45 +123,44 @@ export const InsightDetailScreen: React.FC = () => {
             </div>
           </div>
         </ListRow>
-      ) : (
-        <p className="text-app-text-muted">{t.labels.noLogs}</p>
       )}
 
-      {progression && (
+      {(progression || regression) && (
         <div className="space-y-2">
           <h3 className="text-sm font-semibold text-app-text">{t.labels.recentProgress}</h3>
-          <ListRow className="border border-app-success/30 bg-app-success/5">
-            <div className="space-y-1">
-              <p className="text-sm text-app-text">{progression.timeSince}</p>
-              <div className="flex gap-4 text-sm">
-                {progression.type !== 'reps' && (
-                  <span className="text-app-text-muted">{progression.prevWeight} kg → <span className="font-semibold text-app-success">{progression.currWeight} kg</span></span>
-                )}
-                {progression.type !== 'weight' && (
-                  <span className="text-app-text-muted">{progression.prevReps} reps → <span className="font-semibold text-app-success">{progression.currReps} reps</span></span>
-                )}
-              </div>
-            </div>
-          </ListRow>
-        </div>
-      )}
-
-      {regression && (
-        <div className="space-y-2">
-          <h3 className="text-sm font-semibold text-app-text">{t.labels.recentRegressions}</h3>
-          <ListRow className="border border-app-danger/30 bg-app-danger/5">
-            <div className="space-y-1">
-              <p className="text-sm text-app-text">{regression.timeSince}</p>
-              <div className="flex gap-4 text-sm">
-                {regression.type !== 'reps' && (
-                  <span className="text-app-text-muted">{regression.prevWeight} kg → <span className="font-semibold text-app-danger">{regression.currWeight} kg</span></span>
-                )}
-                {regression.type !== 'weight' && (
-                  <span className="text-app-text-muted">{regression.prevReps} reps → <span className="font-semibold text-app-danger">{regression.currReps} reps</span></span>
-                )}
-              </div>
-            </div>
-          </ListRow>
+          <div className="space-y-2">
+            {[progression, regression]
+              .filter(Boolean)
+              .sort((a, b) => new Date(b!.date).getTime() - new Date(a!.date).getTime())
+              .map((change) => {
+                const isRegression = change === regression;
+                const Icon = isRegression ? TrendingDown : TrendingUp;
+                return (
+                  <ListRow
+                    key={change!.date}
+                    className={`border ${isRegression ? 'border-app-danger/30 bg-app-danger/5' : 'border-app-success/30 bg-app-success/5'}`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm text-app-text">{change!.timeSince}</p>
+                        <div className="mt-2 flex gap-4 text-sm">
+                          {change!.type !== 'reps' && (
+                            <span className="text-app-text-muted">{change!.prevWeight} kg → <span className={`font-semibold ${isRegression ? 'text-app-danger' : 'text-app-success'}`}>{change!.currWeight} kg</span></span>
+                          )}
+                          {change!.type !== 'weight' && (
+                            <span className="text-app-text-muted">{change!.prevReps} reps → <span className={`font-semibold ${isRegression ? 'text-app-danger' : 'text-app-success'}`}>{change!.currReps} reps</span></span>
+                          )}
+                        </div>
+                      </div>
+                      <Badge variant={isRegression ? 'danger' : 'success'} className="flex-shrink-0 whitespace-nowrap px-3 py-1.5 text-xs">
+                        <Icon size={12} className="mr-1 inline" />
+                        {change!.timeSince}
+                      </Badge>
+                    </div>
+                  </ListRow>
+                );
+              })}
+          </div>
         </div>
       )}
 

@@ -1,5 +1,4 @@
 import React from 'react';
-import { ChevronRight } from 'lucide-react';
 import { useTranslations, getTranslatedGroupName } from '../utils/translations';
 import { Badge } from './ui/Badge';
 import { ListRow } from './ui/ListRow';
@@ -17,10 +16,7 @@ export const RoutineDayCard: React.FC<Props> = ({ name, exerciseCount, muscleGro
   return (
     <ListRow className="select-none transition-colors active:bg-app-surface-muted" onClick={onClick}>
       <div className="min-w-0 flex-1">
-        <div className="flex items-center justify-between gap-3">
-          <h3 className="break-words text-base font-semibold text-app-text">{name}</h3>
-          <ChevronRight size={18} className="text-app-text-muted flex-shrink-0" />
-        </div>
+        <h3 className="break-words text-base font-semibold text-app-text">{name}</h3>
         <p className="mt-1 text-xs text-app-text-muted">
           {exerciseCount} {t.labels.exercises}
         </p>

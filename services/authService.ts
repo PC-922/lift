@@ -1,11 +1,12 @@
 import {
   GoogleAuthProvider,
+  signInAnonymously,
   signInWithPopup,
-  signInWithRedirect,
   getRedirectResult,
   signOut,
   onAuthStateChanged,
   User,
+  AuthError,
 } from 'firebase/auth';
 import { auth, isFirebaseAvailable } from './firebase';
 import { preferencesService, AuthMode } from './preferencesService';
@@ -13,11 +14,26 @@ import { ensureUserProfile } from './userProfileService';
 
 export type AuthUser = User | null;
 
+export interface SignInResult {
+  user: AuthUser;
+  isNewUser: boolean;
+  error?: { code: string; message: string };
+}
+
+export interface GuestResult {
+  success: boolean;
+  needsNetwork?: boolean;
+}
+
 type AuthListener = (user: AuthUser, mode: AuthMode) => void;
 
 const listeners = new Set<AuthListener>();
 
 export const AUTH_TIMEOUT_MS = 5000;
+
+function isOnline(): boolean {
+  return typeof navigator !== 'undefined' && navigator.onLine;
+}
 
 function getStoredAuthMode(): AuthMode {
   return preferencesService.getPrefs().authMode ?? null;
@@ -31,54 +47,118 @@ function notify(user: AuthUser, mode: AuthMode) {
   listeners.forEach((listener) => listener(user, mode));
 }
 
-export interface SignInResult {
-  user: AuthUser;
-  isNewUser: boolean;
+function normalizeError(error: unknown): { code: string; message: string } {
+  const authError = error as AuthError;
+  return {
+    code: authError.code ?? 'auth/unknown',
+    message: authError.message ?? 'Unknown authentication error',
+  };
+}
+
+function inferAuthMode(user: AuthUser): AuthMode {
+  if (!user) return getStoredAuthMode();
+  return user.isAnonymous ? 'guest' : 'google';
+}
+
+function isPopupDismissError(code: string): boolean {
+  return (
+    code === 'auth/popup-blocked' ||
+    code === 'auth/popup-closed-by-user' ||
+    code === 'auth/cancelled-popup-request'
+  );
+}
+
+function completeGoogleSignIn(user: User): SignInResult {
+  setStoredAuthMode('google');
+  const isNewUser = user.metadata?.creationTime === user.metadata?.lastSignInTime;
+  if (isNewUser) {
+    ensureUserProfile(user).catch(() => {});
+  }
+  notify(user, 'google');
+  return { user, isNewUser };
 }
 
 async function signInWithGoogle(): Promise<SignInResult> {
   if (!isFirebaseAvailable() || !auth) {
-    return { user: null, isNewUser: false };
+    return {
+      user: null,
+      isNewUser: false,
+      error: { code: 'auth/unavailable', message: 'Firebase authentication is unavailable' },
+    };
   }
 
   const provider = new GoogleAuthProvider();
 
-  try {
+  async function performPopupSignIn(): Promise<User> {
     const result = await signInWithPopup(auth, provider);
-    setStoredAuthMode('google');
-    const isNewUser = result.user.metadata?.creationTime === result.user.metadata?.lastSignInTime;
-    if (isNewUser) {
-      ensureUserProfile(result.user).catch(() => {});
+    return result.user;
+  }
+
+  async function performPopupSignInFromCurrentUser(): Promise<User | null> {
+    if (auth.currentUser?.isAnonymous) {
+      return performPopupSignIn();
     }
-    notify(result.user, 'google');
-    return { user: result.user, isNewUser };
-  } catch (popupError) {
-    const code = (popupError as { code?: string }).code;
-    if (
-      code === 'auth/popup-blocked' ||
-      code === 'auth/popup-closed-by-user' ||
-      code === 'auth/cancelled-popup-request'
-    ) {
-      setStoredAuthMode('google');
-      await signInWithRedirect(auth, provider);
-      return { user: null, isNewUser: false };
+    return performPopupSignIn();
+  }
+
+  try {
+    const user = await performPopupSignInFromCurrentUser();
+    if (!user) {
+      return {
+        user: null,
+        isNewUser: false,
+        error: { code: 'auth/popup-closed-by-user', message: 'Popup was closed before completing sign-in' },
+      };
+    }
+    return completeGoogleSignIn(user);
+  } catch (error) {
+    const normalized = normalizeError(error);
+    if (isPopupDismissError(normalized.code)) {
+      return { user: null, isNewUser: false, error: normalized };
     }
     setStoredAuthMode(null);
-    throw popupError;
+    return { user: null, isNewUser: false, error: normalized };
   }
 }
 
-function continueAsGuest(): void {
-  setStoredAuthMode('guest');
-  notify(null, 'guest');
+async function continueAsGuest(): Promise<GuestResult> {
+  if (!isFirebaseAvailable() || !auth) {
+    return { success: false };
+  }
+
+  if (!isOnline()) {
+    return { success: false, needsNetwork: true };
+  }
+
+  try {
+    const result = await signInAnonymously(auth);
+    setStoredAuthMode('guest');
+    notify(result.user, 'guest');
+    return { success: true };
+  } catch (error) {
+    console.error('Anonymous sign-in failed', error);
+    return { success: false };
+  }
 }
 
 async function signOutUser(): Promise<void> {
-  if (isFirebaseAvailable() && auth) {
-    await signOut(auth);
+  if (!isFirebaseAvailable() || !auth) {
+    setStoredAuthMode(null);
+    notify(null, null);
+    return;
   }
-  setStoredAuthMode(null);
-  notify(null, null);
+
+  await signOut(auth);
+
+  try {
+    const result = await signInAnonymously(auth);
+    setStoredAuthMode('guest');
+    notify(result.user, 'guest');
+  } catch (error) {
+    console.error('Failed to return to guest mode after sign-out', error);
+    setStoredAuthMode(null);
+    notify(null, null);
+  }
 }
 
 let redirectHandled = false;
@@ -117,20 +197,26 @@ function subscribe(callback: AuthListener): () => void {
   let initialResolved = false;
 
   const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const mode = inferAuthMode(user);
+
     if (user) {
       initialResolved = true;
-      setStoredAuthMode('google');
-      callback(user, 'google');
-    } else if (initialResolved) {
-      callback(null, getStoredAuthMode());
-    } else {
-      initialResolved = true;
-      const storedMode = getStoredAuthMode();
-      if (storedMode === 'google') {
-        return;
-      }
-      callback(null, storedMode);
+      setStoredAuthMode(mode);
+      callback(user, mode);
+      return;
     }
+
+    if (initialResolved) {
+      callback(null, getStoredAuthMode());
+      return;
+    }
+
+    initialResolved = true;
+    const storedMode = getStoredAuthMode();
+    if (storedMode === 'google') {
+      return;
+    }
+    callback(null, storedMode);
   });
 
   return () => {

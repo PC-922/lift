@@ -21,6 +21,11 @@ vi.mock('../services/firebase', () => ({
   auth: null,
 }));
 
+vi.mock('../hooks/useToast', () => ({
+  useToast: () => ({ showToast: vi.fn() }),
+  ToastProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
 const defaultProps = {
   onExport: vi.fn(),
   onImport: vi.fn(() => true),

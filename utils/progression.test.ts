@@ -303,6 +303,7 @@ describe('progression utilities', () => {
         progressionText: t.time.yesterday,
         detail: {
           type: 'weight',
+          date: '2026-02-01',
           timeSince: t.time.yesterday,
           prevWeight: 45,
           currWeight: 50,

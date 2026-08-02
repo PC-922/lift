@@ -13,7 +13,7 @@ export default defineConfig(({ mode }) => {
         react(),
         VitePWA({
           registerType: 'autoUpdate',
-          includeAssets: ['lift-32.png', 'lift-180.png', 'lift-192.png', 'lift-512.png'],
+          includeAssets: ['lift-icon.svg', 'lift-32.png', 'lift-180.png', 'lift-192.png', 'lift-512.png'],
           manifest: {
             name: 'LIFT',
             short_name: 'LIFT',
@@ -23,6 +23,12 @@ export default defineConfig(({ mode }) => {
             theme_color: '#000000',
             orientation: 'portrait',
             icons: [
+              {
+                src: '/lift-icon.svg',
+                sizes: 'any',
+                type: 'image/svg+xml',
+                purpose: 'any maskable',
+              },
               {
                 src: '/lift-192.png',
                 sizes: '192x192',

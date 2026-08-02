@@ -17,33 +17,43 @@ vi.stubGlobal('matchMedia', () => ({
   dispatchEvent: vi.fn(),
 }));
 
+const noop = vi.fn(() => Promise.resolve());
+
 vi.mock('./services/storageService', () => ({
-  storageManager: {
-    getExercises: () => Promise.resolve([]),
-    getMuscleGroups: () => Promise.resolve(['Pecho']),
-    getRoutines: () => Promise.resolve([]),
-    saveExercise: vi.fn(() => Promise.resolve()),
-    logSession: vi.fn(() => Promise.resolve()),
-    updateExerciseNote: vi.fn(() => Promise.resolve()),
-    updateExerciseLog: vi.fn(() => Promise.resolve()),
-    deleteExerciseLog: vi.fn(() => Promise.resolve()),
-    deleteAllLogs: vi.fn(() => Promise.resolve()),
-    deleteAllLogsExceptLatest: vi.fn(() => Promise.resolve()),
-    updateExerciseDetails: vi.fn(() => Promise.resolve()),
-    deleteExercise: vi.fn(() => Promise.resolve()),
-    reorderRoutine: vi.fn(() => Promise.resolve()),
-    reorderRoutineExercise: vi.fn(() => Promise.resolve()),
-    saveRoutine: vi.fn(() => Promise.resolve()),
-    deleteRoutine: vi.fn(() => Promise.resolve()),
+  makeId: (prefix: string) => `${prefix}_id`,
+  createDataStore: vi.fn(),
+}));
+
+vi.mock('./hooks/useAppData', () => ({
+  AppDataProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useAppData: () => ({
+    exercises: [],
+    muscleGroups: ['Pecho'],
+    routines: [],
+    groupSortPreference: { field: 'progress', direction: 'desc' },
+    isLoading: false,
+    syncStatus: null,
+    saveExercise: noop,
+    deleteExercise: noop,
+    updateExerciseDetails: noop,
+    updateExerciseNote: noop,
+    updateExerciseLog: noop,
+    deleteExerciseLog: noop,
+    deleteAllLogs: noop,
+    deleteAllLogsExceptLatest: noop,
+    logSession: noop,
+    addMuscleGroup: noop,
+    deleteMuscleGroup: noop,
+    renameMuscleGroup: noop,
+    saveGroupSortPreference: noop,
+    saveRoutine: noop,
+    deleteRoutine: noop,
+    reorderRoutine: noop,
+    reorderRoutineExercise: noop,
     exportData: vi.fn(() => Promise.resolve('{}')),
     importData: vi.fn(() => Promise.resolve(true)),
-    addMuscleGroup: vi.fn(() => Promise.resolve()),
-    renameMuscleGroup: vi.fn(() => Promise.resolve()),
-    deleteMuscleGroup: vi.fn(() => Promise.resolve()),
-    resetData: vi.fn(() => Promise.resolve()),
-  },
-  makeId: (prefix: string) => `${prefix}_id`,
-  setStorageUser: vi.fn(),
+    resetData: noop,
+  }),
 }));
 
 vi.mock('./services/preferencesService', () => ({
@@ -57,6 +67,7 @@ vi.mock('./services/preferencesService', () => ({
 }));
 
 vi.mock('./hooks/useToast', () => ({
+  useToast: () => ({ showToast: vi.fn() }),
   ToastProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 

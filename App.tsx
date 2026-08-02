@@ -1,13 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Routes, Route, useNavigate, useParams, useSearchParams, Navigate, useLocation } from 'react-router-dom';
-import { setStorageUser } from './services/storageService';
 import { Exercise, ExerciseLog } from './types';
 import { ExerciseList } from './components/ExerciseList';
 import { ExerciseDetail } from './components/ExerciseDetail';
 import { ExerciseFormScreen } from './components/ExerciseFormScreen';
 import { SettingsScreen } from './components/SettingsScreen';
 import { InsightsScreen } from './components/InsightsScreen';
-import { InsightDetailScreen } from './components/InsightDetailScreen';
 import { RoutinesScreen } from './components/RoutinesScreen';
 import { MuscleGroupsScreen } from './components/MuscleGroupsScreen';
 import { OnboardingScreen } from './components/OnboardingScreen';
@@ -19,8 +17,9 @@ import { RestTimerProvider } from './hooks/useRestTimer';
 import { RestTimer } from './components/RestTimer';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { AppDataProvider, useAppData } from './hooks/useAppData';
-import { storageManager } from './services/storageService';
 import { useTranslations } from './utils/translations';
+import { useSyncStatus } from './hooks/useSyncStatus';
+import { createSharedRoutine, serializeSharedRoutine } from './services/routineShareService';
 import { Download, MoreVertical, Plus, PlusSquare, Share } from 'lucide-react';
 import { Button } from './components/ui/Button';
 import { Surface } from './components/ui/Surface';
@@ -29,7 +28,7 @@ import { cn } from './utils/cn';
 
 const HomeScreen: React.FC = () => {
   const t = useTranslations();
-  const { exercises, muscleGroups } = useAppData();
+  const { exercises, muscleGroups, deleteExercise } = useAppData();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -57,7 +56,6 @@ const HomeScreen: React.FC = () => {
   };
 
   const [deletingExercise, setDeletingExercise] = useState<Exercise | null>(null);
-  const { refresh } = useAppData();
 
   return (
     <div className="space-y-8">
@@ -65,14 +63,14 @@ const HomeScreen: React.FC = () => {
         <Button
           onClick={() => navigate('/exercises/new')}
           size="lg"
-          className="w-full rounded-2xl shadow-xl shadow-app-accent/10"
+          className="w-full"
         >
           <Plus size={24} strokeWidth={3} />
           {t.labels.newExercise}
         </Button>
 
         <Button
-          onClick={() => navigate('/settings/muscle-groups')}
+          onClick={() => navigate('/exercises/groups')}
           variant="secondary"
           size="md"
           className="w-full border-2 border-dashed rounded-2xl border-app-border/50 text-app-text-muted"
@@ -100,9 +98,8 @@ const HomeScreen: React.FC = () => {
           confirmLabel={t.actions.delete}
           destructive
           onConfirm={async () => {
-            await storageManager.deleteExercise(deletingExercise.id);
+            await deleteExercise(deletingExercise.id);
             setDeletingExercise(null);
-            await refresh();
           }}
           onCancel={() => setDeletingExercise(null)}
         />
@@ -113,7 +110,7 @@ const HomeScreen: React.FC = () => {
 
 const ExerciseDetailRoute: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { exercises, muscleGroups, refresh } = useAppData();
+  const { exercises, muscleGroups, logSession, updateExerciseNote, updateExerciseLog, deleteExerciseLog, deleteAllLogs, deleteAllLogsExceptLatest, updateExerciseDetails, deleteExercise } = useAppData();
   const navigate = useNavigate();
   const exercise = id ? (exercises.find((e) => e.id === id) ?? null) : null;
 
@@ -127,41 +124,32 @@ const ExerciseDetailRoute: React.FC = () => {
       muscleGroups={muscleGroups}
       onBack={() => navigate(-1)}
       onLog={async (weight, reps) => {
-        await storageManager.logSession(exercise.id, weight, reps);
-        await refresh();
+        await logSession(exercise.id, weight, reps);
       }}
       onUpdateNote={async (note) => {
-        await storageManager.updateExerciseNote(exercise.id, note);
-        await refresh();
+        await updateExerciseNote(exercise.id, note);
       }}
       onUpdateLog={async (originalDate, log) => {
-        await storageManager.updateExerciseLog(exercise.id, originalDate, log);
-        await refresh();
+        await updateExerciseLog(exercise.id, originalDate, log);
       }}
       onDeleteLog={async (date) => {
-        await storageManager.deleteExerciseLog(exercise.id, date);
-        await refresh();
+        await deleteExerciseLog(exercise.id, date);
       }}
       onDeleteAllLogs={async () => {
-        await storageManager.deleteAllLogs(exercise.id);
-        await refresh();
+        await deleteAllLogs(exercise.id);
       }}
       onDeleteAllLogsExceptLatest={async () => {
-        await storageManager.deleteAllLogsExceptLatest(exercise.id);
-        await refresh();
+        await deleteAllLogsExceptLatest(exercise.id);
       }}
       onRename={async (name) => {
-        await storageManager.updateExerciseDetails(exercise.id, name, exercise.muscleGroup);
-        await refresh();
+        await updateExerciseDetails(exercise.id, name, exercise.muscleGroup);
       }}
       onChangeGroup={async (group) => {
-        await storageManager.updateExerciseDetails(exercise.id, exercise.name, group);
-        await refresh();
+        await updateExerciseDetails(exercise.id, exercise.name, group);
       }}
       onDelete={async () => {
-        await storageManager.deleteExercise(exercise.id);
+        await deleteExercise(exercise.id);
         navigate('/', { replace: true });
-        await refresh();
       }}
     />
   );
@@ -173,15 +161,33 @@ const InsightsRoute: React.FC = () => {
   return (
     <InsightsScreen
       exercises={exercises}
-      onSelectExercise={(id) => navigate(`/insights/${id}`)}
+      onSelectExercise={(id) => navigate(`/exercises/${id}`)}
     />
   );
 };
 
 const RoutinesRoute: React.FC = () => {
-  const { exercises, muscleGroups, routines, refresh } = useAppData();
+  const { exercises, muscleGroups, routines, saveRoutine, deleteRoutine, logSession, reorderRoutine, reorderRoutineExercise, updateExerciseNote, updateExerciseLog, deleteExerciseLog, deleteAllLogs, deleteAllLogsExceptLatest, deleteExercise, importRoutine } = useAppData();
   const navigate = useNavigate();
   const [activeRoutineId, setActiveRoutineId] = useState<string | null>(null);
+
+  const handleShareRoutine = (routine: import('./types').Routine) => {
+    const shared = createSharedRoutine(routine, exercises);
+    const blob = new Blob([serializeSharedRoutine(shared)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${routine.name.replace(/\s+/g, '_')}_routine.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportRoutine = async (file: File): Promise<boolean> => {
+    const content = await file.text();
+    return importRoutine(content);
+  };
 
   return (
     <RoutinesScreen
@@ -191,62 +197,53 @@ const RoutinesRoute: React.FC = () => {
       activeRoutineId={activeRoutineId}
       onActiveRoutineChange={setActiveRoutineId}
       onSaveRoutine={async (routine) => {
-        await storageManager.saveRoutine(routine);
-        await refresh();
+        await saveRoutine(routine);
       }}
       onDeleteRoutine={async (id) => {
-        await storageManager.deleteRoutine(id);
-        await refresh();
+        await deleteRoutine(id);
       }}
       onLogExercise={async (id, weight, reps) => {
-        await storageManager.logSession(id, weight, reps);
-        await refresh();
+        await logSession(id, weight, reps);
       }}
       onReorderRoutine={async (from, to) => {
-        await storageManager.reorderRoutine(from, to);
-        await refresh();
+        await reorderRoutine(from, to);
       }}
       onReorderRoutineExercise={async (routineId, dayId, from, to) => {
-        await storageManager.reorderRoutineExercise(routineId, dayId, from, to);
-        await refresh();
+        await reorderRoutineExercise(routineId, dayId, from, to);
       }}
       onUpdateNote={async (id, note) => {
-        await storageManager.updateExerciseNote(id, note);
-        await refresh();
+        await updateExerciseNote(id, note);
       }}
       onUpdateLog={async (exerciseId, originalDate, log) => {
-        await storageManager.updateExerciseLog(exerciseId, originalDate, log);
-        await refresh();
+        await updateExerciseLog(exerciseId, originalDate, log);
       }}
       onDeleteLog={async (exerciseId, date) => {
-        await storageManager.deleteExerciseLog(exerciseId, date);
-        await refresh();
+        await deleteExerciseLog(exerciseId, date);
       }}
       onDeleteAllLogs={async (exerciseId) => {
-        await storageManager.deleteAllLogs(exerciseId);
-        await refresh();
+        await deleteAllLogs(exerciseId);
       }}
       onDeleteAllLogsExceptLatest={async (exerciseId) => {
-        await storageManager.deleteAllLogsExceptLatest(exerciseId);
-        await refresh();
+        await deleteAllLogsExceptLatest(exerciseId);
       }}
       onDeleteExercise={async (id) => {
-        await storageManager.deleteExercise(id);
-        await refresh();
+        await deleteExercise(id);
       }}
       onNavigateToExercise={(id) => navigate(`/exercises/${id}`)}
+      onShareRoutine={handleShareRoutine}
+      onImportRoutine={handleImportRoutine}
       resetSignal={0}
     />
   );
 };
 
 const SettingsRoute: React.FC = () => {
-  const { refresh } = useAppData();
+  const { exportData, importData, resetData } = useAppData();
 
   return (
     <SettingsScreen
       onExport={async () => {
-        const data = await storageManager.exportData();
+        const data = await exportData();
         const blob = new Blob([data], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -258,14 +255,31 @@ const SettingsRoute: React.FC = () => {
         URL.revokeObjectURL(url);
       }}
       onImport={async (content) => {
-        const success = await storageManager.importData(content);
-        if (success) await refresh();
-        return success;
+        return importData(content);
       }}
       onResetData={async () => {
-        await storageManager.resetData();
-        await refresh();
+        await resetData();
       }}
+    />
+  );
+};
+
+const SyncIndicator: React.FC = () => {
+  const { state } = useSyncStatus();
+  const dotClass =
+    state === 'synced'
+      ? 'bg-app-success'
+      : state === 'syncing' || state === 'pending'
+      ? 'bg-app-warning'
+      : state === 'offline'
+      ? 'bg-app-text-muted'
+      : 'bg-app-danger';
+
+  return (
+    <span
+      className={`inline-block h-2 w-2 rounded-full ${dotClass}`}
+      title={state}
+      aria-hidden="true"
     />
   );
 };
@@ -298,7 +312,7 @@ const AppLayout: React.FC = () => {
 
   const showHeader = currentScreen === 'home' && !location.pathname.startsWith('/exercises/');
   const appHeaderClassName = 'px-4 pt-6 pb-4';
-  const appHeaderTitleClassName = 'text-center text-4xl font-black tracking-tighter text-app-text uppercase italic';
+  const appHeaderTitleClassName = 'text-xl font-bold text-app-text';
 
   if (isLoading) {
     return (
@@ -313,33 +327,32 @@ const AppLayout: React.FC = () => {
       <div className="min-h-screen pb-24 sm:mx-auto sm:max-w-md">
           {showHeader && (
             <header className={cn('sticky top-0 z-20 bg-app-bg', appHeaderClassName)}>
-              <div className="relative">
-                <h1 className={appHeaderTitleClassName}>{t.appTitle}</h1>
-                <div className="absolute right-0 top-1/2 -translate-y-1/2">
-                  {!isStandalone && (
-                    <Button
-                      onClick={() => setIsInstallModalOpen(true)}
-                      size="sm"
-                      className="gap-1"
-                    >
-                      <Download size={14} />
-                      {t.actions.install}
-                    </Button>
-                  )}
-                </div>
+              <div className="flex items-center justify-between gap-3">
+                <h1 className={cn(appHeaderTitleClassName, 'flex items-center gap-2')}>
+                  {t.appTitle}
+                  <SyncIndicator />
+                </h1>
+                {!isStandalone && (
+                  <Button
+                    onClick={() => setIsInstallModalOpen(true)}
+                    size="sm"
+                    className="gap-1"
+                  >
+                    <Download size={14} />
+                    {t.actions.install}
+                  </Button>
+                )}
               </div>
             </header>
           )}
 
           {currentScreen !== 'home' && !location.pathname.startsWith('/exercises/') && (
             <header className={cn('sticky top-0 z-20 bg-app-bg', appHeaderClassName)}>
-              <div className="relative">
-                <h1 className={appHeaderTitleClassName}>
-                  {currentScreen === 'insights' ? t.labels.insights
-                    : currentScreen === 'routines' ? t.labels.routines
-                    : t.labels.settings}
-                </h1>
-              </div>
+              <h1 className={appHeaderTitleClassName}>
+                {currentScreen === 'insights' ? t.labels.insights
+                  : currentScreen === 'routines' ? t.labels.routines
+                  : t.labels.settings}
+              </h1>
             </header>
           )}
 
@@ -349,11 +362,11 @@ const AppLayout: React.FC = () => {
               <Route path="/exercises/new" element={<ExerciseFormScreen />} />
               <Route path="/exercises/:id/edit" element={<ExerciseFormScreen />} />
               <Route path="/exercises/:id" element={<ExerciseDetailRoute />} />
+              <Route path="/exercises/groups" element={<MuscleGroupsScreen />} />
               <Route path="/insights" element={<InsightsRoute />} />
-              <Route path="/insights/:id" element={<InsightDetailScreen />} />
               <Route path="/routines" element={<RoutinesRoute />} />
               <Route path="/settings" element={<SettingsRoute />} />
-              <Route path="/settings/muscle-groups" element={<MuscleGroupsScreen />} />
+              <Route path="/settings/muscle-groups" element={<Navigate to="/exercises/groups" replace />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </main>
@@ -409,10 +422,12 @@ const AppLayout: React.FC = () => {
 const AppContent: React.FC = () => {
   const { user, mode: authMode } = useAuth();
 
-  setStorageUser(user, authMode);
-
   if (authMode === null) {
-    return <OnboardingScreen />;
+    return (
+      <ToastProvider>
+        <OnboardingScreen />
+      </ToastProvider>
+    );
   }
 
   const adapterKey = `${user?.uid ?? 'anon'}-${authMode}`;

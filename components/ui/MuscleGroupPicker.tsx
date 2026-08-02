@@ -29,7 +29,7 @@ export const MuscleGroupPicker: React.FC<Props> = ({
           className={cn(
             'truncate rounded-lg border px-1 py-2 text-sm font-medium transition-colors',
             group === selected
-              ? 'border-app-accent bg-app-accent text-app-accent-foreground'
+              ? 'border-app-text bg-app-text text-app-surface'
               : 'border-app-border bg-app-surface text-app-text active:bg-app-surface-muted'
           )}
         >

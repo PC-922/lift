@@ -111,10 +111,10 @@ export const ExerciseList: React.FC<Props> = ({
           <button
             onClick={() => setActiveGroup(null)}
             className={cn(
-              'flex-shrink-0 rounded-full border-2 px-4 py-2 text-xs font-bold transition-all select-none',
+              'flex-shrink-0 rounded-md px-4 py-2 text-xs font-medium transition-all select-none',
               activeGroup === null
-                ? 'border-app-accent bg-app-accent text-app-accent-foreground scale-105'
-                : 'border-app-border bg-app-surface text-app-text-muted active:scale-95'
+                ? 'bg-app-text text-app-surface'
+                : 'bg-app-chip-bg text-app-chip-text active:opacity-70'
             )}
           >
             {t.labels.allGroups}
@@ -125,10 +125,10 @@ export const ExerciseList: React.FC<Props> = ({
               key={group}
               onClick={() => setActiveGroup(activeGroup === group ? null : group)}
               className={cn(
-                'flex-shrink-0 rounded-full border-2 px-4 py-2 text-xs font-bold transition-all select-none',
+                'flex-shrink-0 rounded-md px-4 py-2 text-xs font-medium transition-all select-none',
                 activeGroup === group
-                  ? 'border-app-accent bg-app-accent text-app-accent-foreground scale-105'
-                  : 'border-app-border bg-app-surface text-app-text-muted active:scale-95'
+                  ? 'bg-app-text text-app-surface'
+                  : 'bg-app-chip-bg text-app-chip-text active:opacity-70'
               )}
             >
               {getTranslatedGroupName(group)}

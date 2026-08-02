@@ -12,52 +12,17 @@ interface RestTimerContextType extends RestTimerState {
 
 const RestTimerContext = createContext<RestTimerContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'restTimerState';
-
 const DEFAULT_DURATION = 90;
 
 export const RestTimerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [state, setState] = useState<RestTimerState>(() => {
-    try {
-      if (typeof localStorage !== 'undefined' && localStorage.getItem) {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) {
-          const parsed = JSON.parse(saved) as Partial<RestTimerState>;
-          return {
-            remainingTime: parsed.remainingTime ?? 0,
-            duration: parsed.duration ?? DEFAULT_DURATION,
-            isActive: false,
-            isMinimized: true,
-          };
-        }
-      }
-    } catch {
-      // fall through
-    }
-    return {
-      remainingTime: 0,
-      isActive: false,
-      duration: DEFAULT_DURATION,
-      isMinimized: true,
-    };
+  const [state, setState] = useState<RestTimerState>({
+    remainingTime: 0,
+    isActive: false,
+    duration: DEFAULT_DURATION,
+    isMinimized: true,
   });
 
   const endTimeRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    try {
-      if (typeof localStorage !== 'undefined' && localStorage.setItem) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({
-          remainingTime: state.remainingTime,
-          duration: state.duration,
-          isMinimized: state.isMinimized,
-          isActive: false,
-        }));
-      }
-    } catch {
-      // Ignore storage failures.
-    }
-  }, [state.remainingTime, state.duration, state.isMinimized]);
 
   const syncTimer = useCallback(() => {
     const endTime = endTimeRef.current;

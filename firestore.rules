@@ -2,24 +2,57 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function matchesOwner(doc) {
+      return isAuthenticated() && doc.ownerId == request.auth.uid;
+    }
+
+    function isValidExercise(exercise) {
+      return exercise.keys().hasAll(['id', 'name', 'muscleGroup', 'logs', 'ownerId', 'updatedAt'])
+        && exercise.id is string
+        && exercise.name is string
+        && exercise.muscleGroup is string
+        && exercise.ownerId == request.auth.uid;
+    }
+
+    function isValidRoutine(routine) {
+      return routine.keys().hasAll(['id', 'name', 'days', 'ownerId', 'updatedAt'])
+        && routine.id is string
+        && routine.name is string
+        && routine.ownerId == request.auth.uid;
+    }
 
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if isOwner(userId);
 
       match /profile/data {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read, write: if isOwner(userId);
       }
 
       match /exercises/{exerciseId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidExercise(request.resource.data);
+        allow update: if isOwner(userId) && matchesOwner(request.resource.data);
+        allow delete: if isOwner(userId);
       }
 
       match /routines/{routineId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidRoutine(request.resource.data);
+        allow update: if isOwner(userId) && matchesOwner(request.resource.data);
+        allow delete: if isOwner(userId);
       }
 
       match /metadata/{docId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read: if isOwner(userId);
+        allow write: if isOwner(userId) && request.resource.data.ownerId == request.auth.uid;
       }
     }
   }

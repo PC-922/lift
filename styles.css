@@ -4,31 +4,37 @@
 
 :root {
   color-scheme: light;
-  --color-bg: #f5f7f1;
-  --color-surface: #ffffff;
-  --color-surface-muted: #eef2e7;
-  --color-text: #111411;
-  --color-text-muted: #5f665b;
-  --color-border: #d7ddd0;
+  --color-bg: #F4F5F0;
+  --color-surface: #FFFFFF;
+  --color-surface-muted: #F3F4F6;
+  --color-text: #111827;
+  --color-text-muted: #6B7280;
+  --color-border: #E5E7EB;
   --color-accent: #cdff00;
-  --color-accent-foreground: #0b1100;
-  --color-danger: #d84b3c;
-  --color-success: #18834d;
-  --color-warning: #a46e00;
+  --color-accent-foreground: #000000;
+  --color-accent-text: #15803D;
+  --color-chip-bg: #E5E7EB;
+  --color-chip-text: #374151;
+  --color-danger: #EF4444;
+  --color-success: #16A34A;
+  --color-warning: #CA8A04;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
-    --color-bg: #0b0d0a;
-    --color-surface: #131613;
-    --color-surface-muted: #1a1f18;
-    --color-text: #f3f5ed;
-    --color-text-muted: #a4aa9c;
-    --color-border: #2a3228;
+    --color-bg: #0F1012;
+    --color-surface: #1A1C1E;
+    --color-surface-muted: #2A2D32;
+    --color-text: #F2F4F7;
+    --color-text-muted: #98A2B3;
+    --color-border: #2A2D32;
     --color-accent: #cdff00;
-    --color-accent-foreground: #0b1100;
-    --color-danger: #ff6b5e;
+    --color-accent-foreground: #000000;
+    --color-accent-text: #cdff00;
+    --color-chip-bg: #2A2D32;
+    --color-chip-text: #D0D5DD;
+    --color-danger: #EF4444;
     --color-success: #4cd38c;
     --color-warning: #f2c14e;
   }
@@ -48,8 +54,8 @@ body {
   padding-top: env(safe-area-inset-top);
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
-  font-family: 'JetBrains Mono Variable', 'ui-monospace', 'SFMono-Regular', 'Menlo', monospace;
-  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-variant-numeric: proportional-nums;
 }
 
 * {
@@ -69,6 +75,12 @@ body {
 .home-header-divider {
   border-bottom: 1px solid var(--color-border);
   border-bottom-color: color-mix(in srgb, var(--color-border) 45%, transparent);
+}
+
+@layer utilities {
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
 }
 
 @keyframes slideDown {
