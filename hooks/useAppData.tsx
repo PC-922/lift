@@ -355,17 +355,28 @@ export const AppDataProvider: React.FC<{ children: ReactNode }> = ({ children })
       const data = parseBackup(jsonString);
       if (!data) return false;
 
+      const exerciseBaseOrder = exercises.reduce((max, item) => {
+        const value = item.order;
+        return typeof value === 'number' && value > max ? value : max;
+      }, -1);
+      const routineBaseOrder = routines.reduce((max, item) => {
+        const value = item.order;
+        return typeof value === 'number' && value > max ? value : max;
+      }, -1);
+
       await dataStore.saveMuscleGroups(data.muscleGroups);
       await dataStore.saveGroupSortPreference(data.sortPreference);
-      for (const exercise of data.exercises) {
-        await dataStore.saveExercise(exercise);
-      }
-      for (const routine of data.routines) {
-        await dataStore.saveRoutine(routine);
-      }
+      data.exercises.forEach((exercise, index) => {
+        const order = typeof exercise.order === 'number' ? exercise.order : exerciseBaseOrder + 1 + index;
+        void dataStore.saveExercise({ ...exercise, order });
+      });
+      data.routines.forEach((routine, index) => {
+        const order = typeof routine.order === 'number' ? routine.order : routineBaseOrder + 1 + index;
+        void dataStore.saveRoutine({ ...routine, order, updatedAt: nowIso() });
+      });
       return true;
     },
-    []
+    [exercises, routines]
   );
 
   const importRoutine = useCallback(
@@ -379,14 +390,20 @@ export const AppDataProvider: React.FC<{ children: ReactNode }> = ({ children })
       const updatedGroups = new Set(muscleGroups);
       createdExercises.forEach((exercise) => updatedGroups.add(exercise.muscleGroup));
 
+      const exerciseBaseOrder = exercises.reduce((max, item) => {
+        const value = item.order;
+        return typeof value === 'number' && value > max ? value : max;
+      }, -1);
+
       await dataStore.saveMuscleGroups(Array.from(updatedGroups));
-      for (const exercise of createdExercises) {
-        await dataStore.saveExercise(exercise);
-      }
-      await dataStore.saveRoutine(routine);
+      createdExercises.forEach((exercise, index) => {
+        const order = typeof exercise.order === 'number' ? exercise.order : exerciseBaseOrder + 1 + index;
+        void dataStore.saveExercise({ ...exercise, order });
+      });
+      await dataStore.saveRoutine({ ...routine, order: routines.length, updatedAt: nowIso() });
       return true;
     },
-    [exercises, muscleGroups]
+    [exercises, muscleGroups, routines]
   );
 
   const resetData = useCallback(async () => {

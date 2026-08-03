@@ -66,10 +66,13 @@ vi.mock('../services/storage/legacyMigration', () => ({
   migrateLegacyDataIfNeeded: vi.fn(() => Promise.resolve()),
 }));
 
-vi.mock('../services/exportImport', () => ({
-  exportData: vi.fn(() => '{}'),
-  importData: vi.fn(() => ({ exercises: [], routines: [], muscleGroups: [], sortPreference: { field: 'progress', direction: 'desc' } })),
-}));
+vi.mock('../services/exportImport', async () => {
+  const actual = await vi.importActual<typeof import('../services/exportImport')>('../services/exportImport');
+  return {
+    exportData: vi.fn(actual.exportData),
+    importData: actual.importData,
+  };
+});
 
 const wrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <AppDataProvider>{children}</AppDataProvider>
@@ -250,6 +253,7 @@ describe('useAppData', () => {
           name: 'Day A',
           exercises: [
             { exerciseId: 'ex_squat', sets: 4, reps: '5', dropset: false, toFailure: false },
+            { exerciseId: 'ex_legpress', sets: 3, reps: '10', dropset: false, toFailure: false },
           ],
         },
       ],
@@ -272,5 +276,57 @@ describe('useAppData', () => {
     expect(dataStore.saveRoutine).toHaveBeenCalled();
     const savedRoutine = vi.mocked(dataStore.saveRoutine).mock.calls[0][0] as Routine;
     expect(savedRoutine.name).toBe('Leg Day');
+    expect(typeof savedRoutine.order).toBe('number');
+
+    const saveExerciseCalls = vi.mocked(dataStore.saveExercise).mock.calls;
+    saveExerciseCalls.forEach(([exercise]) => {
+      expect(typeof exercise.order).toBe('number');
+    });
+  });
+});
+
+describe('useAppData import order stamping', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('stamps order on imported exercises and routines from a backup', async () => {
+    const dataStore = createMockDataStore({
+      exercises: [
+        { id: 'existing_1', name: 'Existing', muscleGroup: 'Back', logs: [], order: 5 },
+      ],
+      routines: [
+        { id: 'existing_r', name: 'Existing Routine', days: [], order: 2 },
+      ],
+    });
+    const { createDataStore } = await import('../services/storageService');
+    vi.mocked(createDataStore).mockReturnValue(dataStore);
+
+    const { result } = renderHook(() => useAppData(), { wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    const json = JSON.stringify({
+      exercises: [
+        { id: 'new_a', name: 'New A', muscleGroup: 'Back', logs: [] },
+        { id: 'new_b', name: 'New B', muscleGroup: 'Chest', logs: [] },
+      ],
+      groups: ['Back', 'Chest', 'NewGroup'],
+      routines: [
+        { id: 'new_r', name: 'New Routine', days: [] },
+      ],
+      sortPreference: { field: 'progress', direction: 'desc' },
+    });
+
+    await act(async () => {
+      await result.current.importData(json);
+    });
+
+    const calls = vi.mocked(dataStore.saveExercise).mock.calls;
+    expect(calls).toHaveLength(2);
+    const orders = calls.map(([ex]) => ex.order).sort((a, b) => a - b);
+    expect(orders).toEqual([6, 7]);
+
+    const routineCall = vi.mocked(dataStore.saveRoutine).mock.calls[0];
+    expect(routineCall[0].order).toBe(3);
   });
 });

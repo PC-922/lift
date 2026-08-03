@@ -18,7 +18,6 @@ import { RestTimer } from './components/RestTimer';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { AppDataProvider, useAppData } from './hooks/useAppData';
 import { useTranslations } from './utils/translations';
-import { useSyncStatus } from './hooks/useSyncStatus';
 import { createSharedRoutine, serializeSharedRoutine } from './services/routineShareService';
 import { Download, MoreVertical, Plus, PlusSquare, Share } from 'lucide-react';
 import { Button } from './components/ui/Button';
@@ -264,26 +263,6 @@ const SettingsRoute: React.FC = () => {
   );
 };
 
-const SyncIndicator: React.FC = () => {
-  const { state } = useSyncStatus();
-  const dotClass =
-    state === 'synced'
-      ? 'bg-app-success'
-      : state === 'syncing' || state === 'pending'
-      ? 'bg-app-warning'
-      : state === 'offline'
-      ? 'bg-app-text-muted'
-      : 'bg-app-danger';
-
-  return (
-    <span
-      className={`inline-block h-2 w-2 rounded-full ${dotClass}`}
-      title={state}
-      aria-hidden="true"
-    />
-  );
-};
-
 const AppLayout: React.FC = () => {
   const t = useTranslations();
   const location = useLocation();
@@ -330,7 +309,6 @@ const AppLayout: React.FC = () => {
               <div className="flex items-center justify-between gap-3">
                 <h1 className={cn(appHeaderTitleClassName, 'flex items-center gap-2')}>
                   {t.appTitle}
-                  <SyncIndicator />
                 </h1>
                 {!isStandalone && (
                   <Button

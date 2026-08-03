@@ -88,6 +88,26 @@ export function createFirestoreDataStore(db: Firestore, uid: string): DataStore 
     ownerId: uid,
   });
 
+  async function nextExerciseOrder(): Promise<number> {
+    const snapshot = await getDocs(exercisesRef);
+    let max = -1;
+    snapshot.forEach((d) => {
+      const value = (d.data() as { order?: number }).order;
+      if (typeof value === 'number' && value > max) max = value;
+    });
+    return max + 1;
+  }
+
+  async function nextRoutineOrder(): Promise<number> {
+    const snapshot = await getDocs(routinesRef);
+    let max = -1;
+    snapshot.forEach((d) => {
+      const value = (d.data() as { order?: number }).order;
+      if (typeof value === 'number' && value > max) max = value;
+    });
+    return max + 1;
+  }
+
   return {
     uid,
 
@@ -178,9 +198,10 @@ export function createFirestoreDataStore(db: Firestore, uid: string): DataStore 
     },
 
     async saveExercise(exercise) {
+      const order = typeof exercise.order === 'number' ? exercise.order : await nextExerciseOrder();
       await setDoc(
         doc(exercisesRef, exercise.id),
-        deepClean(withOwner({ ...exercise, updatedAt: new Date().toISOString() })),
+        deepClean(withOwner({ ...exercise, order, updatedAt: new Date().toISOString() })),
         { merge: true }
       );
     },
@@ -190,9 +211,10 @@ export function createFirestoreDataStore(db: Firestore, uid: string): DataStore 
     },
 
     async saveRoutine(routine) {
+      const order = typeof routine.order === 'number' ? routine.order : await nextRoutineOrder();
       await setDoc(
         doc(routinesRef, routine.id),
-        deepClean(withOwner({ ...routine, updatedAt: new Date().toISOString() })),
+        deepClean(withOwner({ ...routine, order, updatedAt: new Date().toISOString() })),
         { merge: true }
       );
     },

@@ -14,7 +14,7 @@ import ConfirmModal from './ConfirmModal';
 
 interface Props {
   onExport: () => void;
-  onImport: (content: string) => boolean;
+  onImport: (content: string) => Promise<boolean>;
   onResetData: () => Promise<void>;
 }
 
@@ -26,6 +26,7 @@ export const SettingsScreen: React.FC<Props> = ({ onExport, onImport, onResetDat
   const { signOut, signInWithGoogle, mode } = useAuth();
   const isSignedIn = mode === 'google';
   const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [isImporting, setIsImporting] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -55,15 +56,21 @@ export const SettingsScreen: React.FC<Props> = ({ onExport, onImport, onResetDat
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       const content = event.target?.result as string;
-      const success = onImport(content);
-
-      if (success) {
-        setImportStatus('success');
-        setTimeout(() => setImportStatus('idle'), 1500);
-      } else {
+      setIsImporting(true);
+      try {
+        const success = await onImport(content);
+        if (success) {
+          setImportStatus('success');
+          setTimeout(() => setImportStatus('idle'), 1500);
+        } else {
+          setImportStatus('error');
+        }
+      } catch {
         setImportStatus('error');
+      } finally {
+        setIsImporting(false);
       }
     };
     reader.readAsText(file);
@@ -150,7 +157,7 @@ export const SettingsScreen: React.FC<Props> = ({ onExport, onImport, onResetDat
         </ListRow>
 
          <ListRow padded={false}>
-           <button onClick={handleImportClick} className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors active:bg-app-surface-muted sm:px-5 sm:py-5">
+           <button onClick={handleImportClick} disabled={isImporting} className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors active:bg-app-surface-muted sm:px-5 sm:py-5">
              <Badge variant="neutral" className="rounded-xl px-3 py-3 bg-app-surface-muted text-app-text-muted border-none"><Upload size={20} /></Badge>
              <div className="text-left">
                <div className="font-semibold text-app-text">{t.actions.import}</div>
