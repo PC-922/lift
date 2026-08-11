@@ -109,42 +109,4 @@ describe('useRestTimer', () => {
     expect(result.current.remainingTime).toBe(90);
     expect(result.current.duration).toBe(60);
   });
-
-  it('debe expandirse al resetear y permitir minimizarse', () => {
-    const { result } = renderHook(() => useRestTimer(), { wrapper });
-
-    // Inicia minimizado por defecto
-    expect(result.current.isMinimized).toBe(true);
-
-    act(() => {
-      result.current.selectDuration(90);
-      result.current.resetTimer();
-    });
-
-    // Al resetear debe expandirse y detenerse
-    expect(result.current.isMinimized).toBe(false);
-    expect(result.current.isActive).toBe(false);
-
-    act(() => {
-      result.current.setMinimized(true);
-    });
-
-    expect(result.current.isMinimized).toBe(true);
-  });
-
-  it('debe poder minimizarse y expandirse', () => {
-    const { result } = renderHook(() => useRestTimer(), { wrapper });
-
-    act(() => {
-      result.current.setMinimized(true);
-    });
-
-    expect(result.current.isMinimized).toBe(true);
-
-    act(() => {
-      result.current.setMinimized(false);
-    });
-
-    expect(result.current.isMinimized).toBe(false);
-  });
 });

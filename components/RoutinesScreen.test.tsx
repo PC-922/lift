@@ -194,6 +194,36 @@ describe('RoutinesScreen', () => {
     expect(nameInput).toBeTruthy();
   });
 
+  it('shows selected exercises before unselected ones in the edit modal', async () => {
+    const customExercises: Exercise[] = [
+      { id: 'ex1', name: 'Z Press', muscleGroup: 'Pecho', logs: [] },
+      { id: 'ex2', name: 'Bench Press', muscleGroup: 'Pecho', logs: [] },
+      { id: 'ex3', name: 'Curl', muscleGroup: 'Bíceps', logs: [] },
+    ];
+    const selectedRoutine: Routine[] = [
+      {
+        id: 'r1',
+        name: 'Push Day',
+        days: [{ id: dayId, name: 'Día 1', exercises: [{ exerciseId: 'ex1', sets: 3, reps: '10', dropset: false, toFailure: false }] }],
+      },
+    ];
+    renderWithToast(<RoutinesScreen {...defaultProps} exercises={customExercises} routines={selectedRoutine} />);
+
+    const menus = screen.getAllByRole('button', { name: 'Menu' });
+    fireEvent.click(menus[0]);
+    await act(() => vi.runAllTimersAsync());
+    fireEvent.click(screen.getByText(t.actions.edit));
+
+    const exerciseButtons = screen
+      .getAllByRole('button')
+      .map((button) => button.textContent ?? '')
+      .filter((text) => ['Z Press', 'Bench Press', 'Curl'].some((name) => text.includes(name)));
+
+    expect(exerciseButtons[0]).toContain('Z Press');
+    expect(exerciseButtons[1]).toContain('Bench Press');
+    expect(exerciseButtons[2]).toContain('Curl');
+  });
+
   it('calls onSaveRoutine with updated routine when editing', async () => {
     const onSaveRoutine = vi.fn();
     renderWithToast(<RoutinesScreen {...defaultProps} onSaveRoutine={onSaveRoutine} />);

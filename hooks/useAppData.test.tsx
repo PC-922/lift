@@ -3,7 +3,7 @@ import { renderHook, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AppDataProvider, useAppData } from './useAppData';
 import { DataStore, DataStoreSnapshot, DataStoreStatus } from '../services/storage/dataStore';
-import { Exercise, GroupSortPreference, Routine } from '../types';
+import { Exercise, GroupSortPreference, Routine, Workout } from '../types';
 import { createSharedRoutine, serializeSharedRoutine } from '../services/routineShareService';
 
 const createMockDataStore = (initial: Partial<DataStoreSnapshot> = {}): DataStore => {
@@ -12,6 +12,7 @@ const createMockDataStore = (initial: Partial<DataStoreSnapshot> = {}): DataStor
     routines: [],
     muscleGroups: [],
     groupSortPreference: { field: 'progress', direction: 'desc' },
+    workouts: [],
     ...initial,
   };
 
@@ -46,6 +47,11 @@ const createMockDataStore = (initial: Partial<DataStoreSnapshot> = {}): DataStor
       snapshot = { ...snapshot, groupSortPreference: preference };
       onData?.(snapshot);
     }),
+    saveWorkout: vi.fn(async (workout: Workout) => {
+      snapshot = { ...snapshot, workouts: [workout, ...snapshot.workouts] };
+      onData?.(snapshot);
+    }),
+    deleteWorkout: vi.fn(() => Promise.resolve()),
     resetData: vi.fn(() => Promise.resolve()),
   };
 };
@@ -157,6 +163,41 @@ describe('useAppData', () => {
     });
 
     expect(dataStore.deleteExercise).toHaveBeenCalledWith('ex_1');
+  });
+
+  it('finishes a workout, saving it and writing the best set into the exercise log', async () => {
+    const exercise: Exercise = {
+      id: 'ex_1',
+      name: 'Bench Press',
+      muscleGroup: 'Chest',
+      logs: [{ date: '2026-01-01', weight: 60, reps: 8 }],
+    };
+    const dataStore = createMockDataStore({ exercises: [exercise] });
+    const { createDataStore } = await import('../services/storageService');
+    vi.mocked(createDataStore).mockReturnValue(dataStore);
+
+    const { result } = renderHook(() => useAppData(), { wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    const workout: Workout = {
+      id: 'w_1',
+      name: 'Push Day',
+      startedAt: '2026-01-02T10:00:00.000Z',
+      finishedAt: '2026-01-02T11:00:00.000Z',
+      entries: [
+        { exerciseId: 'ex_1', sets: [{ weight: 80, reps: 10 }, { weight: 75, reps: 12 }] },
+      ],
+    };
+
+    await act(async () => {
+      await result.current.finishWorkout(workout);
+    });
+
+    expect(dataStore.saveWorkout).toHaveBeenCalledWith(expect.objectContaining({ id: 'w_1' }));
+
+    const today = new Date().toISOString().split('T')[0];
+    const savedExercise = vi.mocked(dataStore.saveExercise).mock.calls.at(-1)?.[0] as Exercise;
+    expect(savedExercise.logs).toContainEqual({ date: today, weight: 80, reps: 10 });
   });
 
   it('adds a muscle group through the data store', async () => {

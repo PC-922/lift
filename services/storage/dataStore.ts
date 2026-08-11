@@ -12,7 +12,7 @@ import {
   writeBatch,
   Timestamp,
 } from 'firebase/firestore';
-import { Exercise, GroupSortPreference, Routine } from '../../types';
+import { Exercise, GroupSortPreference, Routine, Workout } from '../../types';
 import { getDefaultExercises, getDefaultMuscleGroups } from './seedData';
 import { DEFAULT_GROUP_SORT_PREFERENCE } from '../../utils/exerciseSorting';
 
@@ -26,6 +26,7 @@ export interface DataStoreSnapshot {
   routines: Routine[];
   muscleGroups: string[];
   groupSortPreference: GroupSortPreference;
+  workouts: Workout[];
 }
 
 export interface DataStore {
@@ -41,6 +42,8 @@ export interface DataStore {
   deleteRoutine(id: string): Promise<void>;
   saveMuscleGroups(groups: string[]): Promise<void>;
   saveGroupSortPreference(preference: GroupSortPreference): Promise<void>;
+  saveWorkout(workout: Workout): Promise<void>;
+  deleteWorkout(id: string): Promise<void>;
   resetData(): Promise<void>;
 }
 
@@ -80,6 +83,7 @@ function normalizeTimestamp(value: string | Timestamp | undefined | null): strin
 export function createFirestoreDataStore(db: Firestore, uid: string): DataStore {
   const exercisesRef = collection(db, 'users', uid, 'exercises');
   const routinesRef = collection(db, 'users', uid, 'routines');
+  const workoutsRef = collection(db, 'users', uid, 'workouts');
   const groupsDoc = doc(db, 'users', uid, 'metadata', 'groups');
   const sortDoc = doc(db, 'users', uid, 'metadata', 'sort');
 
@@ -125,9 +129,10 @@ export function createFirestoreDataStore(db: Firestore, uid: string): DataStore 
       let routines: Routine[] = [];
       let muscleGroups: string[] = [];
       let groupSortPreference: GroupSortPreference = DEFAULT_GROUP_SORT_PREFERENCE;
+      let workouts: Workout[] = [];
 
       const emit = () => {
-        onData({ exercises, routines, muscleGroups, groupSortPreference });
+        onData({ exercises, routines, muscleGroups, groupSortPreference, workouts });
       };
 
       const unsubscribeExercises = onSnapshot(
@@ -189,11 +194,24 @@ export function createFirestoreDataStore(db: Firestore, uid: string): DataStore 
         }
       );
 
+      const unsubscribeWorkouts = onSnapshot(
+        query(workoutsRef, orderBy('startedAt', 'desc')),
+        (snapshot) => {
+          workouts = snapshot.docs.map((d) => d.data() as Workout);
+          onStatus({ hasPendingWrites: snapshot.metadata.hasPendingWrites, fromCache: snapshot.metadata.fromCache });
+          emit();
+        },
+        (error) => {
+          console.error('Workouts listener error', error);
+        }
+      );
+
       return () => {
         unsubscribeExercises();
         unsubscribeRoutines();
         unsubscribeGroups();
         unsubscribeSort();
+        unsubscribeWorkouts();
       };
     },
 
@@ -239,12 +257,26 @@ export function createFirestoreDataStore(db: Firestore, uid: string): DataStore 
       );
     },
 
+    async saveWorkout(workout) {
+      await setDoc(
+        doc(workoutsRef, workout.id),
+        deepClean(withOwner({ ...workout, updatedAt: new Date().toISOString() })),
+        { merge: true }
+      );
+    },
+
+    async deleteWorkout(id) {
+      await deleteDoc(doc(workoutsRef, id));
+    },
+
     async resetData() {
       const batch = writeBatch(db);
       const exerciseDocs = await getDocs(exercisesRef);
       const routineDocs = await getDocs(routinesRef);
+      const workoutDocs = await getDocs(workoutsRef);
       exerciseDocs.docs.forEach((d) => batch.delete(d.ref));
       routineDocs.docs.forEach((d) => batch.delete(d.ref));
+      workoutDocs.docs.forEach((d) => batch.delete(d.ref));
       await batch.commit();
 
       const seedGroups = getDefaultMuscleGroups();

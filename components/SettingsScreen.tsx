@@ -18,7 +18,7 @@ interface Props {
   onResetData: () => Promise<void>;
 }
 
-const SCREEN_ORDER: ScreenType[] = ['home', 'insights', 'routines', 'settings'];
+const SCREEN_ORDER: ScreenType[] = ['home', 'insights', 'workout', 'routines', 'settings'];
 
 export const SettingsScreen: React.FC<Props> = ({ onExport, onImport, onResetData }) => {
   const t = useTranslations();
@@ -81,6 +81,7 @@ export const SettingsScreen: React.FC<Props> = ({ onExport, onImport, onResetDat
     const map: Record<ScreenType, string> = {
       home: t.labels.home,
       insights: t.labels.insights,
+      workout: t.labels.workout,
       routines: t.labels.routines,
       settings: t.labels.settings,
     };

@@ -7,7 +7,7 @@ interface RestTimerContextType extends RestTimerState {
   stopTimer: () => void;
   resetTimer: () => void;
   addTime: (seconds: number) => void;
-  setMinimized: (minimized: boolean) => void;
+  clearTimer: () => void;
 }
 
 const RestTimerContext = createContext<RestTimerContextType | undefined>(undefined);
@@ -19,7 +19,6 @@ export const RestTimerProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     remainingTime: 0,
     isActive: false,
     duration: DEFAULT_DURATION,
-    isMinimized: true,
   });
 
   const endTimeRef = useRef<number | null>(null);
@@ -92,7 +91,6 @@ export const RestTimerProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       remainingTime: seconds,
       duration: seconds,
       isActive: false,
-      isMinimized: false,
     }));
   }, []);
 
@@ -103,7 +101,6 @@ export const RestTimerProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       return {
         ...prev,
         isActive: true,
-        isMinimized: false,
       };
     });
   }, []);
@@ -120,7 +117,6 @@ export const RestTimerProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         ...prev,
         remainingTime: prev.duration,
         isActive: false,
-        isMinimized: false,
       };
     });
   }, []);
@@ -133,12 +129,18 @@ export const RestTimerProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }));
   }, []);
 
-  const setMinimized = useCallback((isMinimized: boolean) => {
-    setState((prev) => ({ ...prev, isMinimized }));
+  const clearTimer = useCallback(() => {
+    endTimeRef.current = null;
+    setState((prev) => ({
+      ...prev,
+      remainingTime: 0,
+      duration: DEFAULT_DURATION,
+      isActive: false,
+    }));
   }, []);
 
   return (
-    <RestTimerContext.Provider value={{ ...state, selectDuration, startTimer, stopTimer, resetTimer, addTime, setMinimized }}>
+    <RestTimerContext.Provider value={{ ...state, selectDuration, startTimer, stopTimer, resetTimer, addTime, clearTimer }}>
       {children}
     </RestTimerContext.Provider>
   );

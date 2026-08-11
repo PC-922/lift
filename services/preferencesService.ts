@@ -9,6 +9,7 @@ interface Prefs {
   language: 'es' | 'en' | null;
   defaultScreen: ScreenType | null;
   authMode: AuthMode;
+  lastUid: string | null;
 }
 
 const DEFAULT_PREFS: Prefs = {
@@ -16,6 +17,7 @@ const DEFAULT_PREFS: Prefs = {
   language: null,
   defaultScreen: null,
   authMode: null,
+  lastUid: null,
 };
 
 type PrefsListener = () => void;
@@ -78,6 +80,14 @@ function subscribe(listener: PrefsListener): () => void {
   };
 }
 
+function getLastUid(): string | null {
+  return getPrefs().lastUid ?? null;
+}
+
+function setLastUid(uid: string | null): void {
+  savePrefs({ lastUid: uid });
+}
+
 export const preferencesService = {
   getPrefs,
   savePrefs,
@@ -87,5 +97,7 @@ export const preferencesService = {
   setDefaultScreen,
   isOnboardingDone,
   markOnboardingDone,
+  getLastUid,
+  setLastUid,
   subscribe,
 };

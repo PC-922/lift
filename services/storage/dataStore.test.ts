@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createFirestoreDataStore, DataStore, DataStoreSnapshot, DataStoreStatus } from './dataStore';
-import { Exercise, GroupSortPreference, Routine } from '../../types';
+import { Exercise, GroupSortPreference, Routine, Workout } from '../../types';
 
 interface FakeDoc {
   id: string;
@@ -302,6 +302,35 @@ describe('createFirestoreDataStore', () => {
     expect(afterDelete[afterDelete.length - 1].routines).toHaveLength(0);
   });
 
+  it('saves and deletes a workout', async () => {
+    const workout: Workout = {
+      id: 'w_1',
+      name: 'Push Day',
+      startedAt: '2026-01-01T10:00:00.000Z',
+      finishedAt: '2026-01-01T11:00:00.000Z',
+      entries: [{ exerciseId: 'ex_1', sets: [{ weight: 80, reps: 8 }] }],
+    };
+
+    await dataStore.saveWorkout(workout);
+
+    const captured: DataStoreSnapshot[] = [];
+    const unsubscribe = dataStore.subscribe((snapshot) => captured.push(snapshot), () => undefined);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    unsubscribe();
+
+    expect(captured[captured.length - 1].workouts).toHaveLength(1);
+    expect(captured[captured.length - 1].workouts[0].id).toBe('w_1');
+
+    await dataStore.deleteWorkout('w_1');
+
+    const afterDelete: DataStoreSnapshot[] = [];
+    const unsubscribe2 = dataStore.subscribe((snapshot) => afterDelete.push(snapshot), () => undefined);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    unsubscribe2();
+
+    expect(afterDelete[afterDelete.length - 1].workouts).toHaveLength(0);
+  });
+
   it('resets data to defaults', async () => {
     const exercise: Exercise = {
       id: 'ex_1',
@@ -313,6 +342,13 @@ describe('createFirestoreDataStore', () => {
 
     await dataStore.saveExercise(exercise);
     await dataStore.saveMuscleGroups(['Old Group']);
+    await dataStore.saveWorkout({
+      id: 'w_old',
+      name: 'Old Workout',
+      startedAt: '2026-01-01T10:00:00.000Z',
+      finishedAt: '2026-01-01T11:00:00.000Z',
+      entries: [],
+    });
 
     await dataStore.resetData();
 
@@ -325,5 +361,6 @@ describe('createFirestoreDataStore', () => {
     expect(latest.muscleGroups.length).toBeGreaterThan(0);
     expect(latest.exercises.length).toBeGreaterThan(0);
     expect(latest.exercises.some((e) => e.name === 'Old Exercise')).toBe(false);
+    expect(latest.workouts).toHaveLength(0);
   });
 });

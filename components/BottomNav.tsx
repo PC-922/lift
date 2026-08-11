@@ -1,14 +1,15 @@
 import React from 'react';
-import { Home, BarChart3, Settings, ListChecks } from 'lucide-react';
+import { Home, BarChart3, Settings, ListChecks, Dumbbell } from 'lucide-react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslations } from '../utils/translations';
 import { cn } from '../utils/cn';
 
-export type ScreenType = 'home' | 'insights' | 'routines' | 'settings';
+export type ScreenType = 'home' | 'insights' | 'workout' | 'routines' | 'settings';
 
 const paths: Record<ScreenType, string> = {
   home: '/',
   insights: '/insights',
+  workout: '/workout',
   routines: '/routines',
   settings: '/settings',
 };
@@ -16,6 +17,7 @@ const paths: Record<ScreenType, string> = {
 const screenByPath: Record<string, ScreenType> = {
   '/': 'home',
   '/insights': 'insights',
+  '/workout': 'workout',
   '/routines': 'routines',
   '/settings': 'settings',
 };
@@ -30,6 +32,7 @@ export const BottomNav: React.FC = () => {
   const navItems: { id: ScreenType; label: string; icon: React.ReactNode }[] = [
     { id: 'home', label: t.labels.home, icon: <Home size={22} /> },
     { id: 'insights', label: t.labels.insights, icon: <BarChart3 size={22} /> },
+    { id: 'workout', label: t.labels.workout, icon: <Dumbbell size={22} /> },
     { id: 'routines', label: t.labels.routines, icon: <ListChecks size={22} /> },
     { id: 'settings', label: t.labels.settings, icon: <Settings size={22} /> },
   ];

@@ -4,7 +4,6 @@ import { Exercise, ExerciseLog } from '../types';
 import { getTranslatedGroupName, useTranslations } from '../utils/translations';
 import { getLatestLog, getLogFeedback } from '../utils/progression';
 import { useToast } from '../hooks/useToast';
-import { useRestTimer } from '../hooks/useRestTimer';
 import { ExerciseInsights } from './ExerciseInsights';
 import ConfirmModal from './ConfirmModal';
 import { ActionSheet } from './ActionSheet';
@@ -69,7 +68,6 @@ export const ExerciseDetail: React.FC<Props> = ({
 }) => {
   const { showToast } = useToast();
   const t = useTranslations();
-  const { selectDuration, startTimer } = useRestTimer();
   const latest = getLatestLog(exercise.logs);
 
   const [weight, setWeight] = useState(() => (latest?.weight ?? '').toString());
@@ -139,8 +137,6 @@ export const ExerciseDetail: React.FC<Props> = ({
     setReps('');
 
     const feedback = getLogFeedback(w, r, prevWeight, prevReps, isFirst);
-    selectDuration(90);
-    startTimer();
 
     if (!feedback) return;
 
@@ -385,6 +381,8 @@ export const ExerciseDetail: React.FC<Props> = ({
         </div>
       </Surface>
 
+      <ExerciseInsights exercise={exercise} />
+
       {editableLogs.length > 0 && (
         <div className="mb-2 pb-24">
           <div className="mb-3 flex items-center justify-between">
@@ -454,8 +452,6 @@ export const ExerciseDetail: React.FC<Props> = ({
           </div>
         </div>
       )}
-
-      <ExerciseInsights exercise={exercise} />
 
       {showHistoryActions && (
         <ActionSheet

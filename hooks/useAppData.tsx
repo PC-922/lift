@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback, ReactNode } from 'react';
-import { Exercise, ExerciseLog, GroupSortPreference, Routine, RoutineDay, RoutineExercise } from '../types';
+import { Exercise, ExerciseLog, GroupSortPreference, Routine, RoutineDay, RoutineExercise, Workout, WorkoutEntry, WorkoutSet } from '../types';
 import { createDataStore, DataStore, DataStoreStatus } from '../services/storageService';
 import { migrateLegacyDataIfNeeded } from '../services/storage/legacyMigration';
 import { exportData as serializeBackup, importData as parseBackup } from '../services/exportImport';
@@ -31,6 +31,10 @@ interface AppDataContextValue {
   deleteRoutine(id: string): Promise<void>;
   reorderRoutine(fromIndex: number, toIndex: number): Promise<void>;
   reorderRoutineExercise(routineId: string, dayId: string, fromIndex: number, toIndex: number): Promise<void>;
+  workouts: Workout[];
+  saveWorkout(workout: Workout): Promise<void>;
+  deleteWorkout(id: string): Promise<void>;
+  finishWorkout(workout: Workout): Promise<void>;
   exportData(): Promise<string>;
   importData(jsonString: string): Promise<boolean>;
   importRoutine(jsonString: string): Promise<boolean>;
@@ -52,6 +56,16 @@ function updateRoutineDay(day: RoutineDay, exerciseId: string, updater: (re: Rou
   };
 }
 
+function bestSetOf(entry: WorkoutEntry): WorkoutSet | null {
+  return entry.sets.reduce<WorkoutSet | null>((best, set) => {
+    if (set.weight === null && set.reps === null) return best;
+    if (!best) return set;
+    const bestScore = (best.weight ?? 0) * 1000 + (best.reps ?? 0);
+    const setScore = (set.weight ?? 0) * 1000 + (set.reps ?? 0);
+    return setScore > bestScore ? set : best;
+  }, null);
+}
+
 export const AppDataProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const uid = user?.uid;
@@ -60,6 +74,7 @@ export const AppDataProvider: React.FC<{ children: ReactNode }> = ({ children })
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [muscleGroups, setMuscleGroups] = useState<string[]>([]);
   const [groupSortPreference, setGroupSortPreference] = useState<GroupSortPreference>(DEFAULT_GROUP_SORT_PREFERENCE);
+  const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [syncStatus, setSyncStatus] = useState<DataStoreStatus | null>(null);
 
@@ -81,6 +96,7 @@ export const AppDataProvider: React.FC<{ children: ReactNode }> = ({ children })
           setRoutines(snapshot.routines);
           setMuscleGroups(snapshot.muscleGroups);
           setGroupSortPreference(snapshot.groupSortPreference);
+          setWorkouts(snapshot.workouts);
           setIsLoading(false);
         },
         (status) => setSyncStatus(status)
@@ -339,6 +355,48 @@ export const AppDataProvider: React.FC<{ children: ReactNode }> = ({ children })
     [routines]
   );
 
+  const saveWorkout = useCallback(
+    async (workout: Workout) => {
+      const dataStore = requireDataStore();
+      if (!dataStore) return;
+      await dataStore.saveWorkout({ ...workout, updatedAt: nowIso() });
+    },
+    []
+  );
+
+  const deleteWorkout = useCallback(
+    async (id: string) => {
+      const dataStore = requireDataStore();
+      if (!dataStore) return;
+      await dataStore.deleteWorkout(id);
+    },
+    []
+  );
+
+  // A workout is best-served by writing its best set per exercise into the
+  // exercise log (one log per day), so insights keep working unchanged.
+  const finishWorkout = useCallback(
+    async (workout: Workout) => {
+      await saveWorkout(workout);
+      const today = nowIso().split('T')[0];
+      for (const entry of workout.entries) {
+        const best = bestSetOf(entry);
+        if (!best) continue;
+        const exercise = exercises.find((e) => e.id === entry.exerciseId);
+        if (!exercise) continue;
+        const existingIndex = exercise.logs.findIndex((log) => log.date === today);
+        const logs = [...exercise.logs];
+        if (existingIndex >= 0) {
+          logs[existingIndex] = { date: today, weight: best.weight, reps: best.reps };
+        } else {
+          logs.push({ date: today, weight: best.weight, reps: best.reps });
+        }
+        await saveExercise({ ...exercise, logs, updatedAt: nowIso() });
+      }
+    },
+    [exercises, saveExercise, saveWorkout]
+  );
+
   const exportData = useCallback(async () => {
     return serializeBackup({
       exercises,
@@ -436,6 +494,10 @@ export const AppDataProvider: React.FC<{ children: ReactNode }> = ({ children })
     deleteRoutine,
     reorderRoutine,
     reorderRoutineExercise,
+    workouts,
+    saveWorkout,
+    deleteWorkout,
+    finishWorkout,
     exportData,
     importData,
     importRoutine,

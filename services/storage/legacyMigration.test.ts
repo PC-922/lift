@@ -12,6 +12,8 @@ const createMockDataStore = (hasData = false): DataStore => ({
   deleteRoutine: vi.fn(() => Promise.resolve()),
   saveMuscleGroups: vi.fn(() => Promise.resolve()),
   saveGroupSortPreference: vi.fn(() => Promise.resolve()),
+  saveWorkout: vi.fn(() => Promise.resolve()),
+  deleteWorkout: vi.fn(() => Promise.resolve()),
   resetData: vi.fn(() => Promise.resolve()),
 });
 

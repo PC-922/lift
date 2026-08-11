@@ -70,6 +70,7 @@ function isPopupDismissError(code: string): boolean {
 
 function completeGoogleSignIn(user: User): SignInResult {
   setStoredAuthMode('google');
+  preferencesService.setLastUid(user.uid);
   const isNewUser = user.metadata?.creationTime === user.metadata?.lastSignInTime;
   if (isNewUser) {
     ensureUserProfile(user).catch(() => {});
@@ -133,6 +134,7 @@ async function continueAsGuest(): Promise<GuestResult> {
   try {
     const result = await signInAnonymously(auth);
     setStoredAuthMode('guest');
+    preferencesService.setLastUid(result.user.uid);
     notify(result.user, 'guest');
     return { success: true };
   } catch (error) {
@@ -179,6 +181,7 @@ function subscribe(callback: AuthListener): () => void {
       .then((result) => {
         if (result?.user) {
           setStoredAuthMode('google');
+          preferencesService.setLastUid(result.user.uid);
           const isNewUser = result.user.metadata?.creationTime === result.user.metadata?.lastSignInTime;
           if (isNewUser) {
             ensureUserProfile(result.user).catch(() => {});
@@ -202,6 +205,7 @@ function subscribe(callback: AuthListener): () => void {
     if (user) {
       initialResolved = true;
       setStoredAuthMode(mode);
+      preferencesService.setLastUid(user.uid);
       callback(user, mode);
       return;
     }

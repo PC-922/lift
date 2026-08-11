@@ -7,6 +7,7 @@ import { ExerciseFormScreen } from './components/ExerciseFormScreen';
 import { SettingsScreen } from './components/SettingsScreen';
 import { InsightsScreen } from './components/InsightsScreen';
 import { RoutinesScreen } from './components/RoutinesScreen';
+import { WorkoutScreen } from './components/WorkoutScreen';
 import { MuscleGroupsScreen } from './components/MuscleGroupsScreen';
 import { OnboardingScreen } from './components/OnboardingScreen';
 import { BottomNav } from './components/BottomNav';
@@ -14,12 +15,13 @@ import ConfirmModal from './components/ConfirmModal';
 import { Modal } from './components/Modal';
 import { ToastProvider } from './hooks/useToast';
 import { RestTimerProvider } from './hooks/useRestTimer';
-import { RestTimer } from './components/RestTimer';
+import { WorkoutSessionProvider, useWorkoutSession } from './hooks/useWorkoutSession';
+import { SyncIndicator } from './components/SyncIndicator';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { AppDataProvider, useAppData } from './hooks/useAppData';
 import { useTranslations } from './utils/translations';
 import { createSharedRoutine, serializeSharedRoutine } from './services/routineShareService';
-import { Download, MoreVertical, Plus, PlusSquare, Share } from 'lucide-react';
+import { Download, Dumbbell, MoreVertical, Plus, PlusSquare, Share } from 'lucide-react';
 import { Button } from './components/ui/Button';
 import { Surface } from './components/ui/Surface';
 import { Badge } from './components/ui/Badge';
@@ -167,6 +169,7 @@ const InsightsRoute: React.FC = () => {
 
 const RoutinesRoute: React.FC = () => {
   const { exercises, muscleGroups, routines, saveRoutine, deleteRoutine, logSession, reorderRoutine, reorderRoutineExercise, updateExerciseNote, updateExerciseLog, deleteExerciseLog, deleteAllLogs, deleteAllLogsExceptLatest, deleteExercise, importRoutine } = useAppData();
+  const { startWorkout } = useWorkoutSession();
   const navigate = useNavigate();
   const [activeRoutineId, setActiveRoutineId] = useState<string | null>(null);
 
@@ -188,6 +191,21 @@ const RoutinesRoute: React.FC = () => {
     return importRoutine(content);
   };
 
+  const handleStartWorkout = (routine: import('./types').Routine, dayId: string) => {
+    const day = routine.days.find((d) => d.id === dayId);
+    if (!day) return;
+    startWorkout({
+      name: `${routine.name} · ${day.name}`,
+      routineId: routine.id,
+      dayId: day.id,
+      exercises: day.exercises.map((re) => ({
+        exerciseId: re.exerciseId,
+        target: { sets: re.sets, reps: re.reps, restSeconds: re.restSeconds },
+      })),
+    });
+    navigate('/workout');
+  };
+
   return (
     <RoutinesScreen
       routines={routines}
@@ -198,6 +216,7 @@ const RoutinesRoute: React.FC = () => {
       onSaveRoutine={async (routine) => {
         await saveRoutine(routine);
       }}
+      onStartWorkout={handleStartWorkout}
       onDeleteRoutine={async (id) => {
         await deleteRoutine(id);
       }}
@@ -285,6 +304,7 @@ const AppLayout: React.FC = () => {
   const currentScreen =
     location.pathname === '/' ? 'home'
     : location.pathname === '/insights' || location.pathname.startsWith('/insights/') ? 'insights'
+    : location.pathname === '/workout' ? 'workout'
     : location.pathname === '/routines' || location.pathname.startsWith('/routines/') ? 'routines'
     : location.pathname === '/settings' || location.pathname.startsWith('/settings/') ? 'settings'
     : 'home';
@@ -303,13 +323,17 @@ const AppLayout: React.FC = () => {
 
   return (
     <RestTimerProvider>
+      <WorkoutSessionProvider>
       <div className="min-h-screen pb-24 sm:mx-auto sm:max-w-md">
           {showHeader && (
             <header className={cn('sticky top-0 z-20 bg-app-bg', appHeaderClassName)}>
               <div className="flex items-center justify-between gap-3">
-                <h1 className={cn(appHeaderTitleClassName, 'flex items-center gap-2')}>
-                  {t.appTitle}
-                </h1>
+                <div className="flex min-w-0 items-center gap-2">
+                  <h1 className={cn(appHeaderTitleClassName, 'flex items-center gap-2')}>
+                    {t.appTitle}
+                  </h1>
+                  <SyncIndicator />
+                </div>
                 {!isStandalone && (
                   <Button
                     onClick={() => setIsInstallModalOpen(true)}
@@ -328,6 +352,7 @@ const AppLayout: React.FC = () => {
             <header className={cn('sticky top-0 z-20 bg-app-bg', appHeaderClassName)}>
               <h1 className={appHeaderTitleClassName}>
                 {currentScreen === 'insights' ? t.labels.insights
+                  : currentScreen === 'workout' ? t.labels.workout
                   : currentScreen === 'routines' ? t.labels.routines
                   : t.labels.settings}
               </h1>
@@ -342,6 +367,7 @@ const AppLayout: React.FC = () => {
               <Route path="/exercises/:id" element={<ExerciseDetailRoute />} />
               <Route path="/exercises/groups" element={<MuscleGroupsScreen />} />
               <Route path="/insights" element={<InsightsRoute />} />
+              <Route path="/workout" element={<WorkoutScreen />} />
               <Route path="/routines" element={<RoutinesRoute />} />
               <Route path="/settings" element={<SettingsRoute />} />
               <Route path="/settings/muscle-groups" element={<Navigate to="/exercises/groups" replace />} />
@@ -391,16 +417,35 @@ const AppLayout: React.FC = () => {
               </Button>
             </div>
           </Modal>
-          <RestTimer />
         </div>
+      </WorkoutSessionProvider>
       </RestTimerProvider>
   );
 };
 
-const AppContent: React.FC = () => {
-  const { user, mode: authMode } = useAuth();
+const SplashScreen: React.FC = () => {
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center gap-6 px-6">
+      <div className="flex h-24 w-24 items-center justify-center rounded-[2rem] bg-app-accent text-app-accent-foreground">
+        <Dumbbell size={48} strokeWidth={2.5} />
+      </div>
+      <div className="h-8 w-8 animate-spin rounded-full border-4 border-app-accent border-t-transparent" />
+    </div>
+  );
+};
 
-  if (authMode === null) {
+const AppContent: React.FC = () => {
+  const { user, phase, fallbackUid } = useAuth();
+
+  if (phase === 'resolving') {
+    return (
+      <ToastProvider>
+        <SplashScreen />
+      </ToastProvider>
+    );
+  }
+
+  if (phase === 'unauthenticated') {
     return (
       <ToastProvider>
         <OnboardingScreen />
@@ -408,11 +453,18 @@ const AppContent: React.FC = () => {
     );
   }
 
-  const adapterKey = `${user?.uid ?? 'anon'}-${authMode}`;
+  const uid = user?.uid ?? fallbackUid;
+  if (!uid) {
+    return (
+      <ToastProvider>
+        <OnboardingScreen />
+      </ToastProvider>
+    );
+  }
 
   return (
     <ToastProvider>
-      <AppDataProvider key={adapterKey}>
+      <AppDataProvider key={uid}>
         <AppLayout />
       </AppDataProvider>
     </ToastProvider>

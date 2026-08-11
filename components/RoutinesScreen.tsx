@@ -1,5 +1,5 @@
 import React, {forwardRef, useCallback, useEffect, useMemo, useState} from 'react';
-import {GripVertical, MoreVertical, Pencil, Plus, Shuffle, Trash2, Upload, X} from 'lucide-react';
+import {GripVertical, MoreVertical, Pencil, Play, Plus, Shuffle, Trash2, Upload, X} from 'lucide-react';
 import {Exercise, ExerciseLog, Routine, RoutineDay, RoutineExercise} from '../types';
 import {getTranslatedGroupName, useTranslations} from '../utils/translations';
 import {getLatestLog, getLogFeedback} from '../utils/progression';
@@ -9,7 +9,6 @@ import {ActionSheet} from './ActionSheet';
 import ConfirmModal from './ConfirmModal';
 import {Modal} from './Modal';
 import {useToast} from '../hooks/useToast';
-import {useRestTimer} from '../hooks/useRestTimer';
 import {useDragReorder} from '../hooks/useDragReorder';
 import {makeId} from '@/services/storage/id.ts';
 import {Button} from './ui/Button';
@@ -41,6 +40,7 @@ interface Props {
   onNavigateToExercise: (exerciseId: string, routineId: string) => void;
   onShareRoutine: (routine: Routine) => void;
   onImportRoutine: (file: File) => Promise<boolean>;
+  onStartWorkout?: (routine: Routine, dayId: string) => void;
   resetSignal?: number;
 }
 
@@ -86,6 +86,7 @@ export const RoutinesScreen: React.FC<Props> = ({
   onNavigateToExercise,
   onShareRoutine,
   onImportRoutine,
+  onStartWorkout,
   resetSignal,
 }) => {
   const t = useTranslations();
@@ -115,7 +116,6 @@ export const RoutinesScreen: React.FC<Props> = ({
   }, [activeRoutineId]);
 
   const { showToast } = useToast();
-  const { selectDuration, startTimer } = useRestTimer();
 
   const activeRoutine = useMemo(() => routines.find((r) => r.id === activeRoutineId) ?? null, [routines, activeRoutineId]);
   const exerciseById = useMemo(() => new Map(exercises.map((exercise) => [exercise.id, exercise] as const)), [exercises]);
@@ -326,7 +326,7 @@ export const RoutinesScreen: React.FC<Props> = ({
     setLogForms((prev) => ({ ...prev, [exerciseId]: { ...getLogForm(exerciseId), [field]: value } }));
   };
 
-  const handleLog = (targetId: string, restSeconds?: number) => {
+  const handleLog = (targetId: string) => {
     const form = getLogForm(targetId);
     const weightValue = form.weight.trim() === '' || form.weight === '-' ? null : parseInt(form.weight, 10);
     const repsValue = form.reps.trim() === '' || form.reps === '-' ? null : parseInt(form.reps, 10);
@@ -340,8 +340,6 @@ export const RoutinesScreen: React.FC<Props> = ({
     const prevReps = latest?.reps ?? null;
 
     onLogExercise(targetId, weightValue, repsValue);
-    selectDuration(restSeconds && restSeconds > 0 ? restSeconds : 90);
-    startTimer();
     setLogForms((prev) => {
       const next = { ...prev };
       delete next[targetId];
@@ -378,8 +376,20 @@ export const RoutinesScreen: React.FC<Props> = ({
 
   const filteredFormExercises = useMemo(() => {
     const q = formSearch.toLowerCase();
-    return exercises.slice().sort((a, b) => a.name.localeCompare(b.name)).filter((ex) => !q || ex.name.toLowerCase().includes(q));
-  }, [exercises, formSearch]);
+    const selectedOrder = new Map<string, number>(
+      (activeFormDay?.exercises.map((re, index) => [re.exerciseId, index] as const) ?? [])
+    );
+    return exercises
+      .filter((ex) => !q || ex.name.toLowerCase().includes(q))
+      .sort((a, b) => {
+        const aIndex = selectedOrder.get(a.id);
+        const bIndex = selectedOrder.get(b.id);
+        if (aIndex !== undefined && bIndex !== undefined) return aIndex - bIndex;
+        if (aIndex !== undefined) return -1;
+        if (bIndex !== undefined) return 1;
+        return a.name.localeCompare(b.name);
+      });
+  }, [exercises, formSearch, activeFormDay]);
 
   const filteredAlternativeExercises = useMemo(() => {
     const q = alternativeSearch.toLowerCase();
@@ -411,6 +421,17 @@ export const RoutinesScreen: React.FC<Props> = ({
             )}
           </div>
 
+          {selectedDay && onStartWorkout && (
+            <Button
+              onClick={() => onStartWorkout(activeRoutine, selectedDay.id)}
+              size="lg"
+              className="mb-4 w-full gap-2"
+            >
+              <Play size={18} strokeWidth={3} />
+              {t.actions.startWorkout}
+            </Button>
+          )}
+
           {activeRoutineDays.length === 0 ? (
             <div className="py-20 text-center opacity-60">
               <p className="font-medium text-app-text">{t.labels.noExercises}</p>
@@ -437,7 +458,7 @@ export const RoutinesScreen: React.FC<Props> = ({
                       isDragging={exercisesDrag.draggingId === exerciseId}
                       form={form}
                       onUpdateForm={(field, value) => updateLogForm(displayExercise.id, field, value)}
-                      onLog={() => handleLog(displayExercise.id, routineExercise.restSeconds)}
+                      onLog={() => handleLog(displayExercise.id)}
                       onMenu={() => setActionSheetExercise({ exerciseId, dayId: selectedDay.id })}
                       onDragHandlePointerDown={exercisesDrag.handleStart(exerciseId)}
                       onTap={() => onNavigateToExercise(displayExercise.id, activeRoutine.id)}

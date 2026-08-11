@@ -78,6 +78,33 @@ describe('authService', () => {
     expect(preferencesService.getPrefs().authMode).toBe('google');
   });
 
+  it('stores the last uid after Google sign-in', async () => {
+    const { signInWithPopup } = await import('firebase/auth');
+    const mockUser = {
+      uid: 'google-uid',
+      email: 'test@example.com',
+      metadata: {
+        creationTime: '2024-01-01T00:00:00Z',
+        lastSignInTime: '2024-01-02T00:00:00Z',
+      },
+    };
+    vi.mocked(signInWithPopup).mockResolvedValue({ user: mockUser } as any);
+
+    await authService.signInWithGoogle();
+
+    expect(preferencesService.getLastUid()).toBe('google-uid');
+  });
+
+  it('stores the last uid when continuing as guest', async () => {
+    const { signInAnonymously } = await import('firebase/auth');
+    const mockUser = { uid: 'anon-uid', isAnonymous: true };
+    vi.mocked(signInAnonymously).mockResolvedValue({ user: mockUser } as any);
+
+    await authService.continueAsGuest();
+
+    expect(preferencesService.getLastUid()).toBe('anon-uid');
+  });
+
   it('detects new user when creationTime matches lastSignInTime', async () => {
     const { signInWithPopup } = await import('firebase/auth');
     const mockUser = {
