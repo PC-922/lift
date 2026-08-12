@@ -586,7 +586,7 @@ export const RoutinesScreen: React.FC<Props> = ({
 
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 pb-5">
             <div className="space-y-3">
-              <label className="block text-sm font-medium text-app-text-muted">{t.labels.selectExercises}</label>
+              
 
               <div className="sticky top-0 z-10 bg-app-surface pb-0 pt-0 -mx-6 px-6">
                 <SearchInput 
