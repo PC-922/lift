@@ -40,6 +40,25 @@
   }
 }
 
+/* Keep the current product theme dark until light mode is revisited. */
+:root {
+  color-scheme: dark;
+  --color-bg: #0F1012;
+  --color-surface: #1A1C1E;
+  --color-surface-muted: #2A2D32;
+  --color-text: #F2F4F7;
+  --color-text-muted: #98A2B3;
+  --color-border: #2A2D32;
+  --color-accent: #cdff00;
+  --color-accent-foreground: #000000;
+  --color-accent-text: #cdff00;
+  --color-chip-bg: #2A2D32;
+  --color-chip-text: #D0D5DD;
+  --color-danger: #EF4444;
+  --color-success: #4cd38c;
+  --color-warning: #f2c14e;
+}
+
 html {
   background: var(--color-bg);
   scrollbar-width: none;

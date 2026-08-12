@@ -19,8 +19,8 @@ export default defineConfig(({ mode }) => {
             short_name: 'LIFT',
             start_url: '/',
             display: 'standalone',
-            background_color: '#000000',
-            theme_color: '#000000',
+             background_color: '#0F1012',
+             theme_color: '#0F1012',
             orientation: 'portrait',
             icons: [
               {
