@@ -40,6 +40,7 @@ interface WorkoutSessionContextValue {
   nextExercise(): void;
   prevExercise(): void;
   addExercise(exerciseId: string, target?: WorkoutExerciseTarget): void;
+  replaceCurrentExercise(exerciseId: string): void;
   removeExercise(index: number): void;
   finish(): Workout | null;
   cancel(): void;
@@ -131,6 +132,18 @@ export const WorkoutSessionProvider: React.FC<{ children: ReactNode }> = ({ chil
     });
   }, []);
 
+  const replaceCurrentExercise = useCallback((exerciseId: string) => {
+    setActiveWorkout((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        exercises: prev.exercises.map((exercise, index) =>
+          index === currentIndex ? { ...exercise, exerciseId, sets: [] } : exercise
+        ),
+      };
+    });
+  }, [currentIndex]);
+
   const removeExercise = useCallback((index: number) => {
     if (!activeWorkout || activeWorkout.exercises.length <= 1) return;
     setActiveWorkout((prev) => {
@@ -165,7 +178,7 @@ export const WorkoutSessionProvider: React.FC<{ children: ReactNode }> = ({ chil
 
   return (
     <WorkoutSessionContext.Provider
-      value={{ activeWorkout, currentIndex, startWorkout, logSet, nextExercise, prevExercise, addExercise, removeExercise, finish, cancel }}
+      value={{ activeWorkout, currentIndex, startWorkout, logSet, nextExercise, prevExercise, addExercise, replaceCurrentExercise, removeExercise, finish, cancel }}
     >
       {children}
     </WorkoutSessionContext.Provider>

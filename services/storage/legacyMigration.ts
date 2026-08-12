@@ -113,10 +113,12 @@ function readLegacyRoutines(exercises: Exercise[]): Routine[] {
   const cleanRoutineExercise = (re: RoutineExercise): RoutineExercise | null => {
     if (!exerciseIds.has(re.exerciseId)) return null;
     return {
-      ...re,
-      alternativeExerciseId: re.alternativeExerciseId && exerciseIds.has(re.alternativeExerciseId)
-        ? re.alternativeExerciseId
-        : undefined,
+      exerciseId: re.exerciseId,
+      sets: re.sets,
+      reps: re.reps,
+      dropset: re.dropset,
+      toFailure: re.toFailure,
+      restSeconds: re.restSeconds,
     };
   };
 

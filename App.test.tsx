@@ -132,6 +132,7 @@ describe('App home layout', () => {
 
     const newExerciseButton = await screen.findByRole('button', { name: /New Exercise/i });
     const addGroupButton = await screen.findByRole('button', { name: /Add Group/i });
+    expect(screen.getByRole('heading', { name: 'LIFT' })).toBeTruthy();
     const list = container.querySelector('[data-testid="exercise-list"]');
 
     await waitFor(() => {

@@ -114,4 +114,16 @@ describe('WorkoutScreen', () => {
     expect(screen.getByText(new RegExp(`${t.labels.sets}:\\s*3`))).toBeTruthy();
     expect(screen.getByText(new RegExp(`${t.labels.reps}:\\s*10`))).toBeTruthy();
   });
+
+  it('replaces the current exercise during a workout', async () => {
+    renderWithProviders(<WorkoutScreen />);
+
+    fireEvent.click(screen.getByText('Push Day'));
+    fireEvent.click(screen.getByText('Día 1'));
+    fireEvent.click(screen.getByText(t.labels.changeExercise));
+    fireEvent.click(screen.getByText('Squat'));
+
+    expect(screen.getByRole('heading', { name: 'Squat' })).toBeTruthy();
+    expect(screen.getByText(new RegExp(`${t.labels.sets}:\\s*3`))).toBeTruthy();
+  });
 });

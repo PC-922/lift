@@ -8,8 +8,6 @@ export interface SharedRoutineExercise {
   reps: string;
   dropset: boolean;
   toFailure: boolean;
-  alternativeName?: string;
-  alternativeMuscleGroup?: string;
   restSeconds?: number;
 }
 
@@ -40,7 +38,6 @@ export function createSharedRoutine(routine: Routine, exercises: Exercise[]): Sh
     name: day.name,
     exercises: day.exercises.map((re) => {
       const exercise = exerciseById.get(re.exerciseId);
-      const alternative = re.alternativeExerciseId ? exerciseById.get(re.alternativeExerciseId) : undefined;
 
       return {
         name: exercise?.name ?? '',
@@ -49,8 +46,6 @@ export function createSharedRoutine(routine: Routine, exercises: Exercise[]): Sh
         reps: re.reps,
         dropset: re.dropset,
         toFailure: re.toFailure,
-        alternativeName: alternative?.name,
-        alternativeMuscleGroup: alternative?.muscleGroup,
         restSeconds: re.restSeconds,
       };
     }),
@@ -105,7 +100,22 @@ export function parseSharedRoutine(jsonString: string): SharedRoutine | null {
   try {
     const parsed = JSON.parse(jsonString) as unknown;
     if (isValidSharedRoutine(parsed)) {
-      return parsed;
+      return {
+        version: parsed.version,
+        name: parsed.name,
+        days: parsed.days.map((day) => ({
+          name: day.name,
+          exercises: day.exercises.map((exercise) => ({
+            name: exercise.name,
+            muscleGroup: exercise.muscleGroup,
+            sets: exercise.sets,
+            reps: exercise.reps,
+            dropset: exercise.dropset,
+            toFailure: exercise.toFailure,
+            restSeconds: exercise.restSeconds,
+          })),
+        })),
+      };
     }
   } catch {
     // fall through
@@ -140,9 +150,6 @@ export function importSharedRoutine(
 
   function importExercise(sharedExercise: SharedRoutineExercise): { routineExercise: RoutineExercise; exercise: Exercise } {
     const exercise = resolveExercise(sharedExercise.name, sharedExercise.muscleGroup);
-    const alternative = sharedExercise.alternativeName && sharedExercise.alternativeMuscleGroup
-      ? resolveExercise(sharedExercise.alternativeName, sharedExercise.alternativeMuscleGroup)
-      : undefined;
 
     const routineExercise: RoutineExercise = {
       exerciseId: exercise.id,
@@ -152,10 +159,6 @@ export function importSharedRoutine(
       toFailure: sharedExercise.toFailure,
       restSeconds: sharedExercise.restSeconds,
     };
-
-    if (alternative && alternative.id !== exercise.id) {
-      routineExercise.alternativeExerciseId = alternative.id;
-    }
 
     return { routineExercise, exercise };
   }

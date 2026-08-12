@@ -80,6 +80,27 @@ describe('exportImport', () => {
     expect(result?.routines[0].days[0].exercises[0].reps).toBe('8');
   });
 
+  it('removes legacy alternative fields during import', () => {
+    const json = JSON.stringify({
+      exercises: [],
+      groups: [],
+      routines: [{
+        ...baseRoutine,
+        days: [{
+          ...baseRoutine.days[0],
+          exercises: [{
+            ...baseRoutine.days[0].exercises[0],
+            alternativeExerciseId: 'exercise_legacy',
+          }],
+        }],
+      }],
+    });
+
+    const result = importData(json);
+
+    expect(result?.routines[0].days[0].exercises[0]).not.toHaveProperty('alternativeExerciseId');
+  });
+
   it('falls back to default sort preference when invalid', () => {
     const json = JSON.stringify({ exercises: [], groups: [], routines: [], sortPreference: { field: 'invalid', direction: 'asc' } });
     const result = importData(json);

@@ -486,46 +486,6 @@ describe('RoutinesScreen', () => {
     expect(onReorderRoutineExercise).toHaveBeenCalledWith('r5', dayId, 0, 1);
   });
 
-  it('updates form and logs the alternative exercise correctly', async () => {
-    const customExercises = [
-      ...exercises,
-      { id: 'ex3', name: 'Alt Press', muscleGroup: 'Pecho', logs: [{ date: '2026-01-20', weight: 80, reps: 12 }] },
-    ] as Exercise[];
-
-    const altRoutines = [
-      {
-        id: 'r3',
-        name: 'Alt Day',
-        days: [{ id: dayId, name: 'Día 1', exercises: [{ exerciseId: 'ex1', alternativeExerciseId: 'ex3', sets: 3, reps: '10', dropset: false, toFailure: false }] }],
-      },
-    ];
-
-    const onLogExerciseMock = vi.fn();
-    renderWithToast(<RoutinesScreen {...defaultProps} exercises={customExercises} routines={altRoutines} activeRoutineId="r3" onActiveRoutineChange={vi.fn()} onLogExercise={onLogExerciseMock} />);
-    openDay();
-
-    const weightInput = screen.getByDisplayValue('70') as HTMLInputElement;
-    expect(weightInput).toBeTruthy();
-
-    const toggleBtn = screen.getByText(t.labels.swapToAlternative).closest('button')!;
-    fireEvent.click(toggleBtn);
-    await act(() => vi.runAllTimersAsync());
-
-    const newWeightInput = screen.getByDisplayValue('80') as HTMLInputElement;
-    expect(newWeightInput).toBeTruthy();
-
-    fireEvent.change(newWeightInput, { target: { value: '85' } });
-    const repsInput = screen.getByDisplayValue('12') as HTMLInputElement;
-    fireEvent.change(repsInput, { target: { value: '10' } });
-
-    const logBtn = screen.getByText(t.actions.log);
-    fireEvent.click(logBtn);
-    await act(() => vi.runAllTimersAsync());
-
-    expect(onLogExerciseMock).toHaveBeenCalledWith('ex3', 85, 10);
-    expect(screen.getByDisplayValue('80')).toBeTruthy();
-  });
-
   it('shows muscle group badges for each day in detail view', async () => {
     const multiGroupRoutine: Routine[] = [
       {

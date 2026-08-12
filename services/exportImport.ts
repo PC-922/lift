@@ -93,9 +93,12 @@ export function importData(jsonString: string): BackupData | null {
             exercises: day.exercises
               .filter(isRoutineExerciseLike)
               .map((re) => ({
-                ...re,
+                exerciseId: re.exerciseId,
+                sets: re.sets,
                 reps: typeof re.reps === 'number' ? String(re.reps) : re.reps,
+                dropset: re.dropset,
                 toFailure: re.toFailure ?? false,
+                restSeconds: re.restSeconds,
               })),
           }));
           return { ...routine, days: normalizedDays };

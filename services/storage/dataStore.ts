@@ -69,8 +69,34 @@ function normalizeExercise(data: Exercise): Exercise {
 function normalizeRoutine(data: Routine): Routine {
   return {
     ...data,
+    days: data.days.map((day) => ({
+      ...day,
+      exercises: day.exercises.map((exercise) => ({
+        exerciseId: exercise.exerciseId,
+        sets: exercise.sets,
+        reps: exercise.reps,
+        dropset: exercise.dropset,
+        toFailure: exercise.toFailure,
+        restSeconds: exercise.restSeconds,
+      })),
+    })),
     updatedAt: normalizeTimestamp(data.updatedAt),
   };
+}
+
+function hasLegacyRoutineAlternatives(data: unknown): boolean {
+  if (typeof data !== 'object' || data === null) return false;
+  const days = (data as { days?: unknown }).days;
+  if (!Array.isArray(days)) return false;
+
+  return days.some((day) => {
+    if (typeof day !== 'object' || day === null) return false;
+    const exercises = (day as { exercises?: unknown }).exercises;
+    if (!Array.isArray(exercises)) return false;
+    return exercises.some((exercise) => (
+      typeof exercise === 'object' && exercise !== null && 'alternativeExerciseId' in exercise
+    ));
+  });
 }
 
 function normalizeTimestamp(value: string | Timestamp | undefined | null): string | undefined {
@@ -150,7 +176,17 @@ export function createFirestoreDataStore(db: Firestore, uid: string): DataStore 
       const unsubscribeRoutines = onSnapshot(
         query(routinesRef, orderBy('order', 'asc')),
         (snapshot) => {
-          routines = snapshot.docs.map((d) => normalizeRoutine(d.data() as Routine));
+          routines = snapshot.docs.map((d) => {
+            const raw = d.data() as Routine;
+            const normalized = normalizeRoutine(raw);
+            if (hasLegacyRoutineAlternatives(raw)) {
+              void setDoc(
+                d.ref,
+                deepClean(withOwner({ ...normalized })),
+              );
+            }
+            return normalized;
+          });
           onStatus({ hasPendingWrites: snapshot.metadata.hasPendingWrites, fromCache: snapshot.metadata.fromCache });
           emit();
         },
@@ -233,7 +269,6 @@ export function createFirestoreDataStore(db: Firestore, uid: string): DataStore 
       await setDoc(
         doc(routinesRef, routine.id),
         deepClean(withOwner({ ...routine, order, updatedAt: new Date().toISOString() })),
-        { merge: true }
       );
     },
 

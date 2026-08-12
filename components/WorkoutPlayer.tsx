@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, Clock, Plus, X } from 'lucide-react';
+import { ArrowLeftRight, ChevronLeft, ChevronRight, Clock, Plus, X } from 'lucide-react';
 import { useWorkoutSession } from '../hooks/useWorkoutSession';
 import { useAppData } from '../hooks/useAppData';
 import { useRestTimer } from '../hooks/useRestTimer';
@@ -34,6 +34,7 @@ export const WorkoutPlayer: React.FC = () => {
     nextExercise,
     prevExercise,
     addExercise,
+    replaceCurrentExercise,
     finish,
     cancel,
   } = useWorkoutSession();
@@ -45,6 +46,7 @@ export const WorkoutPlayer: React.FC = () => {
   const [showSummary, setShowSummary] = useState(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const [showAddExercise, setShowAddExercise] = useState(false);
+  const [exercisePickerMode, setExercisePickerMode] = useState<'add' | 'replace'>('add');
   const [exerciseSearch, setExerciseSearch] = useState('');
 
   useWakeLock(!!activeWorkout);
@@ -73,6 +75,25 @@ export const WorkoutPlayer: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentIndex, activeExercise?.exerciseId]);
 
+  const openExercisePicker = (mode: 'add' | 'replace') => {
+    setExercisePickerMode(mode);
+    setShowAddExercise(true);
+  };
+
+  const closeExercisePicker = () => {
+    setShowAddExercise(false);
+    setExerciseSearch('');
+  };
+
+  const handleExerciseSelected = (exerciseId: string) => {
+    if (exercisePickerMode === 'replace') {
+      replaceCurrentExercise(exerciseId);
+    } else {
+      addExercise(exerciseId);
+    }
+    closeExercisePicker();
+  };
+
   if (!activeWorkout || !activeExercise) {
     return (
       <div className="fixed inset-0 z-50 flex flex-col bg-app-bg">
@@ -88,7 +109,7 @@ export const WorkoutPlayer: React.FC = () => {
         </div>
         <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
           <p className="text-app-text-muted">{t.labels.noExercises}</p>
-          <Button onClick={() => setShowAddExercise(true)}>
+          <Button onClick={() => openExercisePicker('add')}>
             <Plus size={18} />
             {t.labels.addExercise}
           </Button>
@@ -98,15 +119,9 @@ export const WorkoutPlayer: React.FC = () => {
           <AddExerciseModal
             search={exerciseSearch}
             onSearchChange={setExerciseSearch}
-            onSelect={(exerciseId) => {
-              addExercise(exerciseId);
-              setShowAddExercise(false);
-              setExerciseSearch('');
-            }}
-            onClose={() => {
-              setShowAddExercise(false);
-              setExerciseSearch('');
-            }}
+            title={exercisePickerMode === 'replace' ? t.labels.changeExercise : t.labels.addExercise}
+            onSelect={handleExerciseSelected}
+            onClose={closeExercisePicker}
           />
         )}
         {showDiscardConfirm && (
@@ -332,14 +347,18 @@ export const WorkoutPlayer: React.FC = () => {
               </Button>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <Button variant="ghost" onClick={() => setShowAddExercise(true)} className="gap-1">
+              <Button variant="ghost" onClick={() => openExercisePicker('add')} className="gap-1">
                 <Plus size={18} />
                 {t.labels.addExercise}
               </Button>
-              <Button variant="destructive" onClick={() => setShowSummary(true)} className="gap-1">
-                {t.labels.finishWorkout}
+              <Button variant="ghost" onClick={() => openExercisePicker('replace')} className="gap-1">
+                <ArrowLeftRight size={18} />
+                {t.labels.changeExercise}
               </Button>
             </div>
+            <Button variant="destructive" onClick={() => setShowSummary(true)} className="w-full gap-1">
+                {t.labels.finishWorkout}
+            </Button>
           </div>
         </div>
       )}
@@ -371,15 +390,9 @@ export const WorkoutPlayer: React.FC = () => {
         <AddExerciseModal
           search={exerciseSearch}
           onSearchChange={setExerciseSearch}
-          onSelect={(exerciseId) => {
-            addExercise(exerciseId);
-            setShowAddExercise(false);
-            setExerciseSearch('');
-          }}
-          onClose={() => {
-            setShowAddExercise(false);
-            setExerciseSearch('');
-          }}
+          title={exercisePickerMode === 'replace' ? t.labels.changeExercise : t.labels.addExercise}
+          onSelect={handleExerciseSelected}
+          onClose={closeExercisePicker}
         />
       )}
     </div>
@@ -427,7 +440,8 @@ const AddExerciseModal: React.FC<{
   onSearchChange: (value: string) => void;
   onSelect: (exerciseId: string) => void;
   onClose: () => void;
-}> = ({ search, onSearchChange, onSelect, onClose }) => {
+  title: string;
+}> = ({ search, onSearchChange, onSelect, onClose, title }) => {
   const t = useTranslations();
   const { exercises } = useAppData();
   const filtered = exercises
@@ -439,7 +453,7 @@ const AddExerciseModal: React.FC<{
       <div className="flex max-h-[70dvh] w-full flex-col">
         <div className="shrink-0 border-b border-app-border px-6 pb-4 pt-5">
           <div className="flex items-center justify-between gap-3">
-            <h2 className="text-lg font-bold text-app-text">{t.labels.addExercise}</h2>
+            <h2 className="text-lg font-bold text-app-text">{title}</h2>
             <button onClick={onClose} className="rounded-full border border-app-border p-2 text-app-text-muted active:opacity-70" aria-label={t.actions.cancel}>
               <X size={18} />
             </button>

@@ -16,7 +16,6 @@ export interface Exercise {
 
 export interface RoutineExercise {
   exerciseId: string;
-  alternativeExerciseId?: string;
   sets: number;
   reps: string;
   dropset: boolean;

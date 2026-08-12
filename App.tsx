@@ -26,6 +26,7 @@ import { Button } from './components/ui/Button';
 import { Surface } from './components/ui/Surface';
 import { Badge } from './components/ui/Badge';
 import { cn } from './utils/cn';
+import { usePortraitOrientation } from './hooks/usePortraitOrientation';
 
 const HomeScreen: React.FC = () => {
   const t = useTranslations();
@@ -301,17 +302,9 @@ const AppLayout: React.FC = () => {
     return () => window.removeEventListener('resize', checkStandalone);
   }, []);
 
-  const currentScreen =
-    location.pathname === '/' ? 'home'
-    : location.pathname === '/insights' || location.pathname.startsWith('/insights/') ? 'insights'
-    : location.pathname === '/workout' ? 'workout'
-    : location.pathname === '/routines' || location.pathname.startsWith('/routines/') ? 'routines'
-    : location.pathname === '/settings' || location.pathname.startsWith('/settings/') ? 'settings'
-    : 'home';
-
-  const showHeader = currentScreen === 'home' && !location.pathname.startsWith('/exercises/');
+  const showHeader = !location.pathname.startsWith('/exercises/');
   const appHeaderClassName = 'px-4 pt-6 pb-4';
-  const appHeaderTitleClassName = 'text-xl font-bold text-app-text';
+  const appHeaderTitleClassName = 'text-xl font-black tracking-[0.22em] text-app-text';
 
   if (isLoading) {
     return (
@@ -327,35 +320,24 @@ const AppLayout: React.FC = () => {
       <div className="min-h-screen pb-24 sm:mx-auto sm:max-w-md">
           {showHeader && (
             <header className={cn('sticky top-0 z-20 bg-app-bg', appHeaderClassName)}>
-              <div className="flex items-center justify-between gap-3">
+              <div className="relative flex min-h-9 items-center justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-2">
-                  <h1 className={cn(appHeaderTitleClassName, 'flex items-center gap-2')}>
-                    {t.appTitle}
-                  </h1>
-                  <SyncIndicator />
+                  {location.pathname === '/' && <SyncIndicator />}
                 </div>
-                {!isStandalone && (
-                  <Button
-                    onClick={() => setIsInstallModalOpen(true)}
-                    size="sm"
-                    className="gap-1"
-                  >
-                    <Download size={14} />
-                    {t.actions.install}
-                  </Button>
-                )}
+                <h1 className={cn(appHeaderTitleClassName, 'absolute left-1/2 -translate-x-1/2')}>{t.appTitle}</h1>
+                <div className="flex min-w-0 justify-end">
+                  {!isStandalone && (
+                    <Button
+                      onClick={() => setIsInstallModalOpen(true)}
+                      size="sm"
+                      className="gap-1"
+                    >
+                      <Download size={14} />
+                      {t.actions.install}
+                    </Button>
+                  )}
+                </div>
               </div>
-            </header>
-          )}
-
-          {currentScreen !== 'home' && !location.pathname.startsWith('/exercises/') && (
-            <header className={cn('sticky top-0 z-20 bg-app-bg', appHeaderClassName)}>
-              <h1 className={appHeaderTitleClassName}>
-                {currentScreen === 'insights' ? t.labels.insights
-                  : currentScreen === 'workout' ? t.labels.workout
-                  : currentScreen === 'routines' ? t.labels.routines
-                  : t.labels.settings}
-              </h1>
             </header>
           )}
 
@@ -436,6 +418,7 @@ const SplashScreen: React.FC = () => {
 
 const AppContent: React.FC = () => {
   const { user, phase, fallbackUid } = useAuth();
+  usePortraitOrientation();
 
   if (phase === 'resolving') {
     return (

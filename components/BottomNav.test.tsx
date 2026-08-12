@@ -30,4 +30,16 @@ describe('BottomNav', () => {
     const workoutLink = screen.getByRole('link', { name: t.labels.workout });
     expect(workoutLink.getAttribute('href')).toBe('/workout');
   });
+
+  it('shows only the active label and marks the active icon', () => {
+    render(
+      <MemoryRouter initialEntries={['/routines']}>
+        <BottomNav />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText(t.labels.routines)).toBeTruthy();
+    expect(screen.queryByText(t.labels.home)).toBeNull();
+    expect(screen.getByRole('link', { name: t.labels.routines }).className).toContain('bottom-nav-active');
+  });
 });

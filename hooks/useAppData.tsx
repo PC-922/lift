@@ -47,15 +47,6 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
-function updateRoutineDay(day: RoutineDay, exerciseId: string, updater: (re: RoutineExercise) => RoutineExercise): RoutineDay {
-  return {
-    ...day,
-    exercises: day.exercises.map((re) =>
-      re.exerciseId === exerciseId || re.alternativeExerciseId === exerciseId ? updater(re) : re
-    ),
-  };
-}
-
 function bestSetOf(entry: WorkoutEntry): WorkoutSet | null {
   return entry.sets.reduce<WorkoutSet | null>((best, set) => {
     if (set.weight === null && set.reps === null) return best;
@@ -255,13 +246,7 @@ export const AppDataProvider: React.FC<{ children: ReactNode }> = ({ children })
       for (const routine of routines) {
         const cleanedDays = routine.days.map((day) => ({
           ...day,
-          exercises: day.exercises
-            .filter((re) => !removedExerciseIds.has(re.exerciseId))
-            .map((re) =>
-              re.alternativeExerciseId && removedExerciseIds.has(re.alternativeExerciseId)
-                ? { ...re, alternativeExerciseId: undefined }
-                : re
-            ),
+          exercises: day.exercises.filter((re) => !removedExerciseIds.has(re.exerciseId)),
         }));
         if (cleanedDays.some((day, index) => day.exercises.length !== routine.days[index].exercises.length)) {
           await dataStore.saveRoutine({ ...routine, days: cleanedDays, updatedAt: nowIso() });

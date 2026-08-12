@@ -102,6 +102,21 @@ describe('useWorkoutSession', () => {
     expect(result.current.activeWorkout?.exercises.map((e) => e.exerciseId)).toEqual(['ex1', 'ex2', 'ex3']);
   });
 
+  it('replaces the current exercise, clears sets and keeps its target', () => {
+    const result = startSession();
+
+    act(() => {
+      result.current.logSet(80, 10);
+      result.current.replaceCurrentExercise('ex2');
+    });
+
+    expect(result.current.activeWorkout?.exercises[0]).toEqual({
+      exerciseId: 'ex2',
+      sets: [],
+      target: { sets: 3, reps: '10', restSeconds: 90 },
+    });
+  });
+
   it('removes an exercise and clamps the index', () => {
     const result = startSession();
 

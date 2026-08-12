@@ -1,5 +1,5 @@
 import React, {forwardRef, useCallback, useEffect, useMemo, useState} from 'react';
-import {GripVertical, MoreVertical, Pencil, Play, Plus, Shuffle, Trash2, Upload, X} from 'lucide-react';
+import {GripVertical, MoreVertical, Pencil, Play, Plus, Trash2, Upload, X} from 'lucide-react';
 import {Exercise, ExerciseLog, Routine, RoutineDay, RoutineExercise} from '../types';
 import {getTranslatedGroupName, useTranslations} from '../utils/translations';
 import {getLatestLog, getLogFeedback} from '../utils/progression';
@@ -97,12 +97,9 @@ export const RoutinesScreen: React.FC<Props> = ({
   const [activeDayIndex, setActiveDayIndex] = useState(0);
   const [formSearch, setFormSearch] = useState('');
   const [logForms, setLogForms] = useState<Record<string, LogFormState>>({});
-  const [usingAlternative, setUsingAlternative] = useState<Record<string, boolean>>({});
   const [actionSheetExercise, setActionSheetExercise] = useState<ExerciseDayRef | null>(null);
   const [confirmDeleteRoutineId, setConfirmDeleteRoutineId] = useState<string | null>(null);
   const [confirmRemoveExercise, setConfirmRemoveExercise] = useState<ExerciseDayRef | null>(null);
-  const [pickingAlternativeFor, setPickingAlternativeFor] = useState<ExerciseDayRef | null>(null);
-  const [alternativeSearch, setAlternativeSearch] = useState('');
   const [selectedDayId, setSelectedDayId] = useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -129,9 +126,8 @@ export const RoutinesScreen: React.FC<Props> = ({
         .map((re) => ({
           routineExercise: re,
           exercise: exercises.find((e) => e.id === re.exerciseId),
-          alternativeExercise: re.alternativeExerciseId ? exercises.find((e) => e.id === re.alternativeExerciseId) : undefined,
         }))
-        .filter((item): item is { routineExercise: RoutineExercise; exercise: Exercise; alternativeExercise: Exercise | undefined } => item.exercise !== undefined),
+        .filter((item): item is { routineExercise: RoutineExercise; exercise: Exercise } => item.exercise !== undefined),
       muscleGroups: getDayMuscleGroups(day, exercises),
     }));
   }, [activeRoutine, exercises]);
@@ -267,14 +263,6 @@ export const RoutinesScreen: React.FC<Props> = ({
     }));
   };
 
-  const setAlternative = (exerciseId: string, alternativeId: string | undefined) => {
-    if (!activeFormDay) return;
-    setFormDays((prev) => prev.map((day, i) => {
-      if (i !== activeDayIndex) return day;
-      return { ...day, exercises: day.exercises.map((re) => (re.exerciseId === exerciseId ? { ...re, alternativeExerciseId: alternativeId } : re)) };
-    }));
-  };
-
   const handleSave = () => {
     const name = formName.trim();
     if (!name || formDays.length === 0) return;
@@ -391,13 +379,7 @@ export const RoutinesScreen: React.FC<Props> = ({
       });
   }, [exercises, formSearch, activeFormDay]);
 
-  const filteredAlternativeExercises = useMemo(() => {
-    const q = alternativeSearch.toLowerCase();
-    return exercises.slice().sort((a, b) => a.name.localeCompare(b.name)).filter((ex) => !q || ex.name.toLowerCase().includes(q));
-  }, [exercises, alternativeSearch]);
-
   const actionSheetExerciseName = actionSheetExercise ? exerciseById.get(actionSheetExercise.exerciseId)?.name ?? '' : '';
-  const pickingAlternativeExerciseId = pickingAlternativeFor?.exerciseId ?? null;
 
   return (
     <div className="space-y-6 pb-20">
@@ -438,10 +420,8 @@ export const RoutinesScreen: React.FC<Props> = ({
             </div>
           ) : selectedDay ? (
             <div className="space-y-3 pb-32">
-              {selectedDay.resolved.map(({ routineExercise, exercise, alternativeExercise }, index) => {
-                const isAlt = !!usingAlternative[exercise.id];
-                const displayExercise = isAlt && alternativeExercise ? alternativeExercise : exercise;
-                const form = getLogForm(displayExercise.id);
+              {selectedDay.resolved.map(({ routineExercise, exercise }, index) => {
+                const form = getLogForm(exercise.id);
                 const exerciseId = exercise.id;
 
                 return (
@@ -452,18 +432,14 @@ export const RoutinesScreen: React.FC<Props> = ({
                     <RoutineExerciseCard
                       ref={exercisesDrag.bindItem(exerciseId).ref}
                       routineExercise={routineExercise}
-                      exercise={displayExercise}
-                      alternativeExercise={alternativeExercise}
-                      isUsingAlternative={isAlt}
+                      exercise={exercise}
                       isDragging={exercisesDrag.draggingId === exerciseId}
                       form={form}
-                      onUpdateForm={(field, value) => updateLogForm(displayExercise.id, field, value)}
-                      onLog={() => handleLog(displayExercise.id)}
+                      onUpdateForm={(field, value) => updateLogForm(exercise.id, field, value)}
+                      onLog={() => handleLog(exercise.id)}
                       onMenu={() => setActionSheetExercise({ exerciseId, dayId: selectedDay.id })}
                       onDragHandlePointerDown={exercisesDrag.handleStart(exerciseId)}
-                      onTap={() => onNavigateToExercise(displayExercise.id, activeRoutine.id)}
-                      onToggleAlternative={() => setUsingAlternative((prev) => ({ ...prev, [exercise.id]: !prev[exercise.id] }))}
-                      onSetAlternative={() => { setPickingAlternativeFor({ exerciseId, dayId: selectedDay.id }); setAlternativeSearch(''); }}
+                      onTap={() => onNavigateToExercise(exercise.id, activeRoutine.id)}
                     />
                   </React.Fragment>
                 );
@@ -665,21 +641,6 @@ export const RoutinesScreen: React.FC<Props> = ({
                               </div>
                             </div>
 
-                            <div className="mt-4">
-                              {routineEx.alternativeExerciseId ? (
-                                <div className="flex items-center justify-between gap-3">
-                                  <p className="text-xs text-app-text-muted">
-                                    {t.labels.alternative}: <span className="font-semibold text-app-text">{exerciseById.get(routineEx.alternativeExerciseId)?.name ?? '—'}</span>
-                                  </p>
-                                  <button onClick={() => setAlternative(exercise.id, undefined)} className="text-xs text-app-danger active:opacity-70">{t.labels.clearAlternative}</button>
-                                </div>
-                              ) : (
-                                <button onClick={() => { setPickingAlternativeFor({ exerciseId: exercise.id, dayId: activeFormDay?.id ?? '' }); setAlternativeSearch(''); }} className="flex items-center gap-1 text-xs font-medium text-app-text underline decoration-app-accent decoration-2 underline-offset-4 active:opacity-70">
-                                  <Shuffle size={12} />
-                                  {t.labels.setAlternative}
-                                </button>
-                              )}
-                            </div>
                           </div>
                         )}
                       </div>
@@ -692,31 +653,6 @@ export const RoutinesScreen: React.FC<Props> = ({
 
           <div className="shrink-0 border-t border-app-border px-6 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-4">
             <Button onClick={handleSave} disabled={!formName.trim()} className="w-full">{t.actions.save}</Button>
-          </div>
-        </div>
-      </Modal>
-
-      <Modal open={!!pickingAlternativeFor} onClose={() => setPickingAlternativeFor(null)} position="bottom">
-        <div className="flex max-h-[calc(100dvh-1.5rem)] w-full flex-col">
-          <div className="shrink-0 border-b border-app-border px-6 pb-4 pt-5">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-lg font-bold text-app-text">{t.labels.setAlternative}</h2>
-              <button onClick={() => setPickingAlternativeFor(null)} className="rounded-full border border-app-border p-2 text-app-text-muted active:opacity-70" aria-label={t.actions.cancel}><X size={18} /></button>
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-y-auto px-6 py-5 pt-[env(safe-area-inset-top,1.25rem)]">
-            <SearchInput value={alternativeSearch} onChange={(e) => setAlternativeSearch(e.target.value)} onClear={() => setAlternativeSearch('')} placeholder={t.labels.searchExercises} />
-            <div className="mt-4 space-y-2">
-              {filteredAlternativeExercises.filter((ex) => ex.id !== pickingAlternativeExerciseId).map((ex) => (
-                <ListRow key={ex.id} padded={false}>
-                  <button onClick={() => { if (pickingAlternativeFor) setAlternative(pickingAlternativeFor.exerciseId, ex.id); setPickingAlternativeFor(null); }} className="w-full px-4 py-4 text-left transition-colors active:bg-app-surface-muted sm:px-5 sm:py-5">
-                    <p className="text-sm font-semibold text-app-text">{ex.name}</p>
-                    <p className="text-xs text-app-text-muted">{getTranslatedGroupName(ex.muscleGroup)}</p>
-                  </button>
-                </ListRow>
-              ))}
-            </div>
           </div>
         </div>
       </Modal>
@@ -745,8 +681,6 @@ export const RoutinesScreen: React.FC<Props> = ({
 interface RoutineExerciseCardProps {
   routineExercise: RoutineExercise;
   exercise: Exercise;
-  alternativeExercise: Exercise | undefined;
-  isUsingAlternative: boolean;
   isDragging: boolean;
   form: LogFormState;
   onUpdateForm: (field: keyof LogFormState, value: string) => void;
@@ -754,16 +688,12 @@ interface RoutineExerciseCardProps {
   onTap: () => void;
   onMenu: () => void;
   onDragHandlePointerDown: (event: React.PointerEvent) => void;
-  onToggleAlternative: () => void;
-  onSetAlternative: () => void;
 }
 
 const RoutineExerciseCard = forwardRef<HTMLDivElement, RoutineExerciseCardProps>(
   ({
     routineExercise,
     exercise,
-    alternativeExercise,
-    isUsingAlternative,
     isDragging,
     form,
     onUpdateForm,
@@ -771,8 +701,6 @@ const RoutineExerciseCard = forwardRef<HTMLDivElement, RoutineExerciseCardProps>
     onTap,
     onMenu,
     onDragHandlePointerDown,
-    onToggleAlternative,
-    onSetAlternative,
   }, ref) => {
     const t = useTranslations();
 
@@ -815,24 +743,6 @@ const RoutineExerciseCard = forwardRef<HTMLDivElement, RoutineExerciseCardProps>
           <Badge variant="neutral" className="text-[10px]">
             {t.labels.rest}: {routineExercise.restSeconds}{t.labels.restSeconds}
           </Badge>
-        )}
-        {alternativeExercise && (
-          <button
-            onClick={onToggleAlternative}
-            className="rounded-md border border-app-border bg-app-surface-muted px-2 py-1 text-xs font-semibold text-app-text active:opacity-70 transition-colors"
-          >
-            <Shuffle size={12} className="inline-block mr-1" />
-            {isUsingAlternative ? t.labels.swapToMain : t.labels.swapToAlternative}
-          </button>
-        )}
-        {!alternativeExercise && (
-          <button
-            onClick={onSetAlternative}
-            className="rounded-md border border-dashed border-app-border bg-app-surface px-2 py-1 text-xs font-semibold text-app-text-muted active:opacity-70 transition-colors"
-          >
-            <Shuffle size={12} className="inline-block mr-1" />
-            {t.labels.setAlternative}
-          </button>
         )}
       </div>
 

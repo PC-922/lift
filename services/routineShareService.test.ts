@@ -22,7 +22,6 @@ const baseRoutine: Routine = {
           reps: '8',
           dropset: false,
           toFailure: false,
-          alternativeExerciseId: 'ex_2',
         },
       ],
     },
@@ -45,8 +44,6 @@ describe('routineShareService', () => {
       muscleGroup: 'Chest',
       sets: 3,
       reps: '8',
-      alternativeName: 'Push Up',
-      alternativeMuscleGroup: 'Chest',
     });
   });
 
@@ -73,7 +70,6 @@ describe('routineShareService', () => {
     expect(result.createdExercises).toHaveLength(0);
     expect(result.routine.name).toBe('Upper Body');
     expect(result.routine.days[0].exercises[0].exerciseId).toBe('ex_1');
-    expect(result.routine.days[0].exercises[0].alternativeExerciseId).toBe('ex_2');
   });
 
   it('creates missing exercises when importing', () => {
@@ -98,35 +94,31 @@ describe('routineShareService', () => {
     expect(result.routine.days[0].exercises[0].exerciseId).toBe(result.createdExercises[0].id);
   });
 
-  it('maps alternatives to newly created exercises', () => {
-    const shared: SharedRoutine = {
+  it('strips legacy alternative fields when importing shared routines', () => {
+    const legacyShared = JSON.stringify({
       version: 1,
       name: 'Push',
-      days: [
-        {
-          name: 'Day A',
-          exercises: [
-            {
-              name: 'Bench Press',
-              muscleGroup: 'Chest',
-              sets: 3,
-              reps: '8',
-              dropset: false,
-              toFailure: false,
-              alternativeName: 'Dumbbell Press',
-              alternativeMuscleGroup: 'Chest',
-            },
-          ],
-        },
-      ],
-    };
+      days: [{
+        name: 'Day A',
+        exercises: [{
+          name: 'Bench Press',
+          muscleGroup: 'Chest',
+          sets: 3,
+          reps: '8',
+          dropset: false,
+          toFailure: false,
+          alternativeName: 'Dumbbell Press',
+          alternativeMuscleGroup: 'Chest',
+        }],
+      }],
+    });
 
-    const result = importSharedRoutine(shared, [], []);
+    const parsed = parseSharedRoutine(legacyShared);
+    expect(parsed?.days[0].exercises[0]).not.toHaveProperty('alternativeName');
+    expect(parsed?.days[0].exercises[0]).not.toHaveProperty('alternativeMuscleGroup');
 
-    expect(result.createdExercises).toHaveLength(2);
-    expect(result.routine.days[0].exercises[0].alternativeExerciseId).toBeDefined();
-    expect(result.routine.days[0].exercises[0].alternativeExerciseId).not.toBe(
-      result.routine.days[0].exercises[0].exerciseId
-    );
+    const result = importSharedRoutine(parsed!, [], []);
+    expect(result.createdExercises).toHaveLength(1);
+    expect(result.routine.days[0].exercises[0]).not.toHaveProperty('alternativeExerciseId');
   });
 });

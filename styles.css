@@ -77,6 +77,23 @@ body {
   border-bottom-color: color-mix(in srgb, var(--color-border) 45%, transparent);
 }
 
+.bottom-nav-shell {
+  border: 1px solid color-mix(in srgb, var(--color-border) 72%, transparent);
+  border-bottom: 0;
+  border-radius: 2.25rem 2.25rem 0 0 / 1.35rem 1.35rem 0 0;
+}
+
+.bottom-nav-active,
+.bottom-nav-indicator,
+.bottom-nav-label {
+  color: var(--color-accent-text);
+}
+
+.bottom-nav-indicator {
+  background: var(--color-accent-text);
+  box-shadow: 0 0 12px 2px color-mix(in srgb, var(--color-accent-text) 72%, transparent);
+}
+
 @layer utilities {
   .tabular-nums {
     font-variant-numeric: tabular-nums;
