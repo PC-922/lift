@@ -584,12 +584,17 @@ export const RoutinesScreen: React.FC<Props> = ({
             </div>
           </div>
 
-          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 py-5">
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 pb-5">
             <div className="space-y-3">
               <label className="block text-sm font-medium text-app-text-muted">{t.labels.selectExercises}</label>
 
-              <div className="sticky top-0 z-10 bg-app-surface pb-3 -mx-6 px-6">
-                <SearchInput value={formSearch} onChange={(e) => setFormSearch(e.target.value)} onClear={() => setFormSearch('')} placeholder={t.labels.searchExercises} />
+              <div className="sticky top-0 z-10 bg-app-surface pb-0 pt-0 -mx-6 px-6">
+                <SearchInput 
+                  value={formSearch} 
+                  onChange={(e) => setFormSearch(e.target.value)} 
+                  onClear={() => setFormSearch('')} 
+                  placeholder={t.labels.searchExercises} 
+                />
               </div>
 
               {filteredFormExercises.length === 0 ? (
