@@ -317,7 +317,7 @@ const AppLayout: React.FC = () => {
   return (
     <RestTimerProvider>
       <WorkoutSessionProvider>
-      <div className="min-h-screen pb-24 sm:mx-auto sm:max-w-md">
+      <div className="app-shell min-h-screen sm:mx-auto sm:max-w-md">
           {showHeader && (
             <header className={cn('sticky top-0 z-20 bg-app-bg', appHeaderClassName)}>
               <div className="relative flex min-h-9 items-center justify-between gap-3">
@@ -341,7 +341,7 @@ const AppLayout: React.FC = () => {
             </header>
           )}
 
-          <main className="animate-slideUp px-4 pb-48 pt-4">
+          <main className="animate-slideUp px-4 pt-4">
             <Routes>
               <Route path="/" element={<HomeScreen />} />
               <Route path="/exercises/new" element={<ExerciseFormScreen />} />

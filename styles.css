@@ -57,6 +57,7 @@
   --color-danger: #EF4444;
   --color-success: #4cd38c;
   --color-warning: #f2c14e;
+  --bottom-nav-height: 5.25rem;
 }
 
 html {
@@ -96,21 +97,21 @@ body {
   border-bottom-color: color-mix(in srgb, var(--color-border) 45%, transparent);
 }
 
+.app-shell {
+  padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px));
+}
+
 .bottom-nav-shell {
-  border: 1px solid color-mix(in srgb, var(--color-border) 72%, transparent);
-  border-bottom: 0;
-  border-radius: 2.25rem 2.25rem 0 0 / 1.35rem 1.35rem 0 0;
+  height: var(--bottom-nav-height);
+}
+
+.bottom-nav-divider {
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 72%, transparent);
 }
 
 .bottom-nav-active,
-.bottom-nav-indicator,
 .bottom-nav-label {
   color: var(--color-accent-text);
-}
-
-.bottom-nav-indicator {
-  background: var(--color-accent-text);
-  box-shadow: 0 0 12px 2px color-mix(in srgb, var(--color-accent-text) 72%, transparent);
 }
 
 @layer utilities {

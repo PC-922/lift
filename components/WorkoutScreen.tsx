@@ -49,7 +49,7 @@ export const WorkoutScreen: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 pb-20">
+    <div className="space-y-6">
       <div className="space-y-3">
         <Button
           onClick={startFreeWorkout}

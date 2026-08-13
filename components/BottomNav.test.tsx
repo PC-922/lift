@@ -31,8 +31,8 @@ describe('BottomNav', () => {
     expect(workoutLink.getAttribute('href')).toBe('/workout');
   });
 
-  it('shows only the active label and marks the active icon', () => {
-    render(
+  it('centers the active label below all icons without an active indicator', () => {
+    const { container } = render(
       <MemoryRouter initialEntries={['/routines']}>
         <BottomNav />
       </MemoryRouter>
@@ -41,5 +41,8 @@ describe('BottomNav', () => {
     expect(screen.getByText(t.labels.routines)).toBeTruthy();
     expect(screen.queryByText(t.labels.home)).toBeNull();
     expect(screen.getByRole('link', { name: t.labels.routines }).className).toContain('bottom-nav-active');
+    expect(container.querySelector('.bottom-nav-label')?.parentElement?.className).toContain('justify-center');
+    expect(container.querySelector('.bottom-nav-divider')).toBeTruthy();
+    expect(container.querySelector('.bottom-nav-indicator')).toBeNull();
   });
 });

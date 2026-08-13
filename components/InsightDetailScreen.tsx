@@ -101,7 +101,7 @@ export const InsightDetailScreen: React.FC = () => {
   const latestLog = sortedLogs.length > 0 ? sortedLogs[sortedLogs.length - 1] : null;
 
   return (
-    <div className="animate-fadeIn space-y-6 pb-20">
+    <div className="animate-fadeIn space-y-6">
       <div className="mb-6">
         <BackButton label={t.labels.insights} onClick={() => navigate('/insights')} />
       </div>

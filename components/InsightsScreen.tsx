@@ -205,7 +205,7 @@ export const InsightsScreen: React.FC<Props> = ({ exercises, onSelectExercise })
   };
 
   return (
-    <div className="space-y-6 pb-20">
+    <div className="space-y-6">
       {hasInsights ? (
         <>
           {renderFeaturedCard()}

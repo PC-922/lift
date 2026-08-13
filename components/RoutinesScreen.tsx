@@ -382,7 +382,7 @@ export const RoutinesScreen: React.FC<Props> = ({
   const actionSheetExerciseName = actionSheetExercise ? exerciseById.get(actionSheetExercise.exerciseId)?.name ?? '' : '';
 
   return (
-    <div className="space-y-6 pb-20">
+    <div className="space-y-6">
       {activeRoutine ? (
         <div className="space-y-4">
           {selectedDay ? (
@@ -419,7 +419,7 @@ export const RoutinesScreen: React.FC<Props> = ({
               <p className="font-medium text-app-text">{t.labels.noExercises}</p>
             </div>
           ) : selectedDay ? (
-            <div className="space-y-3 pb-32">
+            <div className="space-y-3">
               {selectedDay.resolved.map(({ routineExercise, exercise }, index) => {
                 const form = getLogForm(exercise.id);
                 const exerciseId = exercise.id;
@@ -449,7 +449,7 @@ export const RoutinesScreen: React.FC<Props> = ({
               )}
             </div>
           ) : (
-            <div className="space-y-3 pb-32">
+            <div className="space-y-3">
               {activeRoutineDays.map((day) => (
                 <RoutineDayCard
                   key={day.id}

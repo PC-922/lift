@@ -98,7 +98,7 @@ export const ExerciseList: React.FC<Props> = ({
   );
 
   return (
-    <div className="space-y-4 pb-32">
+    <div className="space-y-4">
       <SearchInput
         value={search}
         onChange={(e) => setSearch(e.target.value)}

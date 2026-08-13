@@ -384,7 +384,7 @@ export const ExerciseDetail: React.FC<Props> = ({
       <ExerciseInsights exercise={exercise} />
 
       {editableLogs.length > 0 && (
-        <div className="mb-2 pb-24">
+        <div className="mb-2">
           <div className="mb-3 flex items-center justify-between">
             <p className="text-sm font-bold text-app-text">{t.labels.history}</p>
             <button
