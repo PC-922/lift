@@ -341,7 +341,7 @@ const AppLayout: React.FC = () => {
             </header>
           )}
 
-          <main className="animate-slideUp px-4 pt-4">
+          <main className="px-4 pt-4">
             <Routes>
               <Route path="/" element={<HomeScreen />} />
               <Route path="/exercises/new" element={<ExerciseFormScreen />} />

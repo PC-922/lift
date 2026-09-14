@@ -177,4 +177,34 @@ describe('WorkoutScreen', () => {
 
     expect(screen.getByText('1:30')).toBeTruthy();
   });
+
+  it('keeps the complete recording flow available in a compact mobile viewport', () => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 375 });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 667 });
+    renderWithProviders(<WorkoutScreen />);
+
+    fireEvent.click(screen.getByText('Push Day'));
+    fireEvent.click(screen.getByText('Día 1'));
+
+    const title = screen.getByRole('heading', { name: 'Bench Press' });
+    const player = title.closest('.fixed');
+    expect(player?.className).toContain('h-[100dvh]');
+    expect(player?.className).toContain('pt-[env(safe-area-inset-top)]');
+    expect(screen.getByText(t.labels.weight)).toBeTruthy();
+    expect(screen.getByText(t.labels.reps, { selector: 'label' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: t.labels.recordSet })).toBeTruthy();
+    expect(screen.getByRole('button', { name: t.labels.finishWorkout })).toBeTruthy();
+  });
+
+  it('keeps the workout controls in a readable column on desktop', () => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1280 });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 900 });
+    renderWithProviders(<WorkoutScreen />);
+
+    fireEvent.click(screen.getByText('Push Day'));
+    fireEvent.click(screen.getByText('Día 1'));
+
+    expect(screen.getByRole('heading', { name: 'Bench Press' }).closest('.sm\\:max-w-md')).toBeTruthy();
+    expect(screen.getByRole('button', { name: t.labels.recordSet })).toBeTruthy();
+  });
 });

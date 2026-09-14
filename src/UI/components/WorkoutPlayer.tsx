@@ -90,8 +90,8 @@ export const WorkoutPlayer: React.FC = () => {
 
   if (!activeWorkout || !activeExercise) {
     return (
-      <div className="fixed inset-0 z-50 flex flex-col bg-app-bg">
-        <div className="flex items-center justify-between px-5 pb-4 pt-5">
+      <div className="fixed inset-0 z-50 flex h-[100dvh] flex-col bg-app-bg pt-[env(safe-area-inset-top)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
+        <div className="flex w-full items-center justify-between px-5 pb-4 pt-5 sm:mx-auto sm:max-w-md">
           <h1 className="text-xl font-bold text-app-text">{activeWorkout?.name || t.labels.freeWorkout}</h1>
           <button
             onClick={() => setShowDiscardConfirm(true)}
@@ -101,7 +101,7 @@ export const WorkoutPlayer: React.FC = () => {
             <X size={18} />
           </button>
         </div>
-        <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
+        <div className="flex w-full flex-1 flex-col items-center justify-center gap-4 px-6 text-center sm:mx-auto sm:max-w-md">
           <p className="text-app-text-muted">{t.labels.noExercises}</p>
           <Button onClick={() => openExercisePicker('add')}>
             <Plus size={18} />
@@ -195,8 +195,8 @@ export const WorkoutPlayer: React.FC = () => {
   const isLast = currentIndex === activeWorkout.exercises.length - 1;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-app-bg">
-      <header className="flex items-center justify-between px-5 pb-4 pt-5">
+    <div className="fixed inset-0 z-50 flex h-[100dvh] flex-col bg-app-bg pt-[env(safe-area-inset-top)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
+      <header className="flex w-full items-center justify-between px-5 pb-4 pt-5 sm:mx-auto sm:max-w-md">
         <div className="min-w-0">
           <p className="truncate text-lg font-bold text-app-text">{activeWorkout.name || t.labels.freeWorkout}</p>
           <p className="mt-0.5 flex items-center gap-1 text-xs text-app-text-muted">
@@ -213,7 +213,7 @@ export const WorkoutPlayer: React.FC = () => {
         </button>
       </header>
 
-      <div className="flex items-center gap-2 px-5 pb-2">
+      <div className="flex w-full items-center gap-2 px-5 pb-2 sm:mx-auto sm:max-w-md">
         {activeWorkout.exercises.map((item, index) => (
           <span
             key={item.exerciseId}
@@ -229,7 +229,7 @@ export const WorkoutPlayer: React.FC = () => {
       </div>
 
       {remainingTime > 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-6 px-6">
+        <div className="flex w-full flex-1 flex-col items-center justify-center gap-6 px-6 sm:mx-auto sm:max-w-md">
           <p className="text-xs font-semibold uppercase tracking-widest text-app-text-muted">{t.labels.rest}</p>
           <p className="text-7xl font-black tabular-nums text-app-text">
             {Math.floor(remainingTime / 60)}:{String(remainingTime % 60).padStart(2, '0')}
@@ -242,7 +242,7 @@ export const WorkoutPlayer: React.FC = () => {
           </Button>
         </div>
       ) : (
-        <div className="flex min-h-0 flex-1 flex-col px-5">
+        <div className="flex min-h-0 w-full flex-1 flex-col px-5 sm:mx-auto sm:max-w-md">
           <div className="min-h-0 flex-1 overflow-y-auto">
             <div className="mb-4 min-h-[6.5rem]">
               <h2 className="line-clamp-2 text-3xl font-black leading-tight text-app-text">{exercise?.name ?? ''}</h2>
@@ -317,7 +317,7 @@ export const WorkoutPlayer: React.FC = () => {
             </div>
           </div>
 
-          <div className="shrink-0 space-y-3 bg-app-bg pb-6 pt-4">
+          <div className="shrink-0 space-y-3 bg-app-bg pb-[calc(env(safe-area-inset-bottom)+1.5rem)] pt-4">
             <div className="grid grid-cols-2 gap-3">
               <Button
                 variant="secondary"

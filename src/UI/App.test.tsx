@@ -132,4 +132,14 @@ describe('App home layout', () => {
       expect(addGroupButton.compareDocumentPosition(list as Node) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
   });
+
+  it('does not trap full-screen mobile overlays inside a transformed main container', () => {
+    const { container } = render(
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    );
+
+    expect(container.querySelector('main')?.className).not.toContain('animate-slideUp');
+  });
 });

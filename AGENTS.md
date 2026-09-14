@@ -40,6 +40,13 @@ This project is a PWA focused on **absolute simplicity** and **human maintainabi
 - Define interfaces for all Props and "storage" responses.
 - Use `Readonly` for states that should not be directly mutated.
 
+### 4. Mobile-First Responsive Design
+- **Primary Target:** Design and validate every screen first in a portrait mobile viewport. Use both a compact viewport (375×667) and a modern viewport (390×844) for layout checks.
+- **Critical Actions:** Titles, inputs, primary actions, navigation, and feedback must remain visible or reachable without overlap, clipping, or collapsed scroll areas.
+- **Viewport Behavior:** Full-screen, fixed, and sticky interfaces must account for dynamic viewport height, virtual keyboards, and safe-area insets.
+- **Responsive Tests:** UI changes that affect layout must include an integration test rendered with a mobile viewport. Manually inspect the affected flow in a real browser-sized mobile viewport when visual layout changes.
+- **Larger Screens:** Tablet and desktop layouts must remain usable and readable. Responsive enhancements must not compromise the mobile experience.
+
 ---
 
 ## 🧪 Testing Strategy (Vitest)
@@ -47,6 +54,7 @@ This project is a PWA focused on **absolute simplicity** and **human maintainabi
 1. **Unit Tests:** For logic in `/services` and `/hooks`.
 2. **Integration Tests:** For components in `/components` simulating real user interactions.
 3. **Mocking:** Mock LocalStorage only when necessary to validate quota failures or parsing errors.
+4. **Responsive Coverage:** Component layout changes require at least one mobile viewport test. Verify compact mobile first, then confirm the same flow remains usable at desktop width.
 
 ---
 
