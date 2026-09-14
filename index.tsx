@@ -1,12 +1,12 @@
+import { composeApplication } from './src/composition';
+import { ApplicationProvider } from './src/UI/ApplicationProvider';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { registerSW } from 'virtual:pwa-register';
-import App from './App';
-import './styles.css';
-import { registerPwaUpdate } from './services/pwaUpdates';
+import './src/UI/styles.css';
+import { registerPwaUpdate } from './src/infrastructure/pwaUpdates';
 
-// Register the service worker. In development this is a no-op.
 let updateSWRef: ((reloadPage?: boolean) => Promise<void>) | null = null;
 const pwa = registerPwaUpdate((reloadPage) => updateSWRef?.(reloadPage) ?? Promise.resolve());
 const updateSW = registerSW({
@@ -15,14 +15,21 @@ const updateSW = registerSW({
 });
 updateSWRef = updateSW;
 
-const rootElement = document.getElementById('root');
-if (!rootElement) throw new Error('Failed to find the root element');
+async function renderApplication(): Promise<void> {
+  const services = composeApplication();
+  const { default: App } = await import('./src/UI/App');
+  const rootElement = document.getElementById('root');
+  if (!rootElement) throw new Error('Failed to find the root element');
 
-const root = ReactDOM.createRoot(rootElement);
-root.render(
-  <React.StrictMode>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
-  </React.StrictMode>
-);
+  ReactDOM.createRoot(rootElement).render(
+    <React.StrictMode>
+      <ApplicationProvider services={services}>
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </ApplicationProvider>
+    </React.StrictMode>
+  );
+}
+
+void renderApplication();

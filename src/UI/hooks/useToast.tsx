@@ -1,0 +1,86 @@
+import React, { createContext, useContext, useState, useCallback } from 'react';
+import { useIdGenerator } from '../ApplicationProvider';
+
+export type ToastType = 'achievement' | 'regression' | 'info';
+
+interface ToastMessage {
+  id: string;
+  text: string;
+  type: ToastType;
+}
+
+interface ToastContextValue {
+  showToast: (text: string, type?: ToastType) => void;
+}
+
+const ToastContext = createContext<ToastContextValue | null>(null);
+
+const TOAST_DURATION_MS = 3000;
+const TOAST_EXIT_MS = 220;
+
+export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const ids = useIdGenerator();
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const [removingIds, setRemovingIds] = useState<ReadonlySet<string>>(new Set());
+
+  const showToast = useCallback((text: string, type: ToastType = 'achievement') => {
+    const id = ids.generate('toast');
+    setToasts((prev) => [...prev, { id, text, type }]);
+    setTimeout(() => {
+      setRemovingIds((prev) => new Set([...prev, id]));
+      setTimeout(() => {
+        setToasts((prev) => prev.filter((t) => t.id !== id));
+        setRemovingIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
+      }, TOAST_EXIT_MS);
+    }, TOAST_DURATION_MS);
+  }, [ids]);
+
+  return (
+    <ToastContext.Provider value={{ showToast }}>
+      {children}
+      <ToastContainer toasts={toasts} removingIds={removingIds} />
+    </ToastContext.Provider>
+  );
+};
+
+export function useToast(): ToastContextValue {
+  const ctx = useContext(ToastContext);
+  if (!ctx) throw new Error('useToast must be used inside ToastProvider');
+  return ctx;
+}
+
+const ToastContainer: React.FC<{ toasts: ToastMessage[]; removingIds: ReadonlySet<string> }> = ({ toasts, removingIds }) => {
+  if (toasts.length === 0) return null;
+  return (
+    <div
+      className="fixed top-4 left-0 right-0 z-[9999] flex flex-col items-center gap-2 px-4 pointer-events-none"
+      style={{ top: 'calc(env(safe-area-inset-top, 0px) + 16px)' }}
+    >
+      {toasts.map((toast) => (
+        <Toast key={toast.id} toast={toast} isRemoving={removingIds.has(toast.id)} />
+      ))}
+    </div>
+  );
+};
+
+const Toast: React.FC<{ toast: ToastMessage; isRemoving: boolean }> = ({ toast, isRemoving }) => {
+  const isAchievement = toast.type === 'achievement';
+  const isRegression = toast.type === 'regression';
+  return (
+    <div
+      className={`
+        ${isRemoving ? 'animate-toastOut' : 'animate-slideDown'} max-w-sm w-full px-4 py-3 rounded-2xl shadow-xl
+        flex items-center gap-3
+        ${isRegression
+          ? 'bg-app-danger text-white'
+          : isAchievement
+            ? 'bg-app-accent text-app-accent-foreground'
+            : 'border border-app-border bg-app-surface text-app-text'}
+      `}
+    >
+      {isAchievement && <span className="text-lg">🏆</span>}
+      {isRegression && <span className="text-lg">⚠️</span>}
+      <p className="text-sm font-semibold flex-1">{toast.text}</p>
+    </div>
+  );
+};

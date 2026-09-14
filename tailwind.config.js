@@ -3,8 +3,7 @@ export default {
   content: [
     './index.html',
     './*.tsx',
-    './components/**/*.tsx',
-    './hooks/**/*.tsx',
+    './src/UI/**/*.tsx',
   ],
   darkMode: 'media',
   theme: {

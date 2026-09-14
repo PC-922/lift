@@ -18,8 +18,8 @@ A beautiful, iOS-styled Progressive Web App (PWA) for tracking your gym workouts
 - **React 19** - UI Framework
 - **TypeScript** - Type Safety
 - **Vite** - Build Tool
-- **Vitest** - Testing Framework (26 tests)
-- **LocalStorage** - Data Persistence
+- **Vitest** - Testing Framework
+- **Firebase + LocalStorage** - Data and offline draft persistence
 - **Lucide React** - Icons
 - **Tailwind CSS** - Styling
 
@@ -48,7 +48,7 @@ A beautiful, iOS-styled Progressive Web App (PWA) for tracking your gym workouts
    npm run dev
    ```
 
-4. Open [http://localhost:5173](http://localhost:5173) in your browser
+4. Open [http://localhost:3000](http://localhost:3000) in your browser
 
 ## 🏗️ Build
 
@@ -74,7 +74,8 @@ Run tests with UI:
 npm run test:ui
 ```
 
-All 26 tests are comprehensive unit tests for the progression logic and data management.
+The suite covers domain rules, application use cases, infrastructure adapters,
+UI interactions and architectural boundaries.
 
 ## 📱 Installing as PWA
 
@@ -92,21 +93,24 @@ All 26 tests are comprehensive unit tests for the progression logic and data man
 
 ```
 lift/
-├── components/          # React components
-│   ├── BottomNav.tsx           # Navigation between screens
-│   ├── ExerciseCard.tsx         # Exercise logging card
-│   ├── InsightsScreen.tsx       # Progress insights
-│   ├── MuscleGroupCard.tsx      # Muscle group selector
-│   └── SettingsScreen.tsx       # Backup/restore settings
-├── services/           # Business logic
-│   └── storageService.ts        # LocalStorage management
-├── utils/             # Utilities
-│   ├── progression.ts           # Progression calculation (tested)
-│   └── translations.ts          # i18n translations
-├── types.ts           # TypeScript types
-├── App.tsx           # Main app component
-└── index.tsx         # Entry point
+├── src/
+│   ├── UI/                    # React components, hooks and presentation helpers
+│   ├── application/           # One file for each use case
+│   ├── domain/                # Entities, value types, services and external contracts
+│   ├── infrastructure/        # Concrete Firebase and LocalStorage adapters
+│   └── composition.ts         # Concrete adapter wiring
+└── index.tsx                  # Application entry point
 ```
+
+Dependencies point inward: UI calls application use cases, infrastructure
+implements contracts such as `TrainingRepository`, and the composition root
+injects implementations such as `FirestoreTrainingRepository`. Contracts live
+directly in `domain`; their names express what can be specialized, so a separate
+`ports` directory is unnecessary. Domain services own training rules and have no
+framework or storage dependencies. Collection value objects such as
+`ExerciseLogs` encapsulate their own transformations, while application use
+cases only coordinate those objects with repositories. `src/architecture.test.ts`
+enforces these boundaries.
 
 ## 🎯 Key Features Explained
 
@@ -137,7 +141,7 @@ This ensures your training variations are properly tracked, including strategic 
    - Manage your data
 
 ### Data Storage
-All data is stored locally using `localStorage`. Your data never leaves your device. Use the backup/restore feature to transfer data between devices or keep as insurance.
+Training data is stored in Firestore with Firebase offline persistence. Preferences and the active workout draft use `localStorage`. You can export and import a backup in JSON.
 
 ## 🤝 Contributing
 
