@@ -20,6 +20,7 @@ import {ListRow} from './ui/ListRow';
 import {BackButton} from './ui/BackButton';
 import {IconButton} from './ui/IconButton';
 import {cn} from '../utils/cn';
+import {isDecimalInput, isIntegerInput, parseDecimalInput, parseIntegerInput} from '../utils/numberInput';
 
 interface Props {
   routines: Routine[];
@@ -312,14 +313,15 @@ export const RoutinesScreen: React.FC<Props> = ({
   );
 
   const updateLogForm = (exerciseId: string, field: keyof LogFormState, value: string) => {
-    if (value !== '' && value !== '-' && !/^-?\d+$/.test(value)) return;
+    if (field === 'weight' && !isDecimalInput(value)) return;
+    if (field === 'reps' && !isIntegerInput(value)) return;
     setLogForms((prev) => ({ ...prev, [exerciseId]: { ...getLogForm(exerciseId), [field]: value } }));
   };
 
   const handleLog = (targetId: string) => {
     const form = getLogForm(targetId);
-    const weightValue = form.weight.trim() === '' || form.weight === '-' ? null : parseInt(form.weight, 10);
-    const repsValue = form.reps.trim() === '' || form.reps === '-' ? null : parseInt(form.reps, 10);
+    const weightValue = parseDecimalInput(form.weight);
+    const repsValue = parseIntegerInput(form.reps);
     if (weightValue === null && repsValue === null) return;
     if ((weightValue !== null && Number.isNaN(weightValue)) || (repsValue !== null && Number.isNaN(repsValue))) return;
 
@@ -758,7 +760,7 @@ const RoutineExerciseCard = forwardRef<HTMLDivElement, RoutineExerciseCardProps>
           <label className="mb-1.5 block text-[11px] font-bold uppercase text-app-text-muted">{t.labels.weightShort}</label>
           <Input
             type="text"
-            inputMode="text"
+            inputMode="decimal"
             value={form.weight}
             onChange={(e) => onUpdateForm('weight', e.target.value)}
             onMouseDown={(e) => e.stopPropagation()}

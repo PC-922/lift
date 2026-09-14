@@ -26,9 +26,10 @@ describe('workout session', () => {
     expect(workoutService.removeExercise(initial, 0)).toBe(initial);
   });
 
-  it('selects the best recorded set and skips empty sets', () => {
-    expect(workoutService.bestSet({ exerciseId: 'ex', sets: [{ weight: 50, reps: 8 }, { weight: 50, reps: 10 }] }))
+  it('selects the last recorded set instead of the best one', () => {
+    expect(workoutService.lastRecordedSet({ exerciseId: 'ex', sets: [{ weight: 50, reps: 10 }, { weight: 45.5, reps: 8 }] }))
+      .toEqual({ weight: 45.5, reps: 8 });
+    expect(workoutService.lastRecordedSet({ exerciseId: 'ex', sets: [{ weight: 50, reps: 10 }, { weight: null, reps: null }] }))
       .toEqual({ weight: 50, reps: 10 });
-    expect(workoutService.bestSet({ exerciseId: 'ex', sets: [{ weight: null, reps: null }] })).toBeNull();
   });
 });

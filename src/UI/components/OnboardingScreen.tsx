@@ -14,10 +14,13 @@ export const OnboardingScreen: React.FC = () => {
 
   const handleSignIn = async () => {
     setIsSigningIn(true);
-    const result = await signInWithGoogle();
-    setIsSigningIn(false);
-    if (result.error) {
+    try {
+      const result = await signInWithGoogle();
+      if (result.error) showToast(t.labels.googleSignInError, 'regression');
+    } catch {
       showToast(t.labels.googleSignInError, 'regression');
+    } finally {
+      setIsSigningIn(false);
     }
   };
 

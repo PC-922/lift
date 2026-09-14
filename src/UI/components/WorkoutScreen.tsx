@@ -1,30 +1,18 @@
 import React, { useState } from 'react';
-import { Play, Trash2 } from 'lucide-react';
+import { Play } from 'lucide-react';
 import { useWorkoutSession } from '../hooks/useWorkoutSession';
 import { useAppData } from '../hooks/useAppData';
 import { useTranslations } from '../utils/translations';
 import { Routine } from '../../domain';
 import { WorkoutPlayer } from './WorkoutPlayer';
 import { Button } from './ui/Button';
-import { ListRow } from './ui/ListRow';
 import { Modal } from './Modal';
-import ConfirmModal from './ConfirmModal';
-
-function formatDuration(startedAt: string, finishedAt: string): string {
-  const total = Math.max(0, Math.floor((new Date(finishedAt).getTime() - new Date(startedAt).getTime()) / 1000));
-  const minutes = Math.floor(total / 60);
-  const seconds = total % 60;
-  return minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-}
+import { WorkoutHistory } from './WorkoutHistory';
 
 export const WorkoutScreen: React.FC = () => {
   const t = useTranslations();
   const { activeWorkout, startWorkout } = useWorkoutSession();
-  const { routines, workouts } = useAppData();
+  const { routines } = useAppData();
 
   if (activeWorkout) {
     return <WorkoutPlayer />;
@@ -79,17 +67,7 @@ export const WorkoutScreen: React.FC = () => {
         )}
       </div>
 
-      <div className="space-y-3">
-        <p className="ml-1 text-xs font-semibold uppercase tracking-wide text-app-text-muted">{t.labels.workoutHistory}</p>
-        {workouts.length === 0 ? (
-          <div className="py-10 text-center opacity-60">
-            <p className="font-medium text-app-text">{t.labels.noWorkouts}</p>
-            <p className="mt-1 text-sm text-app-text-muted">{t.labels.noWorkoutsDesc}</p>
-          </div>
-        ) : (
-          <WorkoutHistoryList />
-        )}
-      </div>
+      <WorkoutHistory />
     </div>
   );
 };
@@ -149,56 +127,5 @@ const RoutineStartCard: React.FC<{ routine: Routine; onStartDay: (dayIndex: numb
         </div>
       </Modal>
     </>
-  );
-};
-
-const WorkoutHistoryList: React.FC = () => {
-  const t = useTranslations();
-  const { workouts, deleteWorkout } = useAppData();
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-
-  const deletingWorkout = workouts.find((workout) => workout.id === deletingId) ?? null;
-
-  return (
-    <div className="space-y-3">
-      {workouts.map((workout) => {
-        const setCount = workout.entries.reduce((sum, entry) => sum + entry.sets.length, 0);
-        return (
-          <ListRow key={workout.id} padded={false}>
-            <div className="flex items-center justify-between gap-3 px-4 py-4 sm:px-5">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-app-text">{workout.name}</p>
-                <p className="mt-0.5 text-xs text-app-text-muted">
-                  {formatDate(workout.startedAt)} · {workout.entries.length} {t.labels.exercises} · {setCount} {t.labels.setsCount}
-                </p>
-                <p className="mt-0.5 text-xs text-app-text-muted">
-                  {t.labels.duration}: {formatDuration(workout.startedAt, workout.finishedAt)}
-                </p>
-              </div>
-              <button
-                onClick={() => setDeletingId(workout.id)}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-app-text-muted active:text-app-danger"
-                aria-label={t.actions.delete}
-              >
-                <Trash2 size={18} />
-              </button>
-            </div>
-          </ListRow>
-        );
-      })}
-
-      {deletingWorkout && (
-        <ConfirmModal
-          title={t.prompts.confirmDelete}
-          confirmLabel={t.actions.delete}
-          destructive
-          onConfirm={async () => {
-            await deleteWorkout(deletingWorkout.id);
-            setDeletingId(null);
-          }}
-          onCancel={() => setDeletingId(null)}
-        />
-      )}
-    </div>
   );
 };

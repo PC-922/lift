@@ -14,6 +14,7 @@ import { Surface } from './ui/Surface';
 import { MuscleGroupPicker } from './ui/MuscleGroupPicker';
 import { Badge } from './ui/Badge';
 import { cn } from '../utils/cn';
+import { isDecimalInput, isIntegerInput, parseDecimalInput, parseIntegerInput } from '../utils/numberInput';
 
 interface RoutineExerciseSettings {
   sets: number;
@@ -110,17 +111,11 @@ export const ExerciseDetail: React.FC<Props> = ({
   }, [exercise.logs]);
 
   const parseWeight = (value: string): number | null => {
-    const trimmed = value.trim();
-    if (trimmed === '' || trimmed === '-') return null;
-    const parsed = parseInt(trimmed, 10);
-    return Number.isNaN(parsed) ? null : parsed;
+    return parseDecimalInput(value);
   };
 
   const parseReps = (value: string): number | null => {
-    const trimmed = value.trim();
-    if (trimmed === '') return null;
-    const parsed = parseInt(trimmed, 10);
-    return Number.isNaN(parsed) ? null : parsed;
+    return parseIntegerInput(value);
   };
 
   const handleLog = () => {
@@ -153,9 +148,8 @@ export const ExerciseDetail: React.FC<Props> = ({
   };
 
   const handleLogChange = useCallback((index: number, field: keyof EditableLog, value: string) => {
-    if (field === 'weight' || field === 'reps') {
-      if (value !== '' && value !== '-' && !/^-?\d+$/.test(value)) return;
-    }
+    if (field === 'weight' && !isDecimalInput(value)) return;
+    if (field === 'reps' && !isIntegerInput(value)) return;
     setEditableLogs((prev) =>
       prev.map((log, i) => (i === index ? { ...log, [field]: value } : log))
     );
@@ -345,11 +339,11 @@ export const ExerciseDetail: React.FC<Props> = ({
             <label className="mb-1 block text-xs font-medium text-app-text-muted">{t.labels.weight}</label>
             <Input
               type="text"
-              inputMode="text"
+              inputMode="decimal"
               value={weight}
               onChange={(e) => {
                 const val = e.target.value;
-                if (val === '' || val === '-' || /^-?\d+$/.test(val)) {
+                if (isDecimalInput(val)) {
                   setWeight(val);
                 }
               }}
@@ -365,7 +359,7 @@ export const ExerciseDetail: React.FC<Props> = ({
               value={reps}
               onChange={(e) => {
                 const val = e.target.value;
-                if (val === '' || val === '-' || /^-?\d+$/.test(val)) {
+                if (isIntegerInput(val)) {
                   setReps(val);
                 }
               }}
@@ -421,7 +415,7 @@ export const ExerciseDetail: React.FC<Props> = ({
                 />
                 <Input
                   type="text"
-                  inputMode="text"
+                  inputMode="decimal"
                   value={log.weight}
                   onChange={(e) => handleLogChange(index, 'weight', e.target.value)}
                   onBlur={() => handleLogBlur(index)}

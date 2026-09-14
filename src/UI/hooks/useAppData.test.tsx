@@ -1,13 +1,17 @@
 import React from 'react';
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ApplicationServices } from '../ApplicationProvider';
 import { ApplicationProvider } from '../ApplicationProvider';
 import type { Exercise, Routine, Workout } from '../../domain';
 import type { TrainingRepository, TrainingSnapshot } from '../../domain/TrainingRepository';
 import { AppDataProvider, useAppData } from './useAppData';
 
-vi.mock('./useAuth', () => ({ useAuth: () => ({ user: { uid: 'test-user' } }) }));
+const authState = vi.hoisted(() => ({
+  current: { user: { uid: 'test-user' } as { uid: string } | null, fallbackUid: null as string | null },
+}));
+
+vi.mock('./useAuth', () => ({ useAuth: () => authState.current }));
 
 const emptySnapshot: TrainingSnapshot = {
   exercises: [], routines: [], muscleGroups: [], workouts: [],
@@ -65,6 +69,10 @@ function wrapperFor(repository: TrainingRepository) {
 }
 
 describe('useAppData', () => {
+  beforeEach(() => {
+    authState.current = { user: { uid: 'test-user' }, fallbackUid: null };
+  });
+
   it('loads repository data and saves edits through a use case', async () => {
     const exercise: Exercise = { id: 'press', name: 'Press', muscleGroup: 'Chest', logs: [] };
     const repository = createRepository({ exercises: [exercise] });
@@ -76,22 +84,38 @@ describe('useAppData', () => {
     expect(repository.saveExercise).toHaveBeenCalledWith(expect.objectContaining({ id: 'press', note: 'Slow descent' }));
   });
 
-  it('finishes a workout and records its best set', async () => {
+  it('finishes a workout and records its last set', async () => {
     const exercise: Exercise = { id: 'press', name: 'Press', muscleGroup: 'Chest', logs: [] };
     const repository = createRepository({ exercises: [exercise] });
     const { result } = renderHook(() => useAppData(), { wrapper: wrapperFor(repository) });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     const workout: Workout = {
       id: 'workout', name: 'Push', startedAt: 'start', finishedAt: 'finish',
-      entries: [{ exerciseId: 'press', sets: [{ weight: 80, reps: 8 }, { weight: 82, reps: 6 }] }],
+      entries: [{ exerciseId: 'press', sets: [{ weight: 82, reps: 6 }, { weight: 70.5, reps: 10 }] }],
     };
 
     await act(async () => result.current.finishWorkout(workout));
 
     expect(repository.saveWorkout).toHaveBeenCalled();
     expect(repository.saveExercise).toHaveBeenCalledWith(expect.objectContaining({
-      logs: [{ date: '2026-09-09', weight: 82, reps: 6 }],
+      logs: [{ date: '2026-09-09', weight: 70.5, reps: 10 }],
     }));
+  });
+
+  it('saves an edited workout without rewriting exercise logs', async () => {
+    const repository = createRepository();
+    const { result } = renderHook(() => useAppData(), { wrapper: wrapperFor(repository) });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    const workout = result.current.createWorkoutDraft();
+
+    await act(async () => result.current.saveWorkout({ ...workout, name: 'Evening workout' }));
+
+    expect(repository.saveWorkout).toHaveBeenCalledWith(expect.objectContaining({
+      id: 'workout_id',
+      name: 'Evening workout',
+      updatedAt: '2026-09-09T10:00:00.000Z',
+    }));
+    expect(repository.saveExercise).not.toHaveBeenCalled();
   });
 
   it('exposes repository subscription errors', async () => {
@@ -103,5 +127,30 @@ describe('useAppData', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.error).toBe('Storage unavailable');
     expect(repository.subscribe).toHaveBeenCalled();
+  });
+
+  it('falls back to the cached snapshot when the data subscription stalls', () => {
+    vi.useFakeTimers();
+    const repository = createRepository({ muscleGroups: ['Cached'] });
+    vi.mocked(repository.subscribe).mockImplementation(() => () => undefined);
+    const { result, unmount } = renderHook(() => useAppData(), { wrapper: wrapperFor(repository) });
+
+    act(() => vi.advanceTimersByTime(12000));
+
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.muscleGroups).toEqual(['Cached']);
+    unmount();
+    vi.useRealTimers();
+  });
+
+  it('loads cached data with the fallback uid when Firebase auth is unavailable', async () => {
+    authState.current = { user: null, fallbackUid: 'cached-user' };
+    const repository = createRepository({ muscleGroups: ['Offline'] });
+    const { result } = renderHook(() => useAppData(), { wrapper: wrapperFor(repository) });
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(repository.subscribe).toHaveBeenCalled();
+    expect(result.current.muscleGroups).toEqual(['Offline']);
   });
 });

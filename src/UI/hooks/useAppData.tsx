@@ -18,12 +18,14 @@ import { ReorderRoutines } from '../../application/usecases/ReorderRoutines';
 import { ResetTrainingData } from '../../application/usecases/ResetTrainingData';
 import { SaveExercise } from '../../application/usecases/SaveExercise';
 import { SaveRoutine } from '../../application/usecases/SaveRoutine';
+import { SaveWorkout } from '../../application/usecases/SaveWorkout';
 import { ShareRoutine } from '../../application/usecases/ShareRoutine';
 import { UpdateExerciseDetails } from '../../application/usecases/UpdateExerciseDetails';
 import { UpdateExerciseLog } from '../../application/usecases/UpdateExerciseLog';
 import { UpdateExerciseNote } from '../../application/usecases/UpdateExerciseNote';
 import { RoutineSharingService } from '../../application/RoutineSharingService';
 import type { Exercise, ExerciseLog, Routine, Workout } from '../../domain';
+import { workoutEditorService } from '../../domain/WorkoutEditorService';
 import type { SyncStatus, TrainingRepository, TrainingSnapshot } from '../../domain/TrainingRepository';
 import { useApplicationServices } from '../ApplicationProvider';
 import { useAuth } from './useAuth';
@@ -49,6 +51,8 @@ interface AppDataContextValue extends TrainingSnapshot {
   reorderRoutine(from: number, to: number): Promise<void>;
   reorderRoutineExercise(routineId: string, dayId: string, from: number, to: number): Promise<void>;
   deleteWorkout(id: string): Promise<void>;
+  saveWorkout(workout: Workout): Promise<void>;
+  createWorkoutDraft(): Workout;
   finishWorkout(workout: Workout): Promise<void>;
   exportData(): Promise<string>;
   importData(json: string): Promise<boolean>;
@@ -62,9 +66,10 @@ const emptySnapshot: TrainingSnapshot = {
 };
 
 const AppDataContext = createContext<AppDataContextValue | null>(null);
+const DATA_RESOLVE_TIMEOUT_MS = 12000;
 
 export function AppDataProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, fallbackUid } = useAuth();
   const { trainingRepository, clock, ids } = useApplicationServices();
   const [snapshot, setSnapshot] = useState(emptySnapshot);
   const [isLoading, setIsLoading] = useState(true);
@@ -73,9 +78,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const repositoryRef = useRef<TrainingRepository | null>(null);
 
   useEffect(() => {
-    const uid = user?.uid;
+    const uid = user?.uid ?? fallbackUid;
     let disposed = false;
     let unsubscribe: (() => void) | undefined;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
     repositoryRef.current = null;
     setSnapshot(emptySnapshot);
     setSyncStatus(null);
@@ -87,9 +93,15 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       try {
         const repository = trainingRepository(uid);
         repositoryRef.current = repository;
+        timeout = setTimeout(() => {
+          if (disposed) return;
+          setSnapshot(repository.getSnapshot());
+          setIsLoading(false);
+        }, DATA_RESOLVE_TIMEOUT_MS);
         unsubscribe = repository.subscribe(
           (next) => {
             if (!disposed) {
+              if (timeout) clearTimeout(timeout);
               setSnapshot(next);
               setIsLoading(false);
             }
@@ -107,10 +119,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     void connect();
     return () => {
       disposed = true;
+      if (timeout) clearTimeout(timeout);
       unsubscribe?.();
       repositoryRef.current = null;
     };
-  }, [trainingRepository, user?.uid]);
+  }, [fallbackUid, trainingRepository, user?.uid]);
 
   const repository = () => repositoryRef.current;
   const routineSharing = () => new RoutineSharingService(ids, clock);
@@ -137,6 +150,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     reorderRoutine: async (...args) => { const current = repository(); if (current) await new ReorderRoutines(current, clock).execute(...args); },
     reorderRoutineExercise: async (...args) => { const current = repository(); if (current) await new ReorderRoutineExercises(current, clock).execute(...args); },
     deleteWorkout: async (id) => { const current = repository(); if (current) await new DeleteWorkout(current).execute(id); },
+    saveWorkout: async (workout) => { const current = repository(); if (current) await new SaveWorkout(current, clock).execute(workout); },
+    createWorkoutDraft: () => workoutEditorService.create(ids.generate('workout'), clock.now()),
     finishWorkout: async (workout) => { const current = repository(); if (current) await new FinishWorkout(current, clock).execute(workout); },
     exportData: async () => { const current = repository(); return current ? new ExportBackup(current).execute() : ''; },
     importData: async (json) => { const current = repository(); return current ? new ImportBackup(current, clock).execute(json) : false; },

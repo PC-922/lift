@@ -15,6 +15,7 @@ import { Modal } from './Modal';
 import ConfirmModal from './ConfirmModal';
 import { SearchInput } from './ui/SearchInput';
 import { cn } from '../utils/cn';
+import { isDecimalInput, isIntegerInput, parseDecimalInput, parseIntegerInput } from '../utils/numberInput';
 
 function formatElapsed(startedAt: string, now: number): string {
   const total = Math.max(0, Math.floor((now - new Date(startedAt).getTime()) / 1000));
@@ -51,12 +52,6 @@ export const WorkoutPlayer: React.FC = () => {
 
   useWakeLock(!!activeWorkout);
 
-  // every session starts with a fresh rest timer and leaves it stopped
-  useEffect(() => {
-    clearTimer();
-    return () => clearTimer();
-  }, [clearTimer]);
-
   useEffect(() => {
     const interval = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(interval);
@@ -72,8 +67,7 @@ export const WorkoutPlayer: React.FC = () => {
     const latestLog = exercise ? getLatestLog(exercise.logs) : null;
     setWeight(lastSet ? (lastSet.weight?.toString() ?? '') : (latestLog?.weight?.toString() ?? ''));
     setReps(lastSet ? (lastSet.reps?.toString() ?? '') : (latestLog?.reps?.toString() ?? ''));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentIndex, activeExercise?.exerciseId]);
+  }, [activeExercise, exercise]);
 
   const openExercisePicker = (mode: 'add' | 'replace') => {
     setExercisePickerMode(mode);
@@ -132,6 +126,7 @@ export const WorkoutPlayer: React.FC = () => {
             destructive
             onConfirm={() => {
               cancel();
+              clearTimer();
               setShowDiscardConfirm(false);
             }}
             onCancel={() => setShowDiscardConfirm(false)}
@@ -146,17 +141,10 @@ export const WorkoutPlayer: React.FC = () => {
   const targetSets = target?.sets ?? doneSets;
   const restSeconds = target?.restSeconds && target.restSeconds > 0 ? target.restSeconds : 90;
 
-  const parseValue = (value: string): number | null => {
-    const trimmed = value.trim();
-    if (trimmed === '' || trimmed === '-') return null;
-    const parsed = parseInt(trimmed, 10);
-    return Number.isNaN(parsed) ? null : parsed;
-  };
-
   const handleLogSet = () => {
     if (!activeExercise) return;
-    const weightValue = parseValue(weight);
-    const repsValue = parseValue(reps);
+    const weightValue = parseDecimalInput(weight);
+    const repsValue = parseIntegerInput(reps);
     if (weightValue === null && repsValue === null) return;
 
     const latestLog = exercise ? getLatestLog(exercise.logs) : null;
@@ -193,12 +181,14 @@ export const WorkoutPlayer: React.FC = () => {
     const workout = finish();
     if (!workout) return;
     await finishWorkout(workout);
+    clearTimer();
     showToast(t.labels.workoutSaved, 'achievement');
     setShowSummary(false);
   };
 
   const handleDiscardConfirm = () => {
     cancel();
+    clearTimer();
     setShowDiscardConfirm(false);
   };
 
@@ -252,27 +242,29 @@ export const WorkoutPlayer: React.FC = () => {
           </Button>
         </div>
       ) : (
-        <div className="flex flex-1 flex-col px-5">
-          <div className="flex-1">
-            <div className="mb-4">
-              <h2 className="text-3xl font-black text-app-text leading-tight">{exercise?.name ?? ''}</h2>
+        <div className="flex min-h-0 flex-1 flex-col px-5">
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <div className="mb-4 min-h-[6.5rem]">
+              <h2 className="line-clamp-2 text-3xl font-black leading-tight text-app-text">{exercise?.name ?? ''}</h2>
               <p className="mt-1 text-xs font-bold uppercase tracking-widest text-app-text-muted">
                 {exercise ? getTranslatedGroupName(exercise.muscleGroup) : ''}
               </p>
             </div>
 
-            {target && (
-              <div className="mb-4 flex items-center gap-2">
-                <Badge variant="accent" className="text-sm font-bold">
-                  {t.labels.sets}: {targetSets}
-                </Badge>
-                <Badge variant="neutral" className="text-sm font-bold">
-                  {t.labels.reps}: {target.reps || '—'}
-                </Badge>
-              </div>
-            )}
+            <div className="mb-4 flex min-h-8 items-center gap-2">
+              {target && (
+                <>
+                  <Badge variant="accent" className="text-sm font-bold">
+                    {t.labels.sets}: {targetSets}
+                  </Badge>
+                  <Badge variant="neutral" className="text-sm font-bold">
+                    {t.labels.reps}: {target.reps || '—'}
+                  </Badge>
+                </>
+              )}
+            </div>
 
-            <div className="mb-6 flex flex-wrap gap-2">
+            <div className="mb-6 flex min-h-9 flex-wrap content-start gap-2">
               {activeExercise.sets.map((set, index) => (
                 <span
                   key={index}
@@ -294,11 +286,11 @@ export const WorkoutPlayer: React.FC = () => {
                   <label className="mb-1.5 block text-xs font-medium text-app-text-muted">{t.labels.weight}</label>
                   <Input
                     type="text"
-                    inputMode="numeric"
+                    inputMode="decimal"
                     value={weight}
                     onChange={(e) => {
                       const value = e.target.value;
-                      if (value === '' || value === '-' || /^-?\d+$/.test(value)) setWeight(value);
+                      if (isDecimalInput(value)) setWeight(value);
                     }}
                     placeholder="0"
                     className="text-center text-2xl font-black tabular-nums"
@@ -312,7 +304,7 @@ export const WorkoutPlayer: React.FC = () => {
                     value={reps}
                     onChange={(e) => {
                       const value = e.target.value;
-                      if (value === '' || value === '-' || /^-?\d+$/.test(value)) setReps(value);
+                      if (isIntegerInput(value)) setReps(value);
                     }}
                     placeholder="0"
                     className="text-center text-2xl font-black tabular-nums"
@@ -325,7 +317,7 @@ export const WorkoutPlayer: React.FC = () => {
             </div>
           </div>
 
-          <div className="space-y-3 pb-6 pt-4">
+          <div className="shrink-0 space-y-3 bg-app-bg pb-6 pt-4">
             <div className="grid grid-cols-2 gap-3">
               <Button
                 variant="secondary"

@@ -15,13 +15,13 @@ export class FinishWorkout {
     await this.repository.saveWorkout({ ...workout, updatedAt: this.clock.now() });
     const exercises = this.repository.getSnapshot().exercises;
     for (const entry of workout.entries) {
-      const best = this.workouts.bestSet(entry);
+      const lastSet = this.workouts.lastRecordedSet(entry);
       const exercise = exercises.find((item) => item.id === entry.exerciseId);
-      if (!best || !exercise) continue;
+      if (!lastSet || !exercise) continue;
       const logs = ExerciseLogs.from(exercise.logs).record({
         date: this.clock.today(),
-        weight: best.weight,
-        reps: best.reps,
+        weight: lastSet.weight,
+        reps: lastSet.reps,
       });
       await this.repository.saveExercise({ ...exercise, logs: logs.values(), updatedAt: this.clock.now() });
     }

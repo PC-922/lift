@@ -48,7 +48,8 @@ export const translations = {
       confirmDelete: 'Confirmar eliminación',
       confirmDeleteAll: '¿Borrar todos los registros de este ejercicio?',
       confirmDeleteAllExceptLatest: '¿Borrar todos los registros excepto el más reciente?',
-      confirmResetData: '¿Eliminar todos los datos y volver a los valores iniciales?'
+      confirmResetData: '¿Eliminar todos los datos y volver a los valores iniciales?',
+      deleteWorkout: '¿Eliminar el entreno "{name}"?'
     },
     labels: {
       empty: 'Vacío',
@@ -190,6 +191,16 @@ export const translations = {
       nextExercise: 'Siguiente',
       previousExercise: 'Anterior',
       finishWorkout: 'Terminar',
+      workoutDetails: 'Detalle del entreno',
+      newWorkout: 'Nuevo entreno',
+      workoutName: 'Nombre del entreno',
+      startTime: 'Inicio',
+      durationMinutes: 'Duración (min)',
+      exercise: 'Ejercicio',
+      removeExercise: 'Eliminar ejercicio',
+      addSet: 'Añadir serie',
+      removeSet: 'Eliminar serie',
+      noSets: 'Sin series registradas',
     },
     time: {
       today: 'Hoy',
@@ -253,7 +264,8 @@ export const translations = {
       confirmDelete: 'Confirm deletion',
       confirmDeleteAll: 'Delete all logs for this exercise?',
       confirmDeleteAllExceptLatest: 'Delete all logs except the most recent one?',
-      confirmResetData: 'Delete all data and reset to defaults?'
+      confirmResetData: 'Delete all data and reset to defaults?',
+      deleteWorkout: 'Delete workout "{name}"?'
     },
     labels: {
       empty: 'Empty',
@@ -395,6 +407,16 @@ export const translations = {
       nextExercise: 'Next',
       previousExercise: 'Previous',
       finishWorkout: 'Finish',
+      workoutDetails: 'Workout details',
+      newWorkout: 'New workout',
+      workoutName: 'Workout name',
+      startTime: 'Start',
+      durationMinutes: 'Duration (min)',
+      exercise: 'Exercise',
+      removeExercise: 'Remove exercise',
+      addSet: 'Add set',
+      removeSet: 'Remove set',
+      noSets: 'No recorded sets',
     },
     time: {
       today: 'Today',
@@ -410,4 +432,3 @@ export const translations = {
     }
   }
 };
-

@@ -76,14 +76,10 @@ export class WorkoutService {
     };
   }
 
-  bestSet(entry: WorkoutEntry): WorkoutSet | null {
-    return entry.sets.reduce<WorkoutSet | null>((best, set) => {
-      if (set.weight === null && set.reps === null) return best;
-      if (!best) return set;
-      const bestScore = (best.weight ?? 0) * 1000 + (best.reps ?? 0);
-      const setScore = (set.weight ?? 0) * 1000 + (set.reps ?? 0);
-      return setScore > bestScore ? set : best;
-    }, null);
+  lastRecordedSet(entry: WorkoutEntry): WorkoutSet | null {
+    return [...entry.sets]
+      .reverse()
+      .find((set) => set.weight !== null || set.reps !== null) ?? null;
   }
 }
 

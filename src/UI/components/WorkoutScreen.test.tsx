@@ -73,6 +73,16 @@ const renderWithProviders = (ui: React.ReactElement) =>
     </ApplicationProvider>
   );
 
+const WorkoutNavigationHarness: React.FC = () => {
+  const [showWorkout, setShowWorkout] = React.useState(true);
+  return (
+    <>
+      <button onClick={() => setShowWorkout((value) => !value)}>Toggle menu</button>
+      {showWorkout ? <WorkoutScreen /> : <p>Another menu</p>}
+    </>
+  );
+};
+
 describe('WorkoutScreen', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -149,5 +159,22 @@ describe('WorkoutScreen', () => {
 
     expect(screen.getByRole('heading', { name: 'Squat' })).toBeTruthy();
     expect(screen.getByText(new RegExp(`${t.labels.sets}:\\s*3`))).toBeTruthy();
+  });
+
+  it('keeps the rest timer when leaving and returning to the workout menu', () => {
+    renderWithProviders(<WorkoutNavigationHarness />);
+    fireEvent.click(screen.getByText(t.labels.freeWorkout));
+    fireEvent.click(screen.getByText(t.labels.addExercise));
+    fireEvent.click(screen.getByText('Bench Press'));
+    const inputs = screen.getAllByPlaceholderText('0');
+    fireEvent.change(inputs[0], { target: { value: '80.5' } });
+    fireEvent.change(inputs[1], { target: { value: '10' } });
+    fireEvent.click(screen.getByText(t.labels.recordSet));
+
+    fireEvent.click(screen.getByText('Toggle menu'));
+    expect(screen.getByText('Another menu')).toBeTruthy();
+    fireEvent.click(screen.getByText('Toggle menu'));
+
+    expect(screen.getByText('1:30')).toBeTruthy();
   });
 });
