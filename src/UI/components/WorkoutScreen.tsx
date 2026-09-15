@@ -12,7 +12,7 @@ import { WorkoutHistory } from './WorkoutHistory';
 export const WorkoutScreen: React.FC = () => {
   const t = useTranslations();
   const { activeWorkout, startWorkout } = useWorkoutSession();
-  const { routines } = useAppData();
+  const { routines, exercises } = useAppData();
 
   if (activeWorkout) {
     return <WorkoutPlayer />;
@@ -31,6 +31,7 @@ export const WorkoutScreen: React.FC = () => {
       dayId: day.id,
       exercises: day.exercises.map((re) => ({
         exerciseId: re.exerciseId,
+        exerciseName: exercises.find((exercise) => exercise.id === re.exerciseId)?.name,
         target: { sets: re.sets, reps: re.reps, restSeconds: re.restSeconds },
       })),
     });

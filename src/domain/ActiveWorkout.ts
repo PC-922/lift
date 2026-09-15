@@ -8,6 +8,7 @@ export interface WorkoutExerciseTarget {
 
 export interface ActiveExercise {
   exerciseId: string;
+  exerciseName?: string;
   sets: WorkoutSet[];
   target?: WorkoutExerciseTarget;
 }
@@ -25,6 +26,5 @@ export interface WorkoutStartOptions {
   name?: string;
   routineId?: string;
   dayId?: string;
-  exercises: { exerciseId: string; target?: WorkoutExerciseTarget }[];
+  exercises: { exerciseId: string; exerciseName?: string; target?: WorkoutExerciseTarget }[];
 }
-

@@ -40,7 +40,7 @@ export const translations = {
       startWorkout: 'Empezar',
     },
     prompts: {
-      deleteExercise: '¿Eliminar "{name}"?',
+      deleteExercise: '¿Eliminar "{name}"? También se quitará de las rutinas. El historial de entrenos se conservará.',
       deleteGroup: '¿Eliminar grupo "{name}"? También se eliminarán sus ejercicios.',
       renameGroup: 'Nuevo nombre para el grupo:',
       renameExercise: 'Nuevo nombre para el ejercicio:',
@@ -201,6 +201,7 @@ export const translations = {
       addSet: 'Añadir serie',
       removeSet: 'Eliminar serie',
       noSets: 'Sin series registradas',
+      deletedExercise: 'Ejercicio eliminado',
     },
     time: {
       today: 'Hoy',
@@ -256,7 +257,7 @@ export const translations = {
       startWorkout: 'Start',
     },
     prompts: {
-      deleteExercise: 'Delete "{name}"?',
+      deleteExercise: 'Delete "{name}"? It will also be removed from routines. Workout history will be preserved.',
       deleteGroup: 'Delete group "{name}"? Its exercises will also be deleted.',
       renameGroup: 'New name for group:',
       renameExercise: 'New name for exercise:',
@@ -417,6 +418,7 @@ export const translations = {
       addSet: 'Add set',
       removeSet: 'Remove set',
       noSets: 'No recorded sets',
+      deletedExercise: 'Deleted exercise',
     },
     time: {
       today: 'Today',

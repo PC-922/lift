@@ -9,8 +9,9 @@ export class WorkoutService {
       name: options.name ?? '',
       routineId: options.routineId,
       dayId: options.dayId,
-      exercises: options.exercises.map(({ exerciseId, target }) => ({
+      exercises: options.exercises.map(({ exerciseId, exerciseName, target }) => ({
         exerciseId,
+        ...(exerciseName ? { exerciseName } : {}),
         sets: [],
         target,
       })),
@@ -23,7 +24,12 @@ export class WorkoutService {
     weight: number | null,
     reps: number | null
   ): ActiveWorkout | null {
-    if (!workout || (weight === null && reps === null)) return workout;
+    if (
+      !workout
+      || currentIndex < 0
+      || currentIndex >= workout.exercises.length
+      || (weight === null && reps === null)
+    ) return workout;
     return {
       ...workout,
       exercises: workout.exercises.map((exercise, index) => index === currentIndex
@@ -35,30 +41,54 @@ export class WorkoutService {
   addExercise(
     workout: ActiveWorkout | null,
     exerciseId: string,
-    target?: WorkoutExerciseTarget
+    target?: WorkoutExerciseTarget,
+    exerciseName?: string
   ): ActiveWorkout | null {
     if (!workout || workout.exercises.some((exercise) => exercise.exerciseId === exerciseId)) {
       return workout;
     }
-    return { ...workout, exercises: [...workout.exercises, { exerciseId, sets: [], target }] };
+    return {
+      ...workout,
+      exercises: [...workout.exercises, {
+        exerciseId,
+        ...(exerciseName ? { exerciseName } : {}),
+        sets: [],
+        target,
+      }],
+    };
   }
 
   replaceExercise(
     workout: ActiveWorkout | null,
     currentIndex: number,
-    exerciseId: string
+    exerciseId: string,
+    exerciseName?: string
   ): ActiveWorkout | null {
     if (!workout) return null;
+    if (
+      currentIndex < 0
+      || currentIndex >= workout.exercises.length
+      || workout.exercises.some((exercise, index) => (
+        index !== currentIndex && exercise.exerciseId === exerciseId
+      ))
+    ) return workout;
     return {
       ...workout,
       exercises: workout.exercises.map((exercise, index) => index === currentIndex
-        ? { ...exercise, exerciseId, sets: [] }
+        ? {
+          ...exercise,
+          exerciseId,
+          ...(exerciseName ? { exerciseName } : { exerciseName: undefined }),
+          sets: [],
+        }
         : exercise),
     };
   }
 
   removeExercise(workout: ActiveWorkout | null, index: number): ActiveWorkout | null {
-    if (!workout || workout.exercises.length <= 1) return workout;
+    if (!workout || workout.exercises.length <= 1 || index < 0 || index >= workout.exercises.length) {
+      return workout;
+    }
     return { ...workout, exercises: workout.exercises.filter((_, itemIndex) => itemIndex !== index) };
   }
 
@@ -71,7 +101,11 @@ export class WorkoutService {
       routineId: workout.routineId,
       dayId: workout.dayId,
       entries: workout.exercises
-        .map((exercise) => ({ exerciseId: exercise.exerciseId, sets: exercise.sets }))
+        .map((exercise) => ({
+          exerciseId: exercise.exerciseId,
+          ...(exercise.exerciseName ? { exerciseName: exercise.exerciseName } : {}),
+          sets: exercise.sets,
+        }))
         .filter((entry) => entry.sets.length > 0),
     };
   }
@@ -80,6 +114,20 @@ export class WorkoutService {
     return [...entry.sets]
       .reverse()
       .find((set) => set.weight !== null || set.reps !== null) ?? null;
+  }
+
+  withExerciseNames(
+    workout: Workout,
+    exerciseNames: ReadonlyMap<string, string>
+  ): Workout | null {
+    let changed = false;
+    const entries = workout.entries.map((entry) => {
+      const exerciseName = exerciseNames.get(entry.exerciseId);
+      if (!exerciseName || exerciseName === entry.exerciseName) return entry;
+      changed = true;
+      return { ...entry, exerciseName };
+    });
+    return changed ? { ...workout, entries } : null;
   }
 }
 

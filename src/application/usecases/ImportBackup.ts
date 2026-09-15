@@ -22,6 +22,9 @@ export class ImportBackup {
         updatedAt: this.clock.now(),
       });
     }
+    for (const workout of backup.workouts) {
+      await this.repository.saveWorkout({ ...workout, updatedAt: this.clock.now() });
+    }
     return true;
   }
 

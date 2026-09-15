@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { Exercise, Routine } from '../../domain';
+import type { Exercise, Routine, Workout } from '../../domain';
 import type { TrainingRepository, TrainingSnapshot } from '../../domain/TrainingRepository';
 import { DeleteMuscleGroup } from './DeleteMuscleGroup';
 
@@ -35,7 +35,12 @@ describe('DeleteMuscleGroup', () => {
         { exerciseId: 'row', sets: 3, reps: '8', dropset: false, toFailure: false },
       ] }],
     };
-    const repository = createRepository({ exercises, routines: [routine], muscleGroups: ['Chest', 'Back'] });
+    const workout: Workout = {
+      id: 'workout', name: 'Upper',
+      startedAt: '2026-09-08T10:00:00.000Z', finishedAt: '2026-09-08T11:00:00.000Z',
+      entries: [{ exerciseId: 'press', sets: [{ weight: 50, reps: 8 }] }],
+    };
+    const repository = createRepository({ exercises, routines: [routine], muscleGroups: ['Chest', 'Back'], workouts: [workout] });
 
     await new DeleteMuscleGroup(repository, { now: () => '2026-09-09T10:00:00.000Z', today: () => '2026-09-09' }).execute('Chest');
 
@@ -44,5 +49,10 @@ describe('DeleteMuscleGroup', () => {
     expect(repository.saveRoutine).toHaveBeenCalledWith(expect.objectContaining({
       days: [expect.objectContaining({ exercises: [expect.objectContaining({ exerciseId: 'row' })] })],
     }));
+    expect(repository.saveWorkout).toHaveBeenCalledWith(expect.objectContaining({
+      entries: [expect.objectContaining({ exerciseId: 'press', exerciseName: 'Press' })],
+    }));
+    expect(vi.mocked(repository.saveMuscleGroups).mock.invocationCallOrder[0])
+      .toBeGreaterThan(vi.mocked(repository.deleteExercise).mock.invocationCallOrder[0]);
   });
 });

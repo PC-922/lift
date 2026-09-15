@@ -27,6 +27,13 @@ const baseData = {
   exercises: [baseExercise],
   muscleGroups: ['Chest'],
   routines: [baseRoutine],
+  workouts: [{
+    id: 'workout_1',
+    name: 'Upper Body',
+    startedAt: '2026-01-02T10:00:00.000Z',
+    finishedAt: '2026-01-02T11:00:00.000Z',
+    entries: [{ exerciseId: 'exercise_1', exerciseName: 'Bench Press', sets: [{ weight: 80, reps: 8 }] }],
+  }],
 };
 
 describe('BackupSerializer', () => {
@@ -36,6 +43,7 @@ describe('BackupSerializer', () => {
     expect(parsed.exercises).toEqual([baseExercise]);
     expect(parsed.groups).toEqual(['Chest']);
     expect(parsed.routines).toEqual([baseRoutine]);
+    expect(parsed.workouts).toEqual(baseData.workouts);
   });
 
   it('imports a full backup object', () => {
@@ -43,11 +51,23 @@ describe('BackupSerializer', () => {
       exercises: [baseExercise],
       groups: ['Chest'],
       routines: [baseRoutine],
+      workouts: baseData.workouts,
     });
     const result = parseBackup(json);
     expect(result?.exercises).toHaveLength(1);
     expect(result?.muscleGroups).toEqual(['Chest']);
     expect(result?.routines).toHaveLength(1);
+    expect(result?.workouts).toEqual(baseData.workouts);
+  });
+
+  it('keeps old backups compatible by defaulting workout history to empty', () => {
+    const result = parseBackup(JSON.stringify({
+      exercises: [baseExercise],
+      groups: ['Chest'],
+      routines: [baseRoutine],
+    }));
+
+    expect(result?.workouts).toEqual([]);
   });
 
   it('rejects backups with an outdated routine format', () => {
@@ -67,5 +87,11 @@ describe('BackupSerializer', () => {
 
   it('returns null for invalid JSON', () => {
     expect(parseBackup('not json')).toBeNull();
+  });
+
+  it('repairs old backups by removing routine references to missing exercises', () => {
+    const result = parseBackup(JSON.stringify({ exercises: [], groups: [], routines: [baseRoutine] }));
+
+    expect(result?.routines[0].days[0].exercises).toEqual([]);
   });
 });

@@ -201,6 +201,7 @@ const RoutinesRoute: React.FC = () => {
       dayId: day.id,
       exercises: day.exercises.map((re) => ({
         exerciseId: re.exerciseId,
+        exerciseName: exercises.find((exercise) => exercise.id === re.exerciseId)?.name,
         target: { sets: re.sets, reps: re.reps, restSeconds: re.restSeconds },
       })),
     });

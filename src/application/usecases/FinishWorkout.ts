@@ -12,9 +12,11 @@ export class FinishWorkout {
   ) {}
 
   async execute(workout: Workout): Promise<void> {
-    await this.repository.saveWorkout({ ...workout, updatedAt: this.clock.now() });
     const exercises = this.repository.getSnapshot().exercises;
-    for (const entry of workout.entries) {
+    const names = new Map(exercises.map((exercise) => [exercise.id, exercise.name]));
+    const completedWorkout = this.workouts.withExerciseNames(workout, names) ?? workout;
+    await this.repository.saveWorkout({ ...completedWorkout, updatedAt: this.clock.now() });
+    for (const entry of completedWorkout.entries) {
       const lastSet = this.workouts.lastRecordedSet(entry);
       const exercise = exercises.find((item) => item.id === entry.exerciseId);
       if (!lastSet || !exercise) continue;

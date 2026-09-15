@@ -33,4 +33,30 @@ describe('ImportBackup', () => {
     expect(repository.saveExercise).not.toHaveBeenCalled();
     expect(repository.saveRoutine).not.toHaveBeenCalled();
   });
+
+  it('imports workout history together with exercises and routines', async () => {
+    const repository = createRepository();
+    const workout = {
+      id: 'workout',
+      name: 'Upper',
+      startedAt: '2026-09-08T10:00:00.000Z',
+      finishedAt: '2026-09-08T11:00:00.000Z',
+      entries: [{ exerciseId: 'press', exerciseName: 'Press', sets: [{ weight: 50, reps: 8 }] }],
+    };
+    const imported = await new ImportBackup(repository, {
+      now: () => '2026-09-09T10:00:00.000Z',
+      today: () => '2026-09-09',
+    }).execute(JSON.stringify({
+      exercises: [{ id: 'press', name: 'Press', muscleGroup: 'Chest', logs: [] }],
+      groups: ['Chest'],
+      routines: [],
+      workouts: [workout],
+    }));
+
+    expect(imported).toBe(true);
+    expect(repository.saveWorkout).toHaveBeenCalledWith({
+      ...workout,
+      updatedAt: '2026-09-09T10:00:00.000Z',
+    });
+  });
 });

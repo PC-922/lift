@@ -134,7 +134,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     syncStatus,
     error,
     saveExercise: async (exercise) => { const current = repository(); if (current) await new SaveExercise(current, clock).execute(exercise); },
-    deleteExercise: async (id) => { const current = repository(); if (current) await new DeleteExercise(current).execute(id); },
+    deleteExercise: async (id) => { const current = repository(); if (current) await new DeleteExercise(current, clock).execute(id); },
     updateExerciseDetails: async (...args) => { const current = repository(); if (current) await new UpdateExerciseDetails(current, clock).execute(...args); },
     updateExerciseNote: async (...args) => { const current = repository(); if (current) await new UpdateExerciseNote(current, clock).execute(...args); },
     updateExerciseLog: async (...args) => { const current = repository(); if (current) await new UpdateExerciseLog(current, clock).execute(...args); },

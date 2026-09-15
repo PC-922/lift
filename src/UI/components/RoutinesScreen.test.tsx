@@ -241,6 +241,28 @@ describe('RoutinesScreen', () => {
     expect(saved.name).toBe('Push Day Updated');
   });
 
+  it('does not restore an exercise deleted while its routine is being edited', async () => {
+    const onSaveRoutine = vi.fn();
+    const view = renderWithToast(<RoutinesScreen {...defaultProps} onSaveRoutine={onSaveRoutine} />);
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Menu' })[0]);
+    await act(() => vi.runAllTimersAsync());
+    fireEvent.click(screen.getByText(t.actions.edit));
+
+    view.rerender(
+      <RestTimerProvider>
+        <ToastProvider>
+          <RoutinesScreen {...defaultProps} exercises={[exercises[1]]} onSaveRoutine={onSaveRoutine} />
+        </ToastProvider>
+      </RestTimerProvider>
+    );
+    fireEvent.click(screen.getByRole('button', { name: t.actions.save }));
+    await act(() => vi.runAllTimersAsync());
+
+    const saved = onSaveRoutine.mock.calls[0][0] as Routine;
+    expect(saved.days[0].exercises).toEqual([]);
+  });
+
   it('calls onDeleteRoutine after confirmation', async () => {
     const onDeleteRoutine = vi.fn();
     renderWithToast(<RoutinesScreen {...defaultProps} onDeleteRoutine={onDeleteRoutine} />);

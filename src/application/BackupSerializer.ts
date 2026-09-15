@@ -1,9 +1,19 @@
-import type { Exercise, ExerciseLog, Routine, RoutineDay, RoutineExercise } from '../domain';
+import type {
+  Exercise,
+  ExerciseLog,
+  Routine,
+  RoutineDay,
+  RoutineExercise,
+  Workout,
+  WorkoutEntry,
+  WorkoutSet,
+} from '../domain';
 
 export interface BackupData {
   exercises: Exercise[];
   muscleGroups: string[];
   routines: Routine[];
+  workouts: Workout[];
 }
 
 function isExerciseLog(value: unknown): value is ExerciseLog {
@@ -49,11 +59,41 @@ function isRoutine(value: unknown): value is Routine {
     && Array.isArray(routine.days) && routine.days.every(isRoutineDay);
 }
 
+function isWorkoutSet(value: unknown): value is WorkoutSet {
+  if (typeof value !== 'object' || value === null) return false;
+  const set = value as WorkoutSet;
+  return (typeof set.weight === 'number' || set.weight === null)
+    && (typeof set.reps === 'number' || set.reps === null);
+}
+
+function isWorkoutEntry(value: unknown): value is WorkoutEntry {
+  if (typeof value !== 'object' || value === null) return false;
+  const entry = value as WorkoutEntry;
+  return typeof entry.exerciseId === 'string'
+    && (entry.exerciseName === undefined || typeof entry.exerciseName === 'string')
+    && Array.isArray(entry.sets)
+    && entry.sets.every(isWorkoutSet);
+}
+
+function isWorkout(value: unknown): value is Workout {
+  if (typeof value !== 'object' || value === null) return false;
+  const workout = value as Workout;
+  return typeof workout.id === 'string'
+    && typeof workout.name === 'string'
+    && typeof workout.startedAt === 'string'
+    && typeof workout.finishedAt === 'string'
+    && (workout.routineId === undefined || typeof workout.routineId === 'string')
+    && (workout.dayId === undefined || typeof workout.dayId === 'string')
+    && Array.isArray(workout.entries)
+    && workout.entries.every(isWorkoutEntry);
+}
+
 export function serializeBackup(data: BackupData): string {
   return JSON.stringify({
     exercises: data.exercises,
     groups: data.muscleGroups,
     routines: data.routines,
+    workouts: data.workouts,
   }, null, 2);
 }
 
@@ -65,14 +105,24 @@ export function parseBackup(json: string): BackupData | null {
       exercises?: unknown;
       groups?: unknown;
       routines?: unknown;
+      workouts?: unknown;
     };
     if (!Array.isArray(backup.exercises) || !backup.exercises.every(isExercise)) return null;
     if (!Array.isArray(backup.groups) || !backup.groups.every((group): group is string => typeof group === 'string')) return null;
     if (!Array.isArray(backup.routines) || !backup.routines.every(isRoutine)) return null;
+    if (backup.workouts !== undefined && (!Array.isArray(backup.workouts) || !backup.workouts.every(isWorkout))) return null;
+    const exerciseIds = new Set(backup.exercises.map((exercise) => exercise.id));
     return {
       exercises: backup.exercises,
       muscleGroups: backup.groups,
-      routines: backup.routines,
+      routines: backup.routines.map((routine) => ({
+        ...routine,
+        days: routine.days.map((day) => ({
+          ...day,
+          exercises: day.exercises.filter((exercise) => exerciseIds.has(exercise.exerciseId)),
+        })),
+      })),
+      workouts: backup.workouts ?? [],
     };
   } catch {
     return null;

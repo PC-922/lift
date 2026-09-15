@@ -44,8 +44,8 @@ function startSession() {
       routineId: 'r1',
       dayId: 'd1',
       exercises: [
-        { exerciseId: 'ex1', target: { sets: 3, reps: '10', restSeconds: 90 } },
-        { exerciseId: 'ex2', target: { sets: 2, reps: '12' } },
+        { exerciseId: 'ex1', exerciseName: 'Bench Press', target: { sets: 3, reps: '10', restSeconds: 90 } },
+        { exerciseId: 'ex2', exerciseName: 'Incline Press', target: { sets: 2, reps: '12' } },
       ],
     });
   });
@@ -125,11 +125,12 @@ describe('useWorkoutSession', () => {
 
     act(() => {
       result.current.logSet(80, 10);
-      result.current.replaceCurrentExercise('ex2');
+      result.current.replaceCurrentExercise('ex3', 'Cable Fly');
     });
 
     expect(result.current.activeWorkout?.exercises[0]).toEqual({
-      exerciseId: 'ex2',
+      exerciseId: 'ex3',
+      exerciseName: 'Cable Fly',
       sets: [],
       target: { sets: 3, reps: '10', restSeconds: 90 },
     });
@@ -173,7 +174,11 @@ describe('useWorkoutSession', () => {
     expect(workout).not.toBeNull();
     expect(workout?.name).toBe('Push Day');
     expect(workout?.entries).toHaveLength(1);
-    expect(workout?.entries[0]).toEqual({ exerciseId: 'ex1', sets: [{ weight: 80, reps: 10 }] });
+    expect(workout?.entries[0]).toEqual({
+      exerciseId: 'ex1',
+      exerciseName: 'Bench Press',
+      sets: [{ weight: 80, reps: 10 }],
+    });
     expect(workout?.finishedAt).toBeTruthy();
     expect(result.current.activeWorkout).toBeNull();
   });

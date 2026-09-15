@@ -115,6 +115,19 @@ export const RoutinesScreen: React.FC<Props> = ({
     setSelectedDayId(null);
   }, [activeRoutineId]);
 
+  useEffect(() => {
+    if (!modalMode) return;
+    const availableIds = new Set(exercises.map((exercise) => exercise.id));
+    setFormDays((current) => {
+      const days = current.map((day) => ({
+        ...day,
+        exercises: day.exercises.filter((exercise) => availableIds.has(exercise.exerciseId)),
+      }));
+      const changed = days.some((day, index) => day.exercises.length !== current[index].exercises.length);
+      return changed ? days : current;
+    });
+  }, [exercises, modalMode]);
+
   const { showToast } = useToast();
 
   const activeRoutine = useMemo(() => routines.find((r) => r.id === activeRoutineId) ?? null, [routines, activeRoutineId]);

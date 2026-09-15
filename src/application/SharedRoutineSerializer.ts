@@ -28,17 +28,18 @@ export function createSharedRoutine(routine: Routine, exercises: Exercise[]): Sh
     name: routine.name,
     days: routine.days.map((day) => ({
       name: day.name,
-      exercises: day.exercises.map((item) => {
+      exercises: day.exercises.flatMap((item) => {
         const exercise = exerciseById.get(item.exerciseId);
-        return {
-          name: exercise?.name ?? '',
-          muscleGroup: exercise?.muscleGroup ?? '',
+        if (!exercise) return [];
+        return [{
+          name: exercise.name,
+          muscleGroup: exercise.muscleGroup,
           sets: item.sets,
           reps: item.reps,
           dropset: item.dropset,
           toFailure: item.toFailure,
           restSeconds: item.restSeconds,
-        };
+        }];
       }),
     })),
   };

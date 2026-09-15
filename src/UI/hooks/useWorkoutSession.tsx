@@ -13,8 +13,8 @@ interface WorkoutSessionContextValue {
   logSet(weight: number | null, reps: number | null): void;
   nextExercise(): void;
   prevExercise(): void;
-  addExercise(exerciseId: string, target?: WorkoutExerciseTarget): void;
-  replaceCurrentExercise(exerciseId: string): void;
+  addExercise(exerciseId: string, target?: WorkoutExerciseTarget, exerciseName?: string): void;
+  replaceCurrentExercise(exerciseId: string, exerciseName?: string): void;
   removeExercise(index: number): void;
   finish(): Workout | null;
   cancel(): void;
@@ -60,12 +60,12 @@ export const WorkoutSessionProvider: React.FC<WorkoutSessionProviderProps> = ({ 
     setCurrentIndex((current) => Math.max(0, current - 1));
   }, []);
 
-  const addExercise = useCallback((exerciseId: string, target?: WorkoutExerciseTarget) => {
-    setActiveWorkout((previous) => workoutService.addExercise(previous, exerciseId, target));
+  const addExercise = useCallback((exerciseId: string, target?: WorkoutExerciseTarget, exerciseName?: string) => {
+    setActiveWorkout((previous) => workoutService.addExercise(previous, exerciseId, target, exerciseName));
   }, []);
 
-  const replaceCurrentExercise = useCallback((exerciseId: string) => {
-    setActiveWorkout((previous) => workoutService.replaceExercise(previous, currentIndex, exerciseId));
+  const replaceCurrentExercise = useCallback((exerciseId: string, exerciseName?: string) => {
+    setActiveWorkout((previous) => workoutService.replaceExercise(previous, currentIndex, exerciseId, exerciseName));
   }, [currentIndex]);
 
   const removeExercise = useCallback((index: number) => {

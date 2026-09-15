@@ -80,10 +80,11 @@ export const WorkoutPlayer: React.FC = () => {
   };
 
   const handleExerciseSelected = (exerciseId: string) => {
+    const exerciseName = exerciseById.get(exerciseId)?.name;
     if (exercisePickerMode === 'replace') {
-      replaceCurrentExercise(exerciseId);
+      replaceCurrentExercise(exerciseId, exerciseName);
     } else {
-      addExercise(exerciseId);
+      addExercise(exerciseId, undefined, exerciseName);
     }
     closeExercisePicker();
   };
@@ -245,7 +246,9 @@ export const WorkoutPlayer: React.FC = () => {
         <div className="flex min-h-0 w-full flex-1 flex-col px-5 sm:mx-auto sm:max-w-md">
           <div className="min-h-0 flex-1 overflow-y-auto">
             <div className="mb-4 min-h-[6.5rem]">
-              <h2 className="line-clamp-2 text-3xl font-black leading-tight text-app-text">{exercise?.name ?? ''}</h2>
+              <h2 className="line-clamp-2 text-3xl font-black leading-tight text-app-text">
+                {exercise?.name ?? activeExercise.exerciseName ?? t.labels.deletedExercise}
+              </h2>
               <p className="mt-1 text-xs font-bold uppercase tracking-widest text-app-text-muted">
                 {exercise ? getTranslatedGroupName(exercise.muscleGroup) : ''}
               </p>

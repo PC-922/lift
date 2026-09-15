@@ -29,6 +29,7 @@ export const WorkoutEntryEditor: React.FC<Props> = ({
   onRemoveSet,
 }) => {
   const t = useTranslations();
+  const missingExercise = !exercises.some((exercise) => exercise.id === entry.exerciseId);
 
   return (
     <section className="rounded-2xl border border-app-border bg-app-surface-muted p-3">
@@ -40,6 +41,9 @@ export const WorkoutEntryEditor: React.FC<Props> = ({
           aria-label={`${t.labels.exercise} ${entryIndex + 1}`}
           className="font-semibold"
         >
+          {missingExercise && (
+            <option value={entry.exerciseId}>{entry.exerciseName ?? t.labels.deletedExercise}</option>
+          )}
           {exercises.map((exercise) => <option key={exercise.id} value={exercise.id}>{exercise.name}</option>)}
         </Select>
         <button

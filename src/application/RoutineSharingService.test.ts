@@ -66,6 +66,22 @@ describe('RoutineSharingService', () => {
     expect(service.parse(JSON.stringify({ name: 'Bad' }))).toBeNull();
   });
 
+  it('omits stale routine references instead of exporting blank exercises', () => {
+    const routine: Routine = {
+      ...baseRoutine,
+      days: [{
+        ...baseRoutine.days[0],
+        exercises: [
+          ...baseRoutine.days[0].exercises,
+          { exerciseId: 'missing', sets: 2, reps: '10', dropset: false, toFailure: false },
+        ],
+      }],
+    };
+
+    expect(service.create(routine, exercises).days[0].exercises).toHaveLength(1);
+    expect(service.create(routine, exercises).days[0].exercises[0].name).toBe('Bench Press');
+  });
+
   it('imports a routine reusing existing exercises by name and group', () => {
     const shared = service.create(baseRoutine, exercises);
     const result = service.import(shared, exercises);
