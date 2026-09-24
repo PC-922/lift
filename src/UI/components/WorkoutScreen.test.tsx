@@ -161,6 +161,8 @@ describe('WorkoutScreen', () => {
     expect(screen.getByText('Bench Press')).toBeTruthy();
     expect(screen.getByText(new RegExp(`${t.labels.sets}:\\s*3`))).toBeTruthy();
     expect(screen.getByText(new RegExp(`${t.labels.reps}:\\s*10`))).toBeTruthy();
+    expect(screen.getByRole('img', { name: 'Bench Press exercise demonstration' }).getAttribute('src'))
+      .toBe('/exercise-media/ex1.gif');
   });
 
   it('replaces the current exercise during a workout', async () => {
@@ -188,6 +190,8 @@ describe('WorkoutScreen', () => {
 
     fireEvent.click(screen.getByText(t.labels.nextExercise));
     expect(screen.getByRole('heading', { name: 'Bench Press' })).toBeTruthy();
+    expect(screen.getByRole('img', { name: 'Bench Press exercise demonstration' }).parentElement?.className)
+      .toContain('aspect-[16/9]');
     expect(screen.getAllByRole('button', { name: t.labels.nextExercise })).toHaveLength(1);
   });
 
@@ -258,6 +262,7 @@ describe('WorkoutScreen', () => {
     expect(screen.getByText(t.labels.reps, { selector: 'label' })).toBeTruthy();
     expect(screen.getByRole('button', { name: t.labels.recordSet })).toBeTruthy();
     expect(screen.getByRole('button', { name: t.labels.finishWorkout })).toBeTruthy();
+    expect(screen.getByRole('img', { name: 'Bench Press exercise demonstration' })).toBeTruthy();
   });
 
   it('removes a recorded middle set and restores it with the accessible mobile undo action', () => {

@@ -76,6 +76,8 @@ describe('ExerciseDetail', () => {
     expect(screen.getByText('History')).toBeTruthy();
     expect(screen.getAllByDisplayValue('80').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByDisplayValue('8').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByRole('img', { name: 'Bench Press exercise demonstration' }).getAttribute('src'))
+      .toBe('/exercise-media/ex1.gif');
   });
 
   it('opens history actions and triggers delete all logs', () => {

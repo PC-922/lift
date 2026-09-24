@@ -14,6 +14,7 @@ import { Surface } from './ui/Surface';
 import { MuscleGroupPicker } from './ui/MuscleGroupPicker';
 import { Badge } from './ui/Badge';
 import { cn } from '../utils/cn';
+import { ExerciseMedia } from './ExerciseMedia';
 import { isDecimalInput, isIntegerInput, parseDecimalInput, parseIntegerInput } from '../utils/numberInput';
 
 interface RoutineExerciseSettings {
@@ -266,6 +267,8 @@ export const ExerciseDetail: React.FC<Props> = ({
           <Trash2 size={20} />
         </button>
       </div>
+
+      <ExerciseMedia exerciseId={exercise.id} exerciseName={exercise.name} className="mb-6" />
 
       {showGroupPicker && (
         <div className="mb-6">

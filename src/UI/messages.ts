@@ -206,6 +206,8 @@ export const translations = {
       removeSet: 'Eliminar serie',
       noSets: 'Sin series registradas',
       deletedExercise: 'Ejercicio eliminado',
+      exerciseMediaUnavailable: 'No hay una animación disponible',
+      exerciseMediaInstruction: 'Añade {file} a /public/exercise-media',
     },
     time: {
       today: 'Hoy',
@@ -427,6 +429,8 @@ export const translations = {
       removeSet: 'Remove set',
       noSets: 'No recorded sets',
       deletedExercise: 'Deleted exercise',
+      exerciseMediaUnavailable: 'Exercise media unavailable',
+      exerciseMediaInstruction: 'Add {file} to /public/exercise-media',
     },
     time: {
       today: 'Today',

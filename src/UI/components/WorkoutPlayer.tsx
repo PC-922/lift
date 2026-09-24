@@ -17,6 +17,7 @@ import { Modal } from './Modal';
 import ConfirmModal from './ConfirmModal';
 import { SearchInput } from './ui/SearchInput';
 import { cn } from '../utils/cn';
+import { ExerciseMedia } from './ExerciseMedia';
 import { isDecimalInput, isIntegerInput, parseDecimalInput, parseIntegerInput } from '../utils/numberInput';
 
 function formatElapsed(startedAt: string, now: number): string {
@@ -268,6 +269,8 @@ export const WorkoutPlayer: React.FC = () => {
       ) : (
         <div className="flex min-h-0 w-full flex-1 flex-col px-5 sm:mx-auto sm:max-w-md">
           <div className="min-h-0 flex-1 overflow-y-auto">
+            {exercise && <ExerciseMedia exerciseId={exercise.id} exerciseName={exercise.name} compact className="mb-4" />}
+
             <div className="mb-4 min-h-[6.5rem]">
               <h2 className="line-clamp-2 text-3xl font-black leading-tight text-app-text">
                 {exercise?.name ?? activeExercise.exerciseName ?? t.labels.deletedExercise}

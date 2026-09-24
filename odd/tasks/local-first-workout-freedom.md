@@ -104,9 +104,15 @@ Exercise creation currently waits on Firestore, exercise occurrences are identif
   - Runtime: N/A — no browser automation surface was available. The local-first adapter test proves writes complete while the remote drain remains unresolved; the sync-indicator integration test exposes a durable sync error.
   - Rollback boundary: revert this work-unit commit to restore the Firestore-only composition. The inactive IndexedDB and outbox commits remain available but unused.
   - Commit: this local work-unit commit (`feat(storage): activate local-first persistence`).
-- [ ] LF-09 Add exercise GIF resolution and placeholders.
+- [x] LF-09 Add exercise GIF resolution and placeholders.
   - Route: delegated; shared responsive UI component and tests.
   - Acceptance: detail and workout use the same component; dropping a correctly named GIF requires no code change.
+  - RED: `npm test -- --run src/UI/components/ExerciseMedia.test.tsx` — failed because `ExerciseMedia` did not exist.
+  - GREEN: `npm test -- --run src/UI/components/ExerciseMedia.test.tsx src/UI/components/ExerciseDetail.test.tsx src/UI/components/WorkoutScreen.test.tsx` — 3 files, 16 tests passed.
+  - Full checks: `npm test -- --run` — 44 files, 252 tests passed; `npm run build` passed; `git diff --check` passed.
+  - Runtime: N/A — browser automation was unavailable. Integration tests cover shared media in the detail and active player at 375×667 and 390×844; desktop player coverage remains green.
+  - Rollback boundary: revert this work-unit commit to remove GIF resolution, the graceful placeholder, and asset-folder guidance without affecting training or persistence behavior.
+  - Commit: this local work-unit commit (`feat(exercises): add media placeholders`).
 - [ ] LF-10 Add device-local machine photos.
   - Route: delegated; IndexedDB Blob storage, native image processing, responsive UI, and tests.
   - Acceptance: capture/select, compress, replace, delete, reload; never synced or exported.
@@ -131,7 +137,8 @@ Exercise creation currently waits on Firestore, exercise occurrences are identif
 - LF-06 complete: a native IndexedDB profile-snapshot adapter now provides isolated transactional CRUD, subscription snapshots, safe legacy bootstrap normalization, and explicit unavailable/quota/transaction errors. It is intentionally not wired into composition; Firestore remains the production repository.
 - LF-07 complete: a native IndexedDB-backed outbox persists operations before draining them through an injected remote gateway. It preserves FIFO ordering, keeps failed operations (including delete tombstones) durable for retries, exposes pending/failed/error status, and selects remote records deterministically only when there is no pending local mutation. It is intentionally not wired into Firestore composition.
 - LF-08 complete: composition now creates an IndexedDB-backed local repository per profile and a Firestore-backed outbox gateway. Local mutations commit before a remote drain begins; existing cloud data merges into the local profile without replacing pending local records. An unavailable Firebase runtime reports a sync issue but keeps device-local use available.
-- Next task: LF-09.
+- LF-09 complete: `ExerciseMedia` is shared by exercise detail and the active player. It maps each exercise directly to `/exercise-media/{exerciseId}.gif`, resets if the selected exercise changes, and replaces a failed asset with a localised accessible placeholder. `public/exercise-media/README.md` documents the drop-in convention.
+- Next task: LF-10.
 
 ## Next step
 
