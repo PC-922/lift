@@ -318,9 +318,7 @@ const AppLayout: React.FC = () => {
   }
 
   return (
-    <RestTimerProvider>
-      <WorkoutSessionProvider>
-      <div className="app-shell min-h-screen sm:mx-auto sm:max-w-md">
+    <div className="app-shell min-h-screen sm:mx-auto sm:max-w-md">
           {showHeader && (
             <header className={cn('sticky top-0 z-20 bg-app-bg', appHeaderClassName)}>
               <div className="relative flex min-h-9 items-center justify-between gap-3">
@@ -412,9 +410,7 @@ const AppLayout: React.FC = () => {
               </Button>
             </div>
           </Modal>
-        </div>
-      </WorkoutSessionProvider>
-      </RestTimerProvider>
+    </div>
   );
 };
 
@@ -425,7 +421,11 @@ const AppContent: React.FC = () => {
   return (
     <ToastProvider>
       <AppDataProvider key={localProfileId}>
-        <AppLayout />
+        <RestTimerProvider>
+          <WorkoutSessionProvider>
+            <AppLayout />
+          </WorkoutSessionProvider>
+        </RestTimerProvider>
       </AppDataProvider>
     </ToastProvider>
   );
