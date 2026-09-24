@@ -77,9 +77,15 @@ Exercise creation currently waits on Firestore, exercise occurrences are identif
   - Runtime: N/A — browser automation was not available. Integration tests exercised leave navigation and the compact 390×844 viewport; existing desktop player coverage confirms controls remain in the readable `sm:max-w-md` column.
   - Rollback boundary: revert this work-unit commit to remove non-destructive leave navigation, the cross-menu resume control, and the separate discard control without changing draft persistence or prior workout behavior.
   - Commit: this local work-unit commit (`feat(workouts): allow leaving and resuming`).
-- [ ] LF-06 Add the native IndexedDB training store without activating it.
+- [x] LF-06 Add the native IndexedDB training store without activating it.
   - Route: delegated; new infrastructure adapter and tests.
   - Acceptance: transactional CRUD, per-profile isolation, migration primitives, and quota/error handling.
+  - RED: `npm test -- --run src/infrastructure/IndexedDbTrainingRepository.test.ts` — failed because the new adapter did not exist.
+  - GREEN: `npm test -- --run src/infrastructure/IndexedDbTrainingRepository.test.ts` — 1 file, 3 tests passed.
+  - Full checks: `npm test -- --run` — 41 files, 239 tests passed; `npm run build` passed; `git diff --check` passed.
+  - Runtime: N/A — this inactive adapter has no UI or composition path yet; deterministic injected-database tests cover persistence behavior without a browser IndexedDB implementation.
+  - Rollback boundary: revert this work-unit commit to remove only the inactive `IndexedDbTrainingRepository` adapter and its tests; Firestore composition and runtime behavior are unchanged.
+  - Commit: this local work-unit commit (`feat(storage): add indexeddb training store`).
 - [ ] LF-07 Add the Firestore synchronization outbox without activating it.
   - Route: delegated; persistence/synchronization infrastructure and tests.
   - Acceptance: queued writes, retries, tombstones, deterministic conflict handling, and status reporting.
@@ -110,8 +116,9 @@ Exercise creation currently waits on Firestore, exercise occurrences are identif
 - LF-03 complete: active workouts and history can add or replace a repeated exercise ID as an independent block. Each addition gets a distinct block ID; replacement targets only the selected block and preserves its ID and target configuration.
 - LF-04 complete: the active player can remove any recorded set, including an intermediate set, and restore it at its original position within a five-second Undo window. Invalid exercise or set indexes are safe no-ops, while valid mutations persist through the existing draft repository.
 - LF-05 complete: leaving the player only changes route, retaining the active draft and active rest timer. Any non-workout screen shows a direct resume control; discard has its own labelled destructive action and still clears both draft and timer.
-- Next task: LF-06.
+- LF-06 complete: a native IndexedDB profile-snapshot adapter now provides isolated transactional CRUD, subscription snapshots, safe legacy bootstrap normalization, and explicit unavailable/quota/transaction errors. It is intentionally not wired into composition; Firestore remains the production repository.
+- Next task: LF-07.
 
 ## Next step
 
-Implement LF-06 under strict TDD. Do not push, open a pull request, or select a remote chain until the user authorizes remote delivery.
+Implement LF-07 under strict TDD. Do not push, open a pull request, or select a remote chain until the user authorizes remote delivery.
