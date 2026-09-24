@@ -216,6 +216,31 @@ describe('WorkoutScreen', () => {
     expect(screen.getByRole('button', { name: t.labels.finishWorkout })).toBeTruthy();
   });
 
+  it('removes a recorded middle set and restores it with the accessible mobile undo action', () => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 375 });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 667 });
+    renderWithProviders(<WorkoutScreen />);
+
+    fireEvent.click(screen.getByText(t.labels.freeWorkout));
+    fireEvent.click(screen.getByText(t.labels.addExercise));
+    fireEvent.click(screen.getByText('Bench Press'));
+    for (const [weight, reps] of [['80', '10'], ['82', '8'], ['84', '6']]) {
+      const inputs = screen.getAllByPlaceholderText('0');
+      fireEvent.change(inputs[0], { target: { value: weight } });
+      fireEvent.change(inputs[1], { target: { value: reps } });
+      fireEvent.click(screen.getByText(t.labels.recordSet));
+      fireEvent.click(screen.getByText(t.labels.restSkip));
+    }
+
+    fireEvent.click(screen.getByRole('button', { name: `${t.labels.removeSet} 2` }));
+    expect(screen.queryByText('82 × 8')).toBeNull();
+    const undo = screen.getByRole('button', { name: t.actions.undo });
+    expect(undo.closest('.fixed')?.className).toContain('h-[100dvh]');
+    fireEvent.click(undo);
+
+    expect(screen.getByText('82 × 8')).toBeTruthy();
+  });
+
   it('keeps the workout controls in a readable column on desktop', () => {
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1280 });
     Object.defineProperty(window, 'innerHeight', { configurable: true, value: 900 });

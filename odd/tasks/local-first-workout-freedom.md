@@ -59,9 +59,15 @@ Exercise creation currently waits on Firestore, exercise occurrences are identif
   - Runtime: N/A — no browser automation surface was available; the focused player integration test exercised the 390×844 mobile viewport and the production build passed.
   - Rollback boundary: revert this work-unit commit to restore duplicate blocking in active and historical workout editors without changing LF-01 block-ID migration or LF-02 routine editing.
   - Commit: `HEAD` (`feat(workouts): allow repeated blocks`).
-- [ ] LF-04 Add arbitrary set removal with Undo.
+- [x] LF-04 Add arbitrary set removal with Undo.
   - Route: delegated; domain, hook, and responsive UI behavior.
   - Acceptance: any recorded set can be removed, persisted, and restored during the undo window.
+  - RED: `npm test -- --run src/domain/WorkoutService.test.ts src/UI/hooks/useWorkoutSession.test.tsx src/UI/components/WorkoutScreen.test.tsx` — 3 files, 4 new behavior tests failed because `removeSet`, restoration APIs, and accessible player controls did not exist.
+  - GREEN: `npm test -- --run src/domain/WorkoutService.test.ts src/UI/hooks/useWorkoutSession.test.tsx src/UI/components/WorkoutScreen.test.tsx` — 3 files, 30 tests passed.
+  - Full checks: `npm test -- --run` — 40 files, 232 tests passed; `npm run build` passed; `git diff --check` passed.
+  - Runtime: N/A — browser automation was not available. The player integration test exercised the 375×667 viewport and verified the accessible removal and Undo flow.
+  - Rollback boundary: revert this work-unit commit to remove active-workout set deletion and its five-second Undo action without changing block identity, repeated-block behavior, or persistence infrastructure.
+  - Commit: `HEAD` (`feat(workouts): add set removal undo`).
 - [ ] LF-05 Allow leaving and resuming an unfinished workout.
   - Route: delegated; routing, draft persistence, and UI behavior.
   - Acceptance: leaving preserves the draft; discarding remains explicit; resume is clearly reachable.
@@ -96,8 +102,9 @@ Exercise creation currently waits on Firestore, exercise occurrences are identif
 - LF-01 commit: this work-unit commit (recorded in the local Git history).
 - LF-02 complete: routine editing now treats each exercise occurrence as an independent block. Replacing preserves the block ID and configuration; repeated exercise IDs are allowed.
 - LF-03 complete: active workouts and history can add or replace a repeated exercise ID as an independent block. Each addition gets a distinct block ID; replacement targets only the selected block and preserves its ID and target configuration.
-- Next task: LF-04.
+- LF-04 complete: the active player can remove any recorded set, including an intermediate set, and restore it at its original position within a five-second Undo window. Invalid exercise or set indexes are safe no-ops, while valid mutations persist through the existing draft repository.
+- Next task: LF-05.
 
 ## Next step
 
-Implement LF-04 under strict TDD. Do not push, open a pull request, or select a remote chain until the user authorizes remote delivery.
+Implement LF-05 under strict TDD. Do not push, open a pull request, or select a remote chain until the user authorizes remote delivery.

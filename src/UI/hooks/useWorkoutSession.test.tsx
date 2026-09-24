@@ -93,6 +93,47 @@ describe('useWorkoutSession', () => {
     expect(result.current.activeWorkout?.exercises[0].sets).toEqual([]);
   });
 
+  it('removes a middle set, persists the draft, and restores it at the same position', () => {
+    const result = startSession();
+
+    act(() => {
+      result.current.logSet(80, 10);
+      result.current.logSet(82, 8);
+      result.current.logSet(84, 6);
+      result.current.removeSet(0, 1);
+    });
+
+    expect(result.current.activeWorkout?.exercises[0].sets).toEqual([
+      { weight: 80, reps: 10 },
+      { weight: 84, reps: 6 },
+    ]);
+    expect(JSON.parse(localStorage.getItem('lift_active_workout_v1') ?? '')).toEqual(expect.objectContaining({
+      exercises: expect.arrayContaining([
+        expect.objectContaining({ sets: [{ weight: 80, reps: 10 }, { weight: 84, reps: 6 }] }),
+      ]),
+    }));
+
+    act(() => result.current.restoreSet(0, 1, { weight: 82, reps: 8 }));
+
+    expect(result.current.activeWorkout?.exercises[0].sets).toEqual([
+      { weight: 80, reps: 10 },
+      { weight: 82, reps: 8 },
+      { weight: 84, reps: 6 },
+    ]);
+  });
+
+  it('ignores invalid current set indexes', () => {
+    const result = startSession();
+
+    act(() => {
+      result.current.logSet(80, 10);
+      result.current.removeSet(0, -1);
+      result.current.removeSet(0, 1);
+    });
+
+    expect(result.current.activeWorkout?.exercises[0].sets).toEqual([{ weight: 80, reps: 10 }]);
+  });
+
   it('navigates between exercises with clamping', () => {
     const result = startSession();
 

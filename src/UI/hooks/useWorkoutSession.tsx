@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
-import { Workout } from '../../domain';
+import { Workout, WorkoutSet } from '../../domain';
 import { workoutService } from '../../domain/WorkoutService';
 
 import type { ActiveWorkout, WorkoutExerciseTarget, WorkoutStartOptions } from '../../domain/ActiveWorkout';
@@ -11,6 +11,8 @@ interface WorkoutSessionContextValue {
   currentIndex: number;
   startWorkout(options: WorkoutStartOptions): void;
   logSet(weight: number | null, reps: number | null): void;
+  removeSet(exerciseIndex: number, setIndex: number): void;
+  restoreSet(exerciseIndex: number, setIndex: number, set: WorkoutSet): void;
   nextExercise(): void;
   prevExercise(): void;
   addExercise(exerciseId: string, target?: WorkoutExerciseTarget, exerciseName?: string): void;
@@ -51,6 +53,14 @@ export const WorkoutSessionProvider: React.FC<WorkoutSessionProviderProps> = ({ 
     setActiveWorkout((previous) => workoutService.recordSet(previous, currentIndex, weight, reps));
   }, [currentIndex]);
 
+  const removeSet = useCallback((exerciseIndex: number, setIndex: number) => {
+    setActiveWorkout((previous) => workoutService.removeSet(previous, exerciseIndex, setIndex));
+  }, []);
+
+  const restoreSet = useCallback((exerciseIndex: number, setIndex: number, set: WorkoutSet) => {
+    setActiveWorkout((previous) => workoutService.restoreSet(previous, exerciseIndex, setIndex, set));
+  }, []);
+
   const nextExercise = useCallback(() => {
     if (!activeWorkout) return;
     setCurrentIndex((current) => Math.min(current + 1, activeWorkout.exercises.length - 1));
@@ -89,7 +99,7 @@ export const WorkoutSessionProvider: React.FC<WorkoutSessionProviderProps> = ({ 
 
   return (
     <WorkoutSessionContext.Provider
-      value={{ activeWorkout, currentIndex, startWorkout, logSet, nextExercise, prevExercise, addExercise, replaceCurrentExercise, removeExercise, finish, cancel }}
+      value={{ activeWorkout, currentIndex, startWorkout, logSet, removeSet, restoreSet, nextExercise, prevExercise, addExercise, replaceCurrentExercise, removeExercise, finish, cancel }}
     >
       {children}
     </WorkoutSessionContext.Provider>

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowLeftRight, ChevronLeft, ChevronRight, Clock, Plus, X } from 'lucide-react';
+import { ArrowLeftRight, ChevronLeft, ChevronRight, Clock, Plus, Trash2, X } from 'lucide-react';
+import type { WorkoutSet } from '../../domain';
 import { useWorkoutSession } from '../hooks/useWorkoutSession';
 import { useAppData } from '../hooks/useAppData';
 import { useRestTimer } from '../hooks/useRestTimer';
@@ -32,6 +33,8 @@ export const WorkoutPlayer: React.FC = () => {
     activeWorkout,
     currentIndex,
     logSet,
+    removeSet,
+    restoreSet,
     nextExercise,
     prevExercise,
     addExercise,
@@ -49,6 +52,7 @@ export const WorkoutPlayer: React.FC = () => {
   const [showAddExercise, setShowAddExercise] = useState(false);
   const [exercisePickerMode, setExercisePickerMode] = useState<'add' | 'replace'>('add');
   const [exerciseSearch, setExerciseSearch] = useState('');
+  const [removedSet, setRemovedSet] = useState<{ exerciseIndex: number; setIndex: number; set: WorkoutSet } | null>(null);
 
   useWakeLock(!!activeWorkout);
 
@@ -56,6 +60,12 @@ export const WorkoutPlayer: React.FC = () => {
     const interval = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (!removedSet) return;
+    const timeout = window.setTimeout(() => setRemovedSet(null), 5000);
+    return () => window.clearTimeout(timeout);
+  }, [removedSet]);
 
   const activeExercise = activeWorkout?.exercises[currentIndex] ?? null;
   const exerciseById = useMemo(() => new Map(exercises.map((e) => [e.id, e] as const)), [exercises]);
@@ -178,6 +188,19 @@ export const WorkoutPlayer: React.FC = () => {
     }
   };
 
+  const handleRemoveSet = (setIndex: number) => {
+    const set = activeExercise?.sets[setIndex];
+    if (!set) return;
+    removeSet(currentIndex, setIndex);
+    setRemovedSet({ exerciseIndex: currentIndex, setIndex, set });
+  };
+
+  const handleUndoRemoveSet = () => {
+    if (!removedSet) return;
+    restoreSet(removedSet.exerciseIndex, removedSet.setIndex, removedSet.set);
+    setRemovedSet(null);
+  };
+
   const handleFinish = async () => {
     const workout = finish();
     if (!workout) return;
@@ -269,12 +292,17 @@ export const WorkoutPlayer: React.FC = () => {
 
             <div className="mb-6 flex min-h-9 flex-wrap content-start gap-2">
               {activeExercise.sets.map((set, index) => (
-                <span
-                  key={index}
-                  className="rounded-lg border border-app-border bg-app-surface-muted px-2.5 py-1.5 text-xs font-semibold tabular-nums text-app-text"
-                >
-                  {set.weight ?? '—'} × {set.reps ?? '—'}
-                </span>
+                <div key={index} className="flex items-center rounded-lg border border-app-border bg-app-surface-muted text-xs font-semibold tabular-nums text-app-text">
+                  <span className="px-2.5 py-1.5">{set.weight ?? '—'} × {set.reps ?? '—'}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveSet(index)}
+                    className="self-stretch border-l border-app-border px-2 text-app-text-muted active:bg-app-surface"
+                    aria-label={`${t.labels.removeSet} ${index + 1}`}
+                  >
+                    <Trash2 size={14} aria-hidden="true" />
+                  </button>
+                </div>
               ))}
               {Array.from({ length: Math.max(0, targetSets - doneSets) }).map((_, index) => (
                 <span key={`empty-${index}`} className="rounded-lg border border-dashed border-app-border px-2.5 py-1.5 text-xs text-app-text-muted">
@@ -321,6 +349,14 @@ export const WorkoutPlayer: React.FC = () => {
           </div>
 
           <div className="shrink-0 space-y-3 bg-app-bg pb-[calc(env(safe-area-inset-bottom)+1.5rem)] pt-4">
+            {removedSet && (
+              <div role="status" className="flex items-center justify-between gap-3 rounded-xl bg-app-surface-muted px-3 py-2 text-sm text-app-text">
+                <span>{t.labels.removeSet}</span>
+                <Button type="button" variant="secondary" size="sm" onClick={handleUndoRemoveSet}>
+                  {t.actions.undo}
+                </Button>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-3">
               <Button
                 variant="secondary"

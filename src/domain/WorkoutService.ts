@@ -40,6 +40,33 @@ export class WorkoutService {
     };
   }
 
+  removeSet(workout: ActiveWorkout | null, exerciseIndex: number, setIndex: number): ActiveWorkout | null {
+    const exercise = workout?.exercises[exerciseIndex];
+    if (!workout || !exercise || setIndex < 0 || setIndex >= exercise.sets.length) return workout;
+    return {
+      ...workout,
+      exercises: workout.exercises.map((item, index) => index === exerciseIndex
+        ? { ...item, sets: item.sets.filter((_, itemIndex) => itemIndex !== setIndex) }
+        : item),
+    };
+  }
+
+  restoreSet(
+    workout: ActiveWorkout | null,
+    exerciseIndex: number,
+    setIndex: number,
+    set: WorkoutSet
+  ): ActiveWorkout | null {
+    const exercise = workout?.exercises[exerciseIndex];
+    if (!workout || !exercise || setIndex < 0 || setIndex > exercise.sets.length) return workout;
+    return {
+      ...workout,
+      exercises: workout.exercises.map((item, index) => index === exerciseIndex
+        ? { ...item, sets: [...item.sets.slice(0, setIndex), set, ...item.sets.slice(setIndex)] }
+        : item),
+    };
+  }
+
   addExercise(
     workout: ActiveWorkout | null,
     exerciseId: string,

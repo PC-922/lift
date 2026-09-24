@@ -33,6 +33,38 @@ describe('workout session', () => {
     expect(workoutService.removeExercise(expanded, 5)).toBe(expanded);
   });
 
+  it('removes and restores any recorded set without changing invalid drafts', () => {
+    const recorded = workoutService.recordSet(
+      workoutService.recordSet(
+        workoutService.recordSet(initial, 0, 40, 10)!,
+        0,
+        45,
+        8
+      )!,
+      0,
+      50,
+      6
+    )!;
+
+    const removed = workoutService.removeSet(recorded, 0, 1)!;
+    expect(removed.exercises[0].sets).toEqual([
+      { weight: 40, reps: 10 },
+      { weight: 50, reps: 6 },
+    ]);
+    expect(workoutService.removeSet(recorded, 0, -1)).toBe(recorded);
+    expect(workoutService.removeSet(recorded, 0, 3)).toBe(recorded);
+    expect(workoutService.removeSet(recorded, 2, 0)).toBe(recorded);
+
+    expect(workoutService.restoreSet(removed, 0, 1, { weight: 45, reps: 8 })?.exercises[0].sets)
+      .toEqual([
+        { weight: 40, reps: 10 },
+        { weight: 45, reps: 8 },
+        { weight: 50, reps: 6 },
+      ]);
+    expect(workoutService.restoreSet(removed, 0, -1, { weight: 45, reps: 8 })).toBe(removed);
+    expect(workoutService.restoreSet(removed, 0, 3, { weight: 45, reps: 8 })).toBe(removed);
+  });
+
   it('allows repeated exercise blocks and preserves the replaced block configuration', () => {
     const repeated = workoutService.addExercise(initial, 'press')!;
     const recorded = workoutService.recordSet(repeated, 0, 80, 8)!;

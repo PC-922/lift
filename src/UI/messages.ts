@@ -38,6 +38,7 @@ export const translations = {
       signOut: 'Cerrar sesión',
       resetData: 'Restablecer datos',
       startWorkout: 'Empezar',
+      undo: 'Deshacer',
     },
     prompts: {
       deleteExercise: '¿Eliminar "{name}"? También se quitará de las rutinas. El historial de entrenos se conservará.',
@@ -255,6 +256,7 @@ export const translations = {
       signOut: 'Sign out',
       resetData: 'Reset data',
       startWorkout: 'Start',
+      undo: 'Undo',
     },
     prompts: {
       deleteExercise: 'Delete "{name}"? It will also be removed from routines. Workout history will be preserved.',
