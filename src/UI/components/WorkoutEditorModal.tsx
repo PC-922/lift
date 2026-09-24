@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { Trash2, X } from 'lucide-react';
 import type { Exercise, Workout } from '../../domain';
 import { workoutEditorService } from '../../domain/WorkoutEditorService';
@@ -29,10 +29,6 @@ export const WorkoutEditorModal: React.FC<Props> = ({ initialWorkout, isNew, exe
   const [workout, setWorkout] = useState(initialWorkout);
   const [isSaving, setIsSaving] = useState(false);
   const durationMinutes = Math.max(0, Math.round((Date.parse(workout.finishedAt) - Date.parse(workout.startedAt)) / 60_000));
-  const availableExercises = useMemo(
-    () => exercises.filter((exercise) => !workout.entries.some((entry) => entry.exerciseId === exercise.id)),
-    [exercises, workout.entries]
-  );
 
   const handleSave = async () => {
     if (!workout.name.trim()) return;
@@ -108,10 +104,10 @@ export const WorkoutEditorModal: React.FC<Props> = ({ initialWorkout, isNew, exe
               />
             ))}
 
-            {availableExercises.length > 0 && (
+            {exercises.length > 0 && (
               <Select value="" onChange={(event) => setWorkout(workoutEditorService.addExercise(workout, event.target.value))}>
                 <option value="" disabled>{t.labels.addExercise}</option>
-                {availableExercises.map((exercise) => <option key={exercise.id} value={exercise.id}>{exercise.name}</option>)}
+                {exercises.map((exercise) => <option key={exercise.id} value={exercise.id}>{exercise.name}</option>)}
               </Select>
             )}
           </div>

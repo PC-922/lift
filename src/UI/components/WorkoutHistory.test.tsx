@@ -72,4 +72,13 @@ describe('WorkoutHistory', () => {
 
     await waitFor(() => expect(deleteWorkout).toHaveBeenCalledWith('workout-1'));
   });
+
+  it('allows the same exercise twice when editing history', () => {
+    render(<WorkoutHistory />);
+    fireEvent.click(screen.getByRole('button', { name: /Push day/i }));
+
+    fireEvent.change(screen.getAllByRole('combobox')[1], { target: { value: 'press' } });
+
+    expect(screen.getAllByLabelText(new RegExp(`${t.labels.exercise} `))).toHaveLength(2);
+  });
 });

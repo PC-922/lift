@@ -109,7 +109,7 @@ describe('useWorkoutSession', () => {
     expect(result.current.currentIndex).toBe(0);
   });
 
-  it('adds an exercise and ignores duplicates', () => {
+  it('adds repeated exercises as independent blocks', () => {
     const result = startSession();
 
     act(() => {
@@ -117,11 +117,14 @@ describe('useWorkoutSession', () => {
       result.current.addExercise('ex3');
     });
 
-    expect(result.current.activeWorkout?.exercises.map((e) => e.exerciseId)).toEqual(['ex1', 'ex2', 'ex3']);
+    expect(result.current.activeWorkout?.exercises.map((e) => e.exerciseId)).toEqual(['ex1', 'ex2', 'ex3', 'ex3']);
+    const repeated = result.current.activeWorkout?.exercises.slice(-2) ?? [];
+    expect(repeated[0].blockId).not.toBe(repeated[1].blockId);
   });
 
   it('replaces the current exercise, clears sets and keeps its target', () => {
     const result = startSession();
+    const blockId = result.current.activeWorkout?.exercises[0].blockId;
 
     act(() => {
       result.current.logSet(80, 10);
@@ -130,6 +133,7 @@ describe('useWorkoutSession', () => {
 
     expect(result.current.activeWorkout?.exercises[0]).toEqual(expect.objectContaining({
       exerciseId: 'ex3',
+      blockId,
       exerciseName: 'Cable Fly',
       sets: [],
       target: { sets: 3, reps: '10', restSeconds: 90 },

@@ -46,7 +46,7 @@ export class WorkoutService {
     target?: WorkoutExerciseTarget,
     exerciseName?: string
   ): ActiveWorkout | null {
-    if (!workout || workout.exercises.some((exercise) => exercise.exerciseId === exerciseId)) {
+    if (!workout) {
       return workout;
     }
     return {
@@ -68,13 +68,7 @@ export class WorkoutService {
     exerciseName?: string
   ): ActiveWorkout | null {
     if (!workout) return null;
-    if (
-      currentIndex < 0
-      || currentIndex >= workout.exercises.length
-      || workout.exercises.some((exercise, index) => (
-        index !== currentIndex && exercise.exerciseId === exerciseId
-      ))
-    ) return workout;
+    if (currentIndex < 0 || currentIndex >= workout.exercises.length) return workout;
     return {
       ...workout,
       exercises: workout.exercises.map((exercise, index) => index === currentIndex

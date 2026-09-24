@@ -21,14 +21,12 @@ export class WorkoutEditorService {
   }
 
   addExercise(workout: Workout, exerciseId: string): Workout {
-    if (!exerciseId || workout.entries.some((entry) => entry.exerciseId === exerciseId)) return workout;
+    if (!exerciseId) return workout;
     return { ...workout, entries: [...workout.entries, { blockId: newBlockId(), exerciseId, sets: [] }] };
   }
 
   replaceExercise(workout: Workout, entryIndex: number, exerciseId: string): Workout {
-    if (!exerciseId || workout.entries.some((entry, index) => index !== entryIndex && entry.exerciseId === exerciseId)) {
-      return workout;
-    }
+    if (!exerciseId || entryIndex < 0 || entryIndex >= workout.entries.length) return workout;
     return {
       ...workout,
       entries: workout.entries.map((entry, index) => index === entryIndex ? { ...entry, exerciseId } : entry),

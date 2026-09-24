@@ -23,22 +23,34 @@ describe('workout session', () => {
     expect(workoutService.removeExercise(expanded, 1)?.exercises).toEqual(draft.exercises);
   });
 
-  it('ignores empty sets, duplicate exercises and removal of the last exercise', () => {
+  it('ignores empty sets and removal of the last exercise', () => {
     const expanded = workoutService.addExercise(initial, 'fly')!;
 
     expect(workoutService.recordSet(initial, 0, null, null)).toBe(initial);
     expect(workoutService.recordSet(null, 0, 10, 5)).toBeNull();
-    expect(workoutService.addExercise(initial, 'press')).toBe(initial);
     expect(workoutService.removeExercise(initial, 0)).toBe(initial);
     expect(workoutService.recordSet(initial, 5, 10, 5)).toBe(initial);
     expect(workoutService.removeExercise(expanded, 5)).toBe(expanded);
   });
 
-  it('does not replace an exercise with another one already in the workout', () => {
-    const workout = workoutService.addExercise(initial, 'fly')!;
+  it('allows repeated exercise blocks and preserves the replaced block configuration', () => {
+    const repeated = workoutService.addExercise(initial, 'press')!;
+    const recorded = workoutService.recordSet(repeated, 0, 80, 8)!;
 
-    expect(workoutService.replaceExercise(workout, 0, 'fly')).toBe(workout);
-    expect(workoutService.replaceExercise(workout, 5, 'row')).toBe(workout);
+    expect(repeated.exercises).toHaveLength(2);
+    expect(repeated.exercises[0].blockId).not.toBe(repeated.exercises[1].blockId);
+    expect(workoutService.replaceExercise(recorded, 1, 'press', 'Bench Press')).toEqual(expect.objectContaining({
+      exercises: [
+        expect.objectContaining({ exerciseId: 'press', sets: [{ weight: 80, reps: 8 }] }),
+        expect.objectContaining({
+          blockId: repeated.exercises[1].blockId,
+          exerciseId: 'press',
+          exerciseName: 'Bench Press',
+          sets: [],
+        }),
+      ],
+    }));
+    expect(workoutService.replaceExercise(recorded, 5, 'row')).toBe(recorded);
   });
 
   it('selects the last recorded set instead of the best one', () => {

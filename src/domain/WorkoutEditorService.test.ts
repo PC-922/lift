@@ -25,7 +25,16 @@ describe('WorkoutEditorService', () => {
     expect(workout.entries).toHaveLength(1);
   });
 
-  it('does not add an exercise twice', () => {
-    expect(workoutEditorService.addExercise(workout, 'press')).toBe(workout);
+  it('allows repeated entries and keeps the replaced entry sets and block identity', () => {
+    const repeated = workoutEditorService.addExercise(workout, 'press');
+    const edited = workoutEditorService.replaceExercise(repeated, 1, 'press');
+
+    expect(repeated.entries).toHaveLength(2);
+    expect(repeated.entries[0].blockId).not.toBe(repeated.entries[1].blockId);
+    expect(edited.entries[1]).toEqual(expect.objectContaining({
+      blockId: repeated.entries[1].blockId,
+      exerciseId: 'press',
+      sets: [],
+    }));
   });
 });

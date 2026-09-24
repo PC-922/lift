@@ -165,6 +165,22 @@ describe('WorkoutScreen', () => {
     expect(screen.getByText(new RegExp(`${t.labels.sets}:\\s*3`))).toBeTruthy();
   });
 
+  it('allows a repeated exercise block in the compact mobile player', () => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 844 });
+    renderWithProviders(<WorkoutScreen />);
+
+    fireEvent.click(screen.getByText(t.labels.freeWorkout));
+    fireEvent.click(screen.getByText(t.labels.addExercise));
+    fireEvent.click(screen.getByRole('button', { name: /Bench Press Chest/ }));
+    fireEvent.click(screen.getByText(t.labels.addExercise));
+    fireEvent.click(screen.getAllByRole('button', { name: /Bench Press Chest/ }).at(-1)!);
+
+    fireEvent.click(screen.getByText(t.labels.nextExercise));
+    expect(screen.getByRole('heading', { name: 'Bench Press' })).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: t.labels.nextExercise })).toHaveLength(1);
+  });
+
   it('keeps the rest timer when leaving and returning to the workout menu', () => {
     renderWithProviders(<WorkoutNavigationHarness />);
     fireEvent.click(screen.getByText(t.labels.freeWorkout));
