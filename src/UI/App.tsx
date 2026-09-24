@@ -288,7 +288,9 @@ const SettingsRoute: React.FC = () => {
 const AppLayout: React.FC = () => {
   const t = useTranslations();
   const location = useLocation();
+  const navigate = useNavigate();
   const { isLoading } = useAppData();
+  const { activeWorkout } = useWorkoutSession();
 
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
   const [isStandalone, setIsStandalone] = useState(true);
@@ -344,6 +346,16 @@ const AppLayout: React.FC = () => {
           )}
 
           <main className="px-4 pt-4">
+            {activeWorkout && location.pathname !== '/workout' && (
+              <button
+                type="button"
+                onClick={() => navigate('/workout')}
+                className="mb-4 flex w-full items-center justify-between rounded-2xl border border-app-accent/30 bg-app-surface px-4 py-3 text-left text-sm font-semibold text-app-text shadow-sm transition-colors active:bg-app-surface-muted"
+              >
+                <span className="truncate">{activeWorkout.name || t.labels.freeWorkout}</span>
+                <span className="shrink-0 text-app-accent-text">{t.labels.resumeWorkout}</span>
+              </button>
+            )}
             <Routes>
               <Route path="/" element={<HomeScreen />} />
               <Route path="/exercises/new" element={<ExerciseFormScreen />} />

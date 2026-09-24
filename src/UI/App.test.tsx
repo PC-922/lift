@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
-import { describe, it, expect, vi } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import App from './App';
 
 vi.stubGlobal('scrollTo', vi.fn());
@@ -63,9 +63,25 @@ vi.mock('./hooks/useToast', () => ({
   ToastProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
+const workoutSession = {
+  activeWorkout: null as { id: string; name: string; startedAt: string; exercises: never[] } | null,
+  currentIndex: 0,
+  startWorkout: vi.fn(),
+  logSet: vi.fn(),
+  removeSet: vi.fn(),
+  restoreSet: vi.fn(),
+  nextExercise: vi.fn(),
+  prevExercise: vi.fn(),
+  addExercise: vi.fn(),
+  replaceCurrentExercise: vi.fn(),
+  removeExercise: vi.fn(),
+  finish: vi.fn(),
+  cancel: vi.fn(),
+};
+
 vi.mock('./hooks/useWorkoutSession', () => ({
   WorkoutSessionProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  useWorkoutSession: () => ({ startWorkout: vi.fn() }),
+  useWorkoutSession: () => workoutSession,
 }));
 
 vi.mock('./utils/translations', async () => {
@@ -114,6 +130,10 @@ vi.mock('./components/PromptModal', () => ({
 }));
 
 describe('App home layout', () => {
+  afterEach(() => {
+    workoutSession.activeWorkout = null;
+  });
+
   it('renders the home actions before the list', async () => {
     const { container } = render(
       <BrowserRouter>
@@ -141,5 +161,24 @@ describe('App home layout', () => {
     );
 
     expect(container.querySelector('main')?.className).not.toContain('animate-slideUp');
+  });
+
+  it('shows a clear resume control for a saved workout outside the workout route', async () => {
+    workoutSession.activeWorkout = {
+      id: 'draft',
+      name: 'Push day',
+      startedAt: '2026-09-24T10:00:00.000Z',
+      exercises: [],
+    };
+
+    render(
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    );
+
+    const resume = await screen.findByRole('button', { name: /Resume workout/i });
+    expect(resume).toBeTruthy();
+    expect(resume.className).toContain('w-full');
   });
 });

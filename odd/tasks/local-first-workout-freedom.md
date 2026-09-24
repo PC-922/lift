@@ -68,9 +68,15 @@ Exercise creation currently waits on Firestore, exercise occurrences are identif
   - Runtime: N/A — browser automation was not available. The player integration test exercised the 375×667 viewport and verified the accessible removal and Undo flow.
   - Rollback boundary: revert this work-unit commit to remove active-workout set deletion and its five-second Undo action without changing block identity, repeated-block behavior, or persistence infrastructure.
   - Commit: `HEAD` (`feat(workouts): add set removal undo`).
-- [ ] LF-05 Allow leaving and resuming an unfinished workout.
+- [x] LF-05 Allow leaving and resuming an unfinished workout.
   - Route: delegated; routing, draft persistence, and UI behavior.
   - Acceptance: leaving preserves the draft; discarding remains explicit; resume is clearly reachable.
+  - RED: `npm test -- --run src/UI/components/WorkoutScreen.test.tsx src/UI/hooks/useWorkoutSession.test.tsx` — the new leave and explicit-discard UI tests failed because the controls did not exist. The reload assertion was corrected to inspect the restored exercise directly rather than using an unsupported nested matcher.
+  - GREEN: `npm test -- --run src/UI/App.test.tsx src/UI/components/WorkoutScreen.test.tsx src/UI/hooks/useWorkoutSession.test.tsx` — 3 files, 29 tests passed.
+  - Full checks: `npm test -- --run` — 40 files, 236 tests passed; `npm run build` passed; `git diff --check` passed.
+  - Runtime: N/A — browser automation was not available. Integration tests exercised leave navigation and the compact 390×844 viewport; existing desktop player coverage confirms controls remain in the readable `sm:max-w-md` column.
+  - Rollback boundary: revert this work-unit commit to remove non-destructive leave navigation, the cross-menu resume control, and the separate discard control without changing draft persistence or prior workout behavior.
+  - Commit: this local work-unit commit (`feat(workouts): allow leaving and resuming`).
 - [ ] LF-06 Add the native IndexedDB training store without activating it.
   - Route: delegated; new infrastructure adapter and tests.
   - Acceptance: transactional CRUD, per-profile isolation, migration primitives, and quota/error handling.
@@ -103,8 +109,9 @@ Exercise creation currently waits on Firestore, exercise occurrences are identif
 - LF-02 complete: routine editing now treats each exercise occurrence as an independent block. Replacing preserves the block ID and configuration; repeated exercise IDs are allowed.
 - LF-03 complete: active workouts and history can add or replace a repeated exercise ID as an independent block. Each addition gets a distinct block ID; replacement targets only the selected block and preserves its ID and target configuration.
 - LF-04 complete: the active player can remove any recorded set, including an intermediate set, and restore it at its original position within a five-second Undo window. Invalid exercise or set indexes are safe no-ops, while valid mutations persist through the existing draft repository.
-- Next task: LF-05.
+- LF-05 complete: leaving the player only changes route, retaining the active draft and active rest timer. Any non-workout screen shows a direct resume control; discard has its own labelled destructive action and still clears both draft and timer.
+- Next task: LF-06.
 
 ## Next step
 
-Implement LF-05 under strict TDD. Do not push, open a pull request, or select a remote chain until the user authorizes remote delivery.
+Implement LF-06 under strict TDD. Do not push, open a pull request, or select a remote chain until the user authorizes remote delivery.

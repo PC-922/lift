@@ -255,4 +255,14 @@ describe('useWorkoutSession', () => {
     expect(second.current.activeWorkout?.id).toBe(first.current.activeWorkout?.id);
     expect(second.current.activeWorkout?.exercises).toHaveLength(2);
   });
+
+  it('restores recorded sets from an unfinished draft after a reload', () => {
+    const first = startSession();
+    act(() => first.current.logSet(80, 10));
+
+    const { result: second } = renderHook(() => useWorkoutSession(), { wrapper });
+
+    expect(second.current.activeWorkout?.id).toBe(first.current.activeWorkout?.id);
+    expect(second.current.activeWorkout?.exercises[0]?.sets).toEqual([{ weight: 80, reps: 10 }]);
+  });
 });

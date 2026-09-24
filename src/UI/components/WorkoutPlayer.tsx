@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowLeftRight, ChevronLeft, ChevronRight, Clock, Plus, Trash2, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import type { WorkoutSet } from '../../domain';
 import { useWorkoutSession } from '../hooks/useWorkoutSession';
 import { useAppData } from '../hooks/useAppData';
@@ -27,6 +28,7 @@ function formatElapsed(startedAt: string, now: number): string {
 
 export const WorkoutPlayer: React.FC = () => {
   const t = useTranslations();
+  const navigate = useNavigate();
   const { showToast } = useToast();
   const { exercises, finishWorkout } = useAppData();
   const {
@@ -99,18 +101,19 @@ export const WorkoutPlayer: React.FC = () => {
     closeExercisePicker();
   };
 
+  const leaveWorkout = () => {
+    navigate('/');
+  };
+
   if (!activeWorkout || !activeExercise) {
     return (
       <div className="fixed inset-0 z-50 flex h-[100dvh] flex-col bg-app-bg pt-[env(safe-area-inset-top)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
         <div className="flex w-full items-center justify-between px-5 pb-4 pt-5 sm:mx-auto sm:max-w-md">
           <h1 className="text-xl font-bold text-app-text">{activeWorkout?.name || t.labels.freeWorkout}</h1>
-          <button
-            onClick={() => setShowDiscardConfirm(true)}
-            className="rounded-full border border-app-border p-2 text-app-text-muted active:opacity-70"
-            aria-label={t.actions.close}
-          >
-            <X size={18} />
-          </button>
+          <PlayerHeaderActions
+            onLeave={leaveWorkout}
+            onDiscard={() => setShowDiscardConfirm(true)}
+          />
         </div>
         <div className="flex w-full flex-1 flex-col items-center justify-center gap-4 px-6 text-center sm:mx-auto sm:max-w-md">
           <p className="text-app-text-muted">{t.labels.noExercises}</p>
@@ -228,13 +231,10 @@ export const WorkoutPlayer: React.FC = () => {
             {formatElapsed(activeWorkout.startedAt, now)}
           </p>
         </div>
-        <button
-          onClick={() => setShowDiscardConfirm(true)}
-          className="rounded-full border border-app-border p-2 text-app-text-muted active:opacity-70"
-          aria-label={t.actions.close}
-        >
-          <X size={18} />
-        </button>
+        <PlayerHeaderActions
+          onLeave={leaveWorkout}
+          onDiscard={() => setShowDiscardConfirm(true)}
+        />
       </header>
 
       <div className="flex w-full items-center gap-2 px-5 pb-2 sm:mx-auto sm:max-w-md">
@@ -426,6 +426,30 @@ export const WorkoutPlayer: React.FC = () => {
           onClose={closeExercisePicker}
         />
       )}
+    </div>
+  );
+};
+
+const PlayerHeaderActions: React.FC<{ onLeave: () => void; onDiscard: () => void }> = ({ onLeave, onDiscard }) => {
+  const t = useTranslations();
+  return (
+    <div className="flex shrink-0 items-center gap-2">
+      <button
+        type="button"
+        onClick={onLeave}
+        className="rounded-full border border-app-border p-2 text-app-text-muted active:opacity-70"
+        aria-label={t.labels.leaveWorkout}
+      >
+        <X size={18} aria-hidden="true" />
+      </button>
+      <button
+        type="button"
+        onClick={onDiscard}
+        className="rounded-full border border-app-danger/40 p-2 text-app-danger active:opacity-70"
+        aria-label={t.labels.discardWorkout}
+      >
+        <Trash2 size={18} aria-hidden="true" />
+      </button>
     </div>
   );
 };

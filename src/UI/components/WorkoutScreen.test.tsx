@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { WorkoutScreen } from './WorkoutScreen';
 import { WorkoutSessionProvider } from '../hooks/useWorkoutSession';
 import { RestTimerProvider } from '../hooks/useRestTimer';
@@ -68,7 +69,9 @@ const renderWithProviders = (ui: React.ReactElement) =>
   render(
     <ApplicationProvider services={services}>
       <RestTimerProvider>
-        <WorkoutSessionProvider>{ui}</WorkoutSessionProvider>
+        <WorkoutSessionProvider>
+          <MemoryRouter initialEntries={['/workout']}>{ui}</MemoryRouter>
+        </WorkoutSessionProvider>
       </RestTimerProvider>
     </ApplicationProvider>
   );
@@ -82,6 +85,13 @@ const WorkoutNavigationHarness: React.FC = () => {
     </>
   );
 };
+
+const WorkoutRouteHarness: React.FC = () => (
+  <Routes>
+    <Route path="/workout" element={<WorkoutScreen />} />
+    <Route path="/" element={<p>Another menu</p>} />
+  </Routes>
+);
 
 describe('WorkoutScreen', () => {
   beforeEach(() => {
@@ -196,6 +206,40 @@ describe('WorkoutScreen', () => {
     fireEvent.click(screen.getByText('Toggle menu'));
 
     expect(screen.getByText('1:30')).toBeTruthy();
+  });
+
+  it('leaves an unfinished workout without discarding its draft', () => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 844 });
+    renderWithProviders(<WorkoutRouteHarness />);
+
+    fireEvent.click(screen.getByText(t.labels.freeWorkout));
+    fireEvent.click(screen.getByText(t.labels.addExercise));
+    fireEvent.click(screen.getByText('Bench Press'));
+    const inputs = screen.getAllByPlaceholderText('0');
+    fireEvent.change(inputs[0], { target: { value: '80' } });
+    fireEvent.change(inputs[1], { target: { value: '10' } });
+    fireEvent.click(screen.getByText(t.labels.recordSet));
+
+    fireEvent.click(screen.getByRole('button', { name: t.labels.leaveWorkout }));
+
+    expect(screen.getByText('Another menu')).toBeTruthy();
+    expect(services.workoutDrafts.save).toHaveBeenLastCalledWith(expect.objectContaining({
+      exercises: [expect.objectContaining({ sets: [{ weight: 80, reps: 10 }] })],
+    }));
+  });
+
+  it('keeps discard separate and explicit after leaving a workout', () => {
+    renderWithProviders(<WorkoutScreen />);
+
+    fireEvent.click(screen.getByText(t.labels.freeWorkout));
+    fireEvent.click(screen.getByText(t.labels.addExercise));
+    fireEvent.click(screen.getByText('Bench Press'));
+    fireEvent.click(screen.getByRole('button', { name: t.labels.discardWorkout }));
+    fireEvent.click(screen.getByRole('button', { name: t.actions.delete }));
+
+    expect(services.workoutDrafts.save).toHaveBeenLastCalledWith(null);
+    expect(screen.getByText(t.labels.freeWorkout)).toBeTruthy();
   });
 
   it('keeps the complete recording flow available in a compact mobile viewport', () => {
