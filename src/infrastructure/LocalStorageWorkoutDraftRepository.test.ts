@@ -28,4 +28,15 @@ describe('LocalStorage workout draft adapter', () => {
     expect(localStorageWorkoutDraftRepository.load()).toBeNull();
     expect(() => localStorageWorkoutDraftRepository.save(draft)).not.toThrow();
   });
+
+  it('normalizes legacy draft occurrences consistently across loads', () => {
+    const legacy = { ...draft, exercises: [
+      { exerciseId: 'press', sets: [] }, { exerciseId: 'press', sets: [] },
+    ] };
+    localStorage.setItem('lift_active_workout_v1', JSON.stringify(legacy));
+    const first = localStorageWorkoutDraftRepository.load()!;
+    const second = localStorageWorkoutDraftRepository.load()!;
+    expect(new Set(first.exercises.map((item) => item.blockId)).size).toBe(2);
+    expect(first.exercises.map((item) => item.blockId)).toEqual(second.exercises.map((item) => item.blockId));
+  });
 });

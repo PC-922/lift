@@ -96,7 +96,7 @@ export const WorkoutEditorModal: React.FC<Props> = ({ initialWorkout, isNew, exe
           <div className="space-y-3">
             {workout.entries.map((entry, entryIndex) => (
               <WorkoutEntryEditor
-                key={`${entry.exerciseId}-${entryIndex}`}
+                key={entry.blockId}
                 entry={entry}
                 entryIndex={entryIndex}
                 exercises={exercises}

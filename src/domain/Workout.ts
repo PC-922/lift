@@ -4,6 +4,7 @@ export interface WorkoutSet {
 }
 
 export interface WorkoutEntry {
+  blockId: string;
   exerciseId: string;
   exerciseName?: string;
   sets: WorkoutSet[];

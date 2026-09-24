@@ -1,4 +1,5 @@
 export interface RoutineExercise {
+  blockId: string;
   exerciseId: string;
   sets: number;
   reps: string;

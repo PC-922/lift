@@ -18,7 +18,10 @@ describe('WorkoutEditorService', () => {
     const edited = workoutEditorService.updateSet(withSet, 1, 0, { weight: 12.5, reps: 12 });
 
     expect(edited.finishedAt).toBe('2026-09-14T11:30:00.000Z');
-    expect(edited.entries[1]).toEqual({ exerciseId: 'fly', sets: [{ weight: 12.5, reps: 12 }] });
+    expect(edited.entries[1]).toEqual(expect.objectContaining({
+      exerciseId: 'fly',
+      sets: [{ weight: 12.5, reps: 12 }],
+    }));
     expect(workout.entries).toHaveLength(1);
   });
 

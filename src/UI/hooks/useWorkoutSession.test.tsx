@@ -128,12 +128,12 @@ describe('useWorkoutSession', () => {
       result.current.replaceCurrentExercise('ex3', 'Cable Fly');
     });
 
-    expect(result.current.activeWorkout?.exercises[0]).toEqual({
+    expect(result.current.activeWorkout?.exercises[0]).toEqual(expect.objectContaining({
       exerciseId: 'ex3',
       exerciseName: 'Cable Fly',
       sets: [],
       target: { sets: 3, reps: '10', restSeconds: 90 },
-    });
+    }));
   });
 
   it('removes an exercise and clamps the index', () => {
@@ -174,11 +174,11 @@ describe('useWorkoutSession', () => {
     expect(workout).not.toBeNull();
     expect(workout?.name).toBe('Push Day');
     expect(workout?.entries).toHaveLength(1);
-    expect(workout?.entries[0]).toEqual({
+    expect(workout?.entries[0]).toEqual(expect.objectContaining({
       exerciseId: 'ex1',
       exerciseName: 'Bench Press',
       sets: [{ weight: 80, reps: 10 }],
-    });
+    }));
     expect(workout?.finishedAt).toBeTruthy();
     expect(result.current.activeWorkout).toBeNull();
   });

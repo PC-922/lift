@@ -74,6 +74,7 @@ export class RoutineSharingService {
     }
 
     return {
+      blockId: this.ids.generate('block'),
       exerciseId: exercise.id,
       sets: shared.sets,
       reps: shared.reps,

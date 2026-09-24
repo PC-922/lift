@@ -30,6 +30,7 @@ export const WorkoutScreen: React.FC = () => {
       routineId: routine.id,
       dayId: day.id,
       exercises: day.exercises.map((re) => ({
+        blockId: re.blockId,
         exerciseId: re.exerciseId,
         exerciseName: exercises.find((exercise) => exercise.id === re.exerciseId)?.name,
         target: { sets: re.sets, reps: re.reps, restSeconds: re.restSeconds },

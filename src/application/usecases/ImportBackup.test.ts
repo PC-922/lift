@@ -54,9 +54,10 @@ describe('ImportBackup', () => {
     }));
 
     expect(imported).toBe(true);
-    expect(repository.saveWorkout).toHaveBeenCalledWith({
+    expect(repository.saveWorkout).toHaveBeenCalledWith(expect.objectContaining({
       ...workout,
+      entries: [expect.objectContaining(workout.entries[0])],
       updatedAt: '2026-09-09T10:00:00.000Z',
-    });
+    }));
   });
 });

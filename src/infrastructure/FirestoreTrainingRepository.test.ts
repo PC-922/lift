@@ -270,6 +270,8 @@ describe('createFirestoreTrainingRepository', () => {
     unsubscribe();
 
     expect(captured[captured.length - 1].routines).toHaveLength(1);
+    expect(captured[captured.length - 1].routines[0].days[0].exercises[0].blockId)
+      .toBe('legacy_block_routine_1_day_1_0');
 
     await dataStore.deleteRoutine('routine_1');
 
@@ -299,6 +301,8 @@ describe('createFirestoreTrainingRepository', () => {
 
     expect(captured[captured.length - 1].workouts).toHaveLength(1);
     expect(captured[captured.length - 1].workouts[0].id).toBe('w_1');
+    expect(captured[captured.length - 1].workouts[0].entries[0].blockId)
+      .toBe('legacy_block_w_1_0');
 
     await dataStore.deleteWorkout('w_1');
 

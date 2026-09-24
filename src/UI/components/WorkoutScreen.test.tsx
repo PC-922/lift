@@ -130,11 +130,11 @@ describe('WorkoutScreen', () => {
       expect(finishWorkout).toHaveBeenCalledTimes(1);
     });
     const savedWorkout = finishWorkout.mock.calls[0][0] as { entries: { exerciseId: string; sets: unknown[] }[] };    expect(savedWorkout.entries).toHaveLength(1);
-    expect(savedWorkout.entries[0]).toEqual({
+    expect(savedWorkout.entries[0]).toEqual(expect.objectContaining({
       exerciseId: 'ex1',
       exerciseName: 'Bench Press',
       sets: [{ weight: 80, reps: 10 }],
-    });
+    }));
     expect(showToast).toHaveBeenCalledWith(t.labels.workoutSaved, 'achievement');
 
     await waitFor(() => {

@@ -8,6 +8,7 @@ import type {
   WorkoutEntry,
   WorkoutSet,
 } from '../domain';
+import { normalizeRoutineBlocks, normalizeWorkoutBlocks } from '../domain/BlockId';
 
 export interface BackupData {
   exercises: Exercise[];
@@ -38,6 +39,7 @@ function isRoutineExercise(value: unknown): value is RoutineExercise {
   if (typeof value !== 'object' || value === null) return false;
   const exercise = value as RoutineExercise;
   return typeof exercise.exerciseId === 'string'
+    && (exercise.blockId === undefined || typeof exercise.blockId === 'string')
     && typeof exercise.sets === 'number'
     && typeof exercise.reps === 'string'
     && typeof exercise.dropset === 'boolean'
@@ -70,6 +72,7 @@ function isWorkoutEntry(value: unknown): value is WorkoutEntry {
   if (typeof value !== 'object' || value === null) return false;
   const entry = value as WorkoutEntry;
   return typeof entry.exerciseId === 'string'
+    && (entry.blockId === undefined || typeof entry.blockId === 'string')
     && (entry.exerciseName === undefined || typeof entry.exerciseName === 'string')
     && Array.isArray(entry.sets)
     && entry.sets.every(isWorkoutSet);
@@ -115,14 +118,14 @@ export function parseBackup(json: string): BackupData | null {
     return {
       exercises: backup.exercises,
       muscleGroups: backup.groups,
-      routines: backup.routines.map((routine) => ({
+      routines: backup.routines.map((routine) => normalizeRoutineBlocks({
         ...routine,
         days: routine.days.map((day) => ({
           ...day,
           exercises: day.exercises.filter((exercise) => exerciseIds.has(exercise.exerciseId)),
         })),
       })),
-      workouts: backup.workouts ?? [],
+      workouts: (backup.workouts ?? []).map(normalizeWorkoutBlocks),
     };
   } catch {
     return null;

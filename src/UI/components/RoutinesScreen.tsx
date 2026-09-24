@@ -159,7 +159,7 @@ export const RoutinesScreen: React.FC<Props> = ({
       if (!activeRoutine || !selectedDay) return;
       onReorderRoutineExercise(activeRoutine.id, selectedDay.id, from, to);
     },
-    (item: { routineExercise: RoutineExercise }) => item.routineExercise.exerciseId
+    (item: { routineExercise: RoutineExercise }) => item.routineExercise.blockId
   );
 
   const openCreate = () => {
@@ -214,6 +214,7 @@ export const RoutinesScreen: React.FC<Props> = ({
       return {
         ...day,
         exercises: [...day.exercises, {
+          blockId: ids.generate('block'),
           exerciseId,
           sets: DEFAULT_SETS,
           reps: DEFAULT_REPS,
@@ -440,22 +441,23 @@ export const RoutinesScreen: React.FC<Props> = ({
               {selectedDay.resolved.map(({ routineExercise, exercise }, index) => {
                 const form = getLogForm(exercise.id);
                 const exerciseId = exercise.id;
+                const blockId = routineExercise.blockId;
 
                 return (
-                  <React.Fragment key={exerciseId}>
+                  <React.Fragment key={blockId}>
                     {exercisesDrag.dropIndicatorIndex === index && (
                       <div className="h-1 rounded-full bg-app-accent" aria-hidden="true" />
                     )}
                     <RoutineExerciseCard
-                      ref={exercisesDrag.bindItem(exerciseId).ref}
+                      ref={exercisesDrag.bindItem(blockId).ref}
                       routineExercise={routineExercise}
                       exercise={exercise}
-                      isDragging={exercisesDrag.draggingId === exerciseId}
+                      isDragging={exercisesDrag.draggingId === blockId}
                       form={form}
                       onUpdateForm={(field, value) => updateLogForm(exercise.id, field, value)}
                       onLog={() => handleLog(exercise.id)}
                       onMenu={() => setActionSheetExercise({ exerciseId, dayId: selectedDay.id })}
-                      onDragHandlePointerDown={exercisesDrag.handleStart(exerciseId)}
+                      onDragHandlePointerDown={exercisesDrag.handleStart(blockId)}
                       onTap={() => onNavigateToExercise(exercise.id, activeRoutine.id)}
                     />
                   </React.Fragment>

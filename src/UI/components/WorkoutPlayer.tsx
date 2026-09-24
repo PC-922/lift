@@ -217,7 +217,7 @@ export const WorkoutPlayer: React.FC = () => {
       <div className="flex w-full items-center gap-2 px-5 pb-2 sm:mx-auto sm:max-w-md">
         {activeWorkout.exercises.map((item, index) => (
           <span
-            key={item.exerciseId}
+            key={item.blockId}
             aria-hidden="true"
             className={cn(
               'h-1.5 flex-1 rounded-full transition-colors',

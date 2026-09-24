@@ -12,7 +12,11 @@ describe('workout session', () => {
     const draft = workoutService.recordSet(initial, 0, 40, 10)!;
     const expanded = workoutService.addExercise(draft, 'fly')!;
     expect(workoutService.finish(expanded, '2026-09-09').entries).toEqual([
-      { exerciseId: 'press', exerciseName: 'Bench Press', sets: [{ weight: 40, reps: 10 }] },
+      expect.objectContaining({
+        exerciseId: 'press',
+        exerciseName: 'Bench Press',
+        sets: [{ weight: 40, reps: 10 }],
+      }),
     ]);
     expect(initial.exercises[0].sets).toEqual([]);
     expect(workoutService.replaceExercise(draft, 0, 'pullover')?.exercises[0].sets).toEqual([]);
@@ -42,6 +46,16 @@ describe('workout session', () => {
       .toEqual({ weight: 45.5, reps: 8 });
     expect(workoutService.lastRecordedSet({ exerciseId: 'ex', sets: [{ weight: 50, reps: 10 }, { weight: null, reps: null }] }))
       .toEqual({ weight: 50, reps: 10 });
+  });
+
+  it('preserves a routine block ID through the active and completed workout', () => {
+    const active = workoutService.start(
+      { exercises: [{ blockId: 'routine-block-1', exerciseId: 'press' }] },
+      'workout', '2026-09-08'
+    );
+    const recorded = workoutService.recordSet(active, 0, 80, 8)!;
+    expect(recorded.exercises[0].blockId).toBe('routine-block-1');
+    expect(workoutService.finish(recorded, '2026-09-09').entries[0].blockId).toBe('routine-block-1');
   });
 
   it('snapshots current exercise names without erasing names for deleted exercises', () => {

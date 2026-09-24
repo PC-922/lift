@@ -17,7 +17,7 @@ const baseRoutine: Routine = {
       id: 'day_1',
       name: 'Day A',
       exercises: [
-        { exerciseId: 'exercise_1', sets: 3, reps: '8', dropset: false, toFailure: false },
+        { blockId: 'routine-block-1', exerciseId: 'exercise_1', sets: 3, reps: '8', dropset: false, toFailure: false },
       ],
     },
   ],
@@ -32,7 +32,7 @@ const baseData = {
     name: 'Upper Body',
     startedAt: '2026-01-02T10:00:00.000Z',
     finishedAt: '2026-01-02T11:00:00.000Z',
-    entries: [{ exerciseId: 'exercise_1', exerciseName: 'Bench Press', sets: [{ weight: 80, reps: 8 }] }],
+    entries: [{ blockId: 'workout-block-1', exerciseId: 'exercise_1', exerciseName: 'Bench Press', sets: [{ weight: 80, reps: 8 }] }],
   }],
 };
 
@@ -93,5 +93,27 @@ describe('BackupSerializer', () => {
     const result = parseBackup(JSON.stringify({ exercises: [], groups: [], routines: [baseRoutine] }));
 
     expect(result?.routines[0].days[0].exercises).toEqual([]);
+  });
+
+  it('assigns stable distinct block IDs to legacy routine and workout occurrences', () => {
+    const legacy = { exercises: [baseExercise], groups: ['Chest'], routines: [
+      { ...baseRoutine, days: [{ ...baseRoutine.days[0], exercises: [
+        (({ blockId: _blockId, ...exercise }) => exercise)(baseRoutine.days[0].exercises[0]),
+        (({ blockId: _blockId, ...exercise }) => exercise)(baseRoutine.days[0].exercises[0]),
+      ] }] },
+    ], workouts: [{ ...baseData.workouts[0], entries: [
+      (({ blockId: _blockId, ...entry }) => entry)(baseData.workouts[0].entries[0]),
+      (({ blockId: _blockId, ...entry }) => entry)(baseData.workouts[0].entries[0]),
+    ] }] };
+    const json = JSON.stringify(legacy);
+    const first = parseBackup(json)!;
+    const second = parseBackup(json)!;
+    const routineIds = first.routines[0].days[0].exercises.map((item) => item.blockId);
+    const workoutIds = first.workouts[0].entries.map((item) => item.blockId);
+
+    expect(new Set(routineIds).size).toBe(2);
+    expect(new Set(workoutIds).size).toBe(2);
+    expect(routineIds).toEqual(second.routines[0].days[0].exercises.map((item) => item.blockId));
+    expect(workoutIds).toEqual(second.workouts[0].entries.map((item) => item.blockId));
   });
 });

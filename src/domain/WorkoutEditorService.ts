@@ -1,4 +1,5 @@
 import type { Workout, WorkoutSet } from './Workout';
+import { newBlockId } from './BlockId';
 
 export class WorkoutEditorService {
   create(id: string, startedAt: string): Workout {
@@ -21,7 +22,7 @@ export class WorkoutEditorService {
 
   addExercise(workout: Workout, exerciseId: string): Workout {
     if (!exerciseId || workout.entries.some((entry) => entry.exerciseId === exerciseId)) return workout;
-    return { ...workout, entries: [...workout.entries, { exerciseId, sets: [] }] };
+    return { ...workout, entries: [...workout.entries, { blockId: newBlockId(), exerciseId, sets: [] }] };
   }
 
   replaceExercise(workout: Workout, entryIndex: number, exerciseId: string): Workout {

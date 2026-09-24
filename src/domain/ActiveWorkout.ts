@@ -7,6 +7,7 @@ export interface WorkoutExerciseTarget {
 }
 
 export interface ActiveExercise {
+  blockId: string;
   exerciseId: string;
   exerciseName?: string;
   sets: WorkoutSet[];
@@ -26,5 +27,5 @@ export interface WorkoutStartOptions {
   name?: string;
   routineId?: string;
   dayId?: string;
-  exercises: { exerciseId: string; exerciseName?: string; target?: WorkoutExerciseTarget }[];
+  exercises: { blockId?: string; exerciseId: string; exerciseName?: string; target?: WorkoutExerciseTarget }[];
 }

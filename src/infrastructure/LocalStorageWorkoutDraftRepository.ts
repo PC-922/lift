@@ -1,5 +1,6 @@
 import type { ActiveWorkout } from '../domain/ActiveWorkout';
 import type { WorkoutDraftRepository } from '../domain/WorkoutDraftRepository';
+import { normalizeActiveWorkoutBlocks } from '../domain/BlockId';
 
 const ACTIVE_WORKOUT_KEY = 'lift_active_workout_v1';
 
@@ -9,7 +10,7 @@ function loadDraft(): ActiveWorkout | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as ActiveWorkout;
     if (!parsed.id || !Array.isArray(parsed.exercises)) return null;
-    return parsed;
+    return normalizeActiveWorkoutBlocks(parsed);
   } catch {
     return null;
   }

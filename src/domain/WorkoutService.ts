@@ -1,5 +1,6 @@
 import type { ActiveWorkout, WorkoutExerciseTarget, WorkoutStartOptions } from './ActiveWorkout';
 import type { Workout, WorkoutEntry, WorkoutSet } from './Workout';
+import { newBlockId } from './BlockId';
 
 export class WorkoutService {
   start(options: WorkoutStartOptions, id: string, startedAt: string): ActiveWorkout {
@@ -9,7 +10,8 @@ export class WorkoutService {
       name: options.name ?? '',
       routineId: options.routineId,
       dayId: options.dayId,
-      exercises: options.exercises.map(({ exerciseId, exerciseName, target }) => ({
+      exercises: options.exercises.map(({ blockId, exerciseId, exerciseName, target }) => ({
+        blockId: blockId || newBlockId(),
         exerciseId,
         ...(exerciseName ? { exerciseName } : {}),
         sets: [],
@@ -50,6 +52,7 @@ export class WorkoutService {
     return {
       ...workout,
       exercises: [...workout.exercises, {
+        blockId: newBlockId(),
         exerciseId,
         ...(exerciseName ? { exerciseName } : {}),
         sets: [],
@@ -102,6 +105,7 @@ export class WorkoutService {
       dayId: workout.dayId,
       entries: workout.exercises
         .map((exercise) => ({
+          blockId: exercise.blockId,
           exerciseId: exercise.exerciseId,
           ...(exercise.exerciseName ? { exerciseName: exercise.exerciseName } : {}),
           sets: exercise.sets,

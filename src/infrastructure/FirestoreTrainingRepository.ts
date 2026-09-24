@@ -14,6 +14,7 @@ import {
 } from 'firebase/firestore';
 import type { Exercise, Routine, Workout } from '../domain';
 import { getDefaultExercises, getDefaultMuscleGroups } from './seedData';
+import { normalizeRoutineBlocks, normalizeWorkoutBlocks } from '../domain/BlockId';
 
 import type { SyncStatus, TrainingRepository, TrainingSnapshot } from '../domain/TrainingRepository';
 export type { SyncStatus, TrainingRepository, TrainingSnapshot } from '../domain/TrainingRepository';
@@ -38,11 +39,12 @@ function normalizeExercise(data: Exercise): Exercise {
 }
 
 function normalizeRoutine(data: Routine): Routine {
-  return {
+  return normalizeRoutineBlocks({
     ...data,
     days: data.days.map((day) => ({
       ...day,
       exercises: day.exercises.map((exercise) => ({
+        blockId: exercise.blockId,
         exerciseId: exercise.exerciseId,
         sets: exercise.sets,
         reps: exercise.reps,
@@ -52,7 +54,7 @@ function normalizeRoutine(data: Routine): Routine {
       })),
     })),
     updatedAt: normalizeTimestamp(data.updatedAt),
-  };
+  });
 }
 
 function normalizeTimestamp(value: string | Timestamp | undefined | null): string | undefined {
@@ -158,7 +160,7 @@ export function createFirestoreTrainingRepository(
       const unsubscribeWorkouts = onSnapshot(
         query(workoutsRef, orderBy('startedAt', 'desc')),
         (snapshot) => {
-          workouts = snapshot.docs.map((d) => d.data() as Workout);
+          workouts = snapshot.docs.map((d) => normalizeWorkoutBlocks(d.data() as Workout));
           onStatus({ hasPendingWrites: snapshot.metadata.hasPendingWrites, fromCache: snapshot.metadata.fromCache });
           emit();
         },
