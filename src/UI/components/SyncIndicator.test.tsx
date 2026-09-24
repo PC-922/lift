@@ -40,6 +40,12 @@ describe('SyncIndicator', () => {
     expect(screen.queryByText('Syncing')).toBeNull();
   });
 
+  it('shows a synchronization problem even when the browser is online', () => {
+    syncStatusMock.value = { hasPendingWrites: true, fromCache: true, lastSyncError: 'offline' };
+    render(<SyncIndicator />);
+    expect(screen.getByText('Sync issue')).toBeTruthy();
+  });
+
   it('shows Offline when reading from cache without a connection', () => {
     syncStatusMock.value = { hasPendingWrites: true, fromCache: true };
     Object.defineProperty(window.navigator, 'onLine', { value: false, configurable: true });

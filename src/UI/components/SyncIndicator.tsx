@@ -25,14 +25,15 @@ export const SyncIndicator: React.FC = () => {
   if (!syncStatus) return null;
 
   const isOnline = typeof navigator === 'undefined' || navigator.onLine;
+  const hasSyncError = Boolean(syncStatus.lastSyncError);
   const isOffline = syncStatus.fromCache && !isOnline;
 
-  if (!isOffline && !syncingVisible) return null;
+  if (!isOffline && !hasSyncError && !syncingVisible) return null;
 
   return (
     <span className="flex items-center gap-1 rounded-full bg-app-surface-muted px-2 py-1 text-[10px] font-semibold text-app-text-muted">
-      {isOffline ? <CloudOff size={12} /> : <RefreshCw size={12} />}
-      {isOffline ? t.labels.offlineMode : t.labels.syncing}
+      {isOffline || hasSyncError ? <CloudOff size={12} /> : <RefreshCw size={12} />}
+      {isOffline ? t.labels.offlineMode : hasSyncError ? t.labels.syncIssue : t.labels.syncing}
     </span>
   );
 };

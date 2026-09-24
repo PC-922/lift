@@ -95,9 +95,15 @@ Exercise creation currently waits on Firestore, exercise occurrences are identif
   - Runtime: N/A — this is inactive persistence infrastructure with no composition or UI path yet; injected store/gateway tests cover the durable queue and remote boundary.
   - Rollback boundary: revert this work-unit commit to remove only the inactive durable outbox, deterministic merge helper, and extended sync status metadata; Firestore-first composition remains unchanged.
   - LF-07 commit: recorded in local Git history.
-- [ ] LF-08 Activate local-first persistence as a dedicated rollback switch.
+- [x] LF-08 Activate local-first persistence as a dedicated rollback switch.
   - Route: delegated; composition and application data flow.
   - Acceptance: local writes resolve immediately; cloud delay/failure never blocks normal local use; reverting this task's commit restores Firestore-first composition.
+  - RED: `npm test -- --run src/infrastructure/LocalFirstTrainingRepository.test.ts` — failed because the local-first repository did not exist.
+  - GREEN: `npm test -- --run src/infrastructure/LocalFirstTrainingRepository.test.ts src/UI/components/SyncIndicator.test.tsx` — 2 files, 6 tests passed.
+  - Full checks: `npm test -- --run` — 43 files, 249 tests passed; `npm run build` passed; `git diff --check` passed.
+  - Runtime: N/A — no browser automation surface was available. The local-first adapter test proves writes complete while the remote drain remains unresolved; the sync-indicator integration test exposes a durable sync error.
+  - Rollback boundary: revert this work-unit commit to restore the Firestore-only composition. The inactive IndexedDB and outbox commits remain available but unused.
+  - Commit: this local work-unit commit (`feat(storage): activate local-first persistence`).
 - [ ] LF-09 Add exercise GIF resolution and placeholders.
   - Route: delegated; shared responsive UI component and tests.
   - Acceptance: detail and workout use the same component; dropping a correctly named GIF requires no code change.
@@ -124,8 +130,9 @@ Exercise creation currently waits on Firestore, exercise occurrences are identif
 - LF-05 complete: leaving the player only changes route, retaining the active draft and active rest timer. Any non-workout screen shows a direct resume control; discard has its own labelled destructive action and still clears both draft and timer.
 - LF-06 complete: a native IndexedDB profile-snapshot adapter now provides isolated transactional CRUD, subscription snapshots, safe legacy bootstrap normalization, and explicit unavailable/quota/transaction errors. It is intentionally not wired into composition; Firestore remains the production repository.
 - LF-07 complete: a native IndexedDB-backed outbox persists operations before draining them through an injected remote gateway. It preserves FIFO ordering, keeps failed operations (including delete tombstones) durable for retries, exposes pending/failed/error status, and selects remote records deterministically only when there is no pending local mutation. It is intentionally not wired into Firestore composition.
-- Next task: LF-08.
+- LF-08 complete: composition now creates an IndexedDB-backed local repository per profile and a Firestore-backed outbox gateway. Local mutations commit before a remote drain begins; existing cloud data merges into the local profile without replacing pending local records. An unavailable Firebase runtime reports a sync issue but keeps device-local use available.
+- Next task: LF-09.
 
 ## Next step
 
-Implement LF-08 under strict TDD. Do not push, open a pull request, or select a remote chain until the user authorizes remote delivery.
+Implement LF-09 under strict TDD. Do not push, open a pull request, or select a remote chain until the user authorizes remote delivery.
