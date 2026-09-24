@@ -3,6 +3,9 @@ import type { Exercise, Routine, Workout } from './index';
 export interface SyncStatus {
   hasPendingWrites: boolean;
   fromCache: boolean;
+  pendingOperations?: number;
+  failedOperations?: number;
+  lastSyncError?: string;
 }
 
 export interface TrainingSnapshot {
