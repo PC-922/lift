@@ -33,10 +33,10 @@ export function composeApplication(): ApplicationServices {
     authentication: new FirebaseAuthentication(localStoragePreferencesRepository),
     preferences: localStoragePreferencesRepository,
     workoutDrafts: localStorageWorkoutDraftRepository,
-    trainingRepository(uid) {
-      const local = createIndexedDbTrainingRepository(uid);
-      const remote = db
-        ? createFirestoreTrainingRepository(db, uid)
+    trainingRepository(profileId, cloudUid) {
+      const local = createIndexedDbTrainingRepository(profileId);
+      const remote = db && cloudUid
+        ? createFirestoreTrainingRepository(db, cloudUid)
         : createUnavailableTrainingRepository('Firestore is not initialized. Changes remain stored on this device.');
       const outbox = createFirestoreSyncOutbox({
         store: createNativeSyncOutboxStore(),
@@ -49,6 +49,7 @@ export function composeApplication(): ApplicationServices {
         deviceId: deviceId(),
         now: systemClock.now,
         operationId: () => browserIdGenerator.generate('sync'),
+        syncEnabled: Boolean(cloudUid),
       });
     },
     ids: browserIdGenerator,

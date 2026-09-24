@@ -13,6 +13,7 @@ const DEFAULT_PREFS: Prefs = {
   defaultScreen: null,
   authMode: null,
   lastUid: null,
+  localProfileId: null,
 };
 
 type PrefsListener = () => void;
@@ -82,6 +83,18 @@ function setLastUid(uid: string | null): void {
   savePrefs({ lastUid: uid });
 }
 
+function localProfileId(): string {
+  const prefs = getPrefs();
+  if (prefs.localProfileId) return prefs.localProfileId;
+
+  // Reuse the old profile identifier once so pre-local-first data stays reachable.
+  const legacyProfileId = prefs.lastUid;
+  const generated = `local_${globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2)}`;
+  const next = legacyProfileId ?? generated;
+  savePrefs({ localProfileId: next });
+  return next;
+}
+
 export const localStoragePreferencesRepository: PreferencesRepository = {
   getPrefs,
   savePrefs,
@@ -93,5 +106,6 @@ export const localStoragePreferencesRepository: PreferencesRepository = {
   markOnboardingDone,
   getLastUid,
   setLastUid,
+  getLocalProfileId: localProfileId,
   subscribe,
 };

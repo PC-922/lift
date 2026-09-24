@@ -119,6 +119,15 @@ Exercise creation currently waits on Firestore, exercise occurrences are identif
 - [ ] LF-11 Run final regression and browser validation.
   - Route: delegated verification; tests/build/runtime execution.
   - Acceptance: focused tests, full suite, build, mobile viewports, desktop, and storage/sync failure scenarios are reported honestly.
+- [x] LF-12 Make authentication optional local-first synchronization.
+  - Route: delegated; auth, composition, settings, routing, and test behavior.
+  - Acceptance: app starts locally without Firebase or a session; Google is an optional settings-triggered sync connection; signing out returns to local-only mode without blocking the app.
+  - RED: `npm test -- --run src/UI/hooks/useAuth.test.tsx src/infrastructure/FirebaseAuthentication.test.ts src/UI/App.test.tsx` — 3 behavior tests failed because startup rendered the login screen, no durable local profile existed, and sign-out created an anonymous Firebase session.
+  - GREEN: `npm test -- --run src/UI/hooks/useAuth.test.tsx src/infrastructure/FirebaseAuthentication.test.ts src/UI/App.test.tsx src/UI/components/SettingsScreen.test.tsx src/UI/hooks/useAppData.test.tsx src/infrastructure/LocalFirstTrainingRepository.test.ts` — 6 files, 30 tests passed.
+  - Full checks: `npm test -- --run` — 44 files, 254 tests passed; `npm run build` passed; `git diff --check` passed.
+  - Runtime: N/A — browser automation is unavailable. `App.test.tsx` renders the direct local startup flow at 390×844; settings and auth integration tests verify optional Google sync and sign-out continuity.
+  - Rollback boundary: revert this work-unit commit to restore the Firebase/anonymous login gate and per-auth-profile composition. This also removes the durable device-local profile preference and deferred local-only sync queue behavior.
+  - Commit: pending local work-unit commit (`feat(auth): make cloud sync optional`).
 
 ## Progress and evidence
 
@@ -138,8 +147,9 @@ Exercise creation currently waits on Firestore, exercise occurrences are identif
 - LF-07 complete: a native IndexedDB-backed outbox persists operations before draining them through an injected remote gateway. It preserves FIFO ordering, keeps failed operations (including delete tombstones) durable for retries, exposes pending/failed/error status, and selects remote records deterministically only when there is no pending local mutation. It is intentionally not wired into Firestore composition.
 - LF-08 complete: composition now creates an IndexedDB-backed local repository per profile and a Firestore-backed outbox gateway. Local mutations commit before a remote drain begins; existing cloud data merges into the local profile without replacing pending local records. An unavailable Firebase runtime reports a sync issue but keeps device-local use available.
 - LF-09 complete: `ExerciseMedia` is shared by exercise detail and the active player. It maps each exercise directly to `/exercise-media/{exerciseId}.gif`, resets if the selected exercise changes, and replaces a failed asset with a localised accessible placeholder. `public/exercise-media/README.md` documents the drop-in convention.
+- LF-12 complete: startup always selects a durable device-local profile and opens the app without Firebase. Google is only an optional Settings synchronization action; it connects Firestore to the same local profile, while sign-out stops the remote drain and keeps that profile open without anonymous auth.
 - Next task: LF-10.
 
 ## Next step
 
-Implement LF-09 under strict TDD. Do not push, open a pull request, or select a remote chain until the user authorizes remote delivery.
+Implement LF-10 under strict TDD. Do not push, open a pull request, or select a remote chain until the user authorizes remote delivery.

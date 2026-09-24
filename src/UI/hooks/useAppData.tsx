@@ -69,7 +69,7 @@ const AppDataContext = createContext<AppDataContextValue | null>(null);
 const DATA_RESOLVE_TIMEOUT_MS = 12000;
 
 export function AppDataProvider({ children }: { children: ReactNode }) {
-  const { user, fallbackUid } = useAuth();
+  const { user, localProfileId } = useAuth();
   const { trainingRepository, clock, ids } = useApplicationServices();
   const [snapshot, setSnapshot] = useState(emptySnapshot);
   const [isLoading, setIsLoading] = useState(true);
@@ -78,7 +78,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const repositoryRef = useRef<TrainingRepository | null>(null);
 
   useEffect(() => {
-    const uid = user?.uid ?? fallbackUid;
+    const profileId = localProfileId;
+    const cloudUid = user?.uid ?? null;
     let disposed = false;
     let unsubscribe: (() => void) | undefined;
     let timeout: ReturnType<typeof setTimeout> | undefined;
@@ -86,12 +87,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setSnapshot(emptySnapshot);
     setSyncStatus(null);
     setError(null);
-    setIsLoading(Boolean(uid));
-    if (!uid) return;
+    setIsLoading(true);
 
     const connect = async () => {
       try {
-        const repository = trainingRepository(uid);
+        const repository = trainingRepository(profileId, cloudUid);
         repositoryRef.current = repository;
         timeout = setTimeout(() => {
           if (disposed) return;
@@ -123,7 +123,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       unsubscribe?.();
       repositoryRef.current = null;
     };
-  }, [fallbackUid, trainingRepository, user?.uid]);
+  }, [localProfileId, trainingRepository, user?.uid]);
 
   const repository = () => repositoryRef.current;
   const routineSharing = () => new RoutineSharingService(ids, clock);

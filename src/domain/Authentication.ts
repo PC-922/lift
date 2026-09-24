@@ -16,14 +16,8 @@ export interface SignInResult {
   error?: { code: string; message: string };
 }
 
-export interface GuestResult {
-  success: boolean;
-  needsNetwork?: boolean;
-}
-
 export interface Authentication {
   signInWithGoogle(): Promise<SignInResult>;
-  continueAsGuest(): Promise<GuestResult>;
   signOut(): Promise<void>;
   subscribe(callback: (user: AuthUser, mode: AuthMode) => void): () => void;
 }

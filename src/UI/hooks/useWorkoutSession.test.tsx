@@ -17,12 +17,12 @@ vi.stubGlobal('localStorage', {
 });
 
 const services = {
-  authentication: { signInWithGoogle: vi.fn(), continueAsGuest: vi.fn(), signOut: vi.fn(), subscribe: vi.fn() },
+  authentication: { signInWithGoogle: vi.fn(), signOut: vi.fn(), subscribe: vi.fn() },
   preferences: {
     getPrefs: () => ({ onboardingDone: false, language: null, defaultScreen: null, authMode: null, lastUid: null }),
     savePrefs: vi.fn(), getLanguage: () => null, setLanguage: vi.fn(), getDefaultScreen: () => null,
     setDefaultScreen: vi.fn(), isOnboardingDone: () => false, markOnboardingDone: vi.fn(),
-    getLastUid: () => null, setLastUid: vi.fn(), subscribe: () => () => undefined,
+    getLastUid: () => null, setLastUid: vi.fn(), getLocalProfileId: () => 'local_test', subscribe: () => () => undefined,
   },
   workoutDrafts: localStorageWorkoutDraftRepository,
   trainingRepository: vi.fn(),

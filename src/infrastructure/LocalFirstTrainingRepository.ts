@@ -9,6 +9,7 @@ export interface LocalFirstTrainingRepositoryOptions {
   readonly deviceId: string;
   readonly now: () => string;
   readonly operationId: () => string;
+  readonly syncEnabled?: boolean;
 }
 
 function emptySnapshot(): TrainingSnapshot {
@@ -120,6 +121,7 @@ export function createTrainingRepositorySyncGateway(repository: TrainingReposito
 
 export function createLocalFirstTrainingRepository(options: LocalFirstTrainingRepositoryOptions): TrainingRepository {
   const { local, remote, outbox } = options;
+  const syncEnabled = options.syncEnabled ?? true;
   let current = local.getSnapshot();
   let onData: ((snapshot: TrainingSnapshot) => void) | undefined;
   let onStatus: ((status: SyncStatus) => void) | undefined;
@@ -142,6 +144,7 @@ export function createLocalFirstTrainingRepository(options: LocalFirstTrainingRe
     try {
       await outbox.enqueue(item);
       emitStatus();
+      if (!syncEnabled) return;
       void outbox.drain()
         .then(() => {
           if (!outbox.getStatus().hasPendingWrites) pendingMutations.clear();
@@ -185,21 +188,21 @@ export function createLocalFirstTrainingRepository(options: LocalFirstTrainingRe
           emitStatus();
         }
       );
-      const unsubscribeRemote = remote.subscribe(
+      const unsubscribeRemote = syncEnabled ? remote.subscribe(
         (snapshot) => { void mergeRemote(snapshot).catch((error: unknown) => { syncError = error instanceof Error ? error.message : 'Remote synchronization failed.'; emitStatus(); }); },
         (status) => {
           if (status.lastSyncError) syncError = status.lastSyncError;
           emitStatus();
         }
-      );
+      ) : () => undefined;
       void outbox.ready().then(() => {
         emitStatus();
-        return outbox.drain();
+        return syncEnabled ? outbox.drain() : undefined;
       }).then(() => {
-        if (!outbox.getStatus().hasPendingWrites) pendingMutations.clear();
+        if (syncEnabled && !outbox.getStatus().hasPendingWrites) pendingMutations.clear();
         emitStatus();
       }).catch((error: unknown) => {
-        syncError = error instanceof Error ? error.message : 'Remote synchronization failed.';
+        syncError = error instanceof Error ? error.message : 'Local synchronization queue failed.';
         emitStatus();
       });
       return () => {

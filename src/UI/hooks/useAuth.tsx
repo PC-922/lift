@@ -1,17 +1,16 @@
 import React, { createContext, useCallback, useContext, useEffect, useState, ReactNode } from 'react';
-import type { AuthUser, GuestResult, SignInResult } from '../../domain/Authentication';
+import type { AuthUser, SignInResult } from '../../domain/Authentication';
 import type { AuthMode } from '../../domain/PreferencesRepository';
 import { useApplicationServices } from '../ApplicationProvider';
 
-export type AuthPhase = 'resolving' | 'authenticated' | 'fallback' | 'unauthenticated';
+export type AuthPhase = 'authenticated';
 
 interface AuthContextValue {
   user: AuthUser;
   mode: AuthMode;
   phase: AuthPhase;
-  fallbackUid: string | null;
+  localProfileId: string;
   signInWithGoogle: () => Promise<SignInResult>;
-  continueAsGuest: () => Promise<GuestResult>;
   signOut: () => Promise<void>;
 }
 
@@ -23,16 +22,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const { authentication, preferences } = useApplicationServices();
   const [user, setUser] = useState<AuthUser>(null);
   const [mode, setMode] = useState<AuthMode>(null);
-  const [phase, setPhase] = useState<AuthPhase>('resolving');
-  const [fallbackUid, setFallbackUid] = useState<string | null>(null);
-
-  const resolveOffline = useCallback((nextMode: AuthMode) => {
-    setUser(null);
-    setMode(nextMode);
-    const lastUid = preferences.getLastUid();
-    setFallbackUid(lastUid);
-    setPhase(lastUid ? 'fallback' : 'unauthenticated');
-  }, [preferences]);
+  const [localProfileId] = useState(() => preferences.getLocalProfileId());
 
   useEffect(() => {
     let timeout: ReturnType<typeof setTimeout> | undefined;
@@ -43,32 +33,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         timeout = undefined;
       }
       setUser(nextUser);
-      setMode(nextMode);
-      if (nextUser) {
-        setPhase('authenticated');
-        setFallbackUid(null);
-        return;
-      }
-      resolveOffline(nextMode);
+      setMode(nextUser ? nextMode : null);
     };
 
     timeout = setTimeout(() => {
-      const prefs = preferences.getPrefs();
-      resolvePhase(null, prefs.authMode ?? null);
+      resolvePhase(null, null);
     }, AUTH_TIMEOUT_MS);
 
-    let unsubscribe = () => undefined;
+    let unsubscribe: () => void = () => undefined;
     try {
       unsubscribe = authentication.subscribe(resolvePhase);
     } catch {
-      resolveOffline(preferences.getPrefs().authMode ?? null);
+      resolvePhase(null, null);
     }
 
     return () => {
       unsubscribe();
       if (timeout) clearTimeout(timeout);
     };
-  }, [authentication, preferences, resolveOffline]);
+  }, [authentication]);
 
   const signInWithGoogle = useCallback(async (): Promise<SignInResult> => {
     let timeout: ReturnType<typeof setTimeout> | undefined;
@@ -94,17 +77,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } finally {
       if (timeout) clearTimeout(timeout);
     }
-    if (!result.user) resolveOffline(preferences.getPrefs().authMode ?? null);
     return result;
-  }, [authentication, preferences, resolveOffline]);
+  }, [authentication]);
 
   const value: AuthContextValue = {
     user,
     mode,
-    phase,
-    fallbackUid,
+    phase: 'authenticated',
+    localProfileId,
     signInWithGoogle,
-    continueAsGuest: () => authentication.continueAsGuest(),
     signOut: () => authentication.signOut(),
   };
 

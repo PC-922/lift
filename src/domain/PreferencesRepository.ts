@@ -1,6 +1,6 @@
 export type ScreenType = 'home' | 'insights' | 'workout' | 'routines' | 'settings';
 
-export type AuthMode = 'google' | 'guest' | null;
+export type AuthMode = 'google' | null;
 
 export interface Prefs {
   onboardingDone: boolean;
@@ -8,6 +8,7 @@ export interface Prefs {
   defaultScreen: ScreenType | null;
   authMode: AuthMode;
   lastUid: string | null;
+  localProfileId?: string | null;
 }
 
 export interface PreferencesRepository {
@@ -21,5 +22,6 @@ export interface PreferencesRepository {
   markOnboardingDone(): void;
   getLastUid(): string | null;
   setLastUid(uid: string | null): void;
+  getLocalProfileId(): string;
   subscribe(listener: () => void): () => void;
 }

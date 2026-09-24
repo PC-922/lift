@@ -8,7 +8,7 @@ import type { TrainingRepository, TrainingSnapshot } from '../../domain/Training
 import { AppDataProvider, useAppData } from './useAppData';
 
 const authState = vi.hoisted(() => ({
-  current: { user: { uid: 'test-user' } as { uid: string } | null, fallbackUid: null as string | null },
+  current: { user: { uid: 'test-user' } as { uid: string } | null, localProfileId: 'local_test' },
 }));
 
 vi.mock('./useAuth', () => ({ useAuth: () => authState.current }));
@@ -47,12 +47,12 @@ function createRepository(initial: Partial<TrainingSnapshot> = {}): TrainingRepo
 
 function createServices(repository: TrainingRepository): ApplicationServices {
   return {
-    authentication: { signInWithGoogle: vi.fn(), continueAsGuest: vi.fn(), signOut: vi.fn(), subscribe: vi.fn() },
+    authentication: { signInWithGoogle: vi.fn(), signOut: vi.fn(), subscribe: vi.fn() },
     preferences: {
       getPrefs: () => ({ onboardingDone: false, language: null, defaultScreen: null, authMode: null, lastUid: null }),
       savePrefs: vi.fn(), getLanguage: () => null, setLanguage: vi.fn(), getDefaultScreen: () => null,
       setDefaultScreen: vi.fn(), isOnboardingDone: () => false, markOnboardingDone: vi.fn(),
-      getLastUid: () => null, setLastUid: vi.fn(), subscribe: () => () => undefined,
+      getLastUid: () => null, setLastUid: vi.fn(), getLocalProfileId: () => 'local_test', subscribe: () => () => undefined,
     },
     workoutDrafts: { load: () => null, save: vi.fn() },
     trainingRepository: () => repository,
@@ -70,7 +70,7 @@ function wrapperFor(repository: TrainingRepository) {
 
 describe('useAppData', () => {
   beforeEach(() => {
-    authState.current = { user: { uid: 'test-user' }, fallbackUid: null };
+    authState.current = { user: { uid: 'test-user' }, localProfileId: 'local_test' };
   });
 
   it('loads repository data and saves edits through a use case', async () => {
@@ -143,8 +143,8 @@ describe('useAppData', () => {
     vi.useRealTimers();
   });
 
-  it('loads cached data with the fallback uid when Firebase auth is unavailable', async () => {
-    authState.current = { user: null, fallbackUid: 'cached-user' };
+  it('loads the device-local profile when Firebase auth is unavailable', async () => {
+    authState.current = { user: null, localProfileId: 'local_test' };
     const repository = createRepository({ muscleGroups: ['Offline'] });
     const { result } = renderHook(() => useAppData(), { wrapper: wrapperFor(repository) });
 

@@ -29,6 +29,13 @@ describe('localStoragePreferencesRepository', () => {
     expect(localStoragePreferencesRepository.getDefaultScreen()).toBe('routines');
   });
 
+  it('creates one stable device-local profile without Firebase', () => {
+    const profileId = localStoragePreferencesRepository.getLocalProfileId();
+
+    expect(profileId).toMatch(/^local_/);
+    expect(localStoragePreferencesRepository.getLocalProfileId()).toBe(profileId);
+  });
+
   it('notifies subscribers when preferences are updated', () => {
     const listener = vi.fn();
     const unsubscribe = localStoragePreferencesRepository.subscribe(listener);

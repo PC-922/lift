@@ -10,7 +10,7 @@ export interface ApplicationServices {
   readonly authentication: Authentication;
   readonly preferences: PreferencesRepository;
   readonly workoutDrafts: WorkoutDraftRepository;
-  readonly trainingRepository: (uid: string) => TrainingRepository;
+  readonly trainingRepository: (profileId: string, cloudUid: string | null) => TrainingRepository;
   readonly ids: IdGenerator;
   readonly clock: Clock;
 }

@@ -9,7 +9,6 @@ import { InsightsScreen } from './components/InsightsScreen';
 import { RoutinesScreen } from './components/RoutinesScreen';
 import { WorkoutScreen } from './components/WorkoutScreen';
 import { MuscleGroupsScreen } from './components/MuscleGroupsScreen';
-import { OnboardingScreen } from './components/OnboardingScreen';
 import { BottomNav } from './components/BottomNav';
 import ConfirmModal from './components/ConfirmModal';
 import { Modal } from './components/Modal';
@@ -20,7 +19,7 @@ import { SyncIndicator } from './components/SyncIndicator';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { AppDataProvider, useAppData } from './hooks/useAppData';
 import { useTranslations } from './utils/translations';
-import { Download, Dumbbell, MoreVertical, Plus, PlusSquare, Share } from 'lucide-react';
+import { Download, MoreVertical, Plus, PlusSquare, Share } from 'lucide-react';
 import { Button } from './components/ui/Button';
 import { Surface } from './components/ui/Surface';
 import { Badge } from './components/ui/Badge';
@@ -419,49 +418,13 @@ const AppLayout: React.FC = () => {
   );
 };
 
-const SplashScreen: React.FC = () => {
-  return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-6 px-6">
-      <div className="flex h-24 w-24 items-center justify-center rounded-[2rem] bg-app-accent text-app-accent-foreground">
-        <Dumbbell size={48} strokeWidth={2.5} />
-      </div>
-      <div className="h-8 w-8 animate-spin rounded-full border-4 border-app-accent border-t-transparent" />
-    </div>
-  );
-};
-
 const AppContent: React.FC = () => {
-  const { user, phase, fallbackUid } = useAuth();
+  const { localProfileId } = useAuth();
   usePortraitOrientation();
-
-  if (phase === 'resolving') {
-    return (
-      <ToastProvider>
-        <SplashScreen />
-      </ToastProvider>
-    );
-  }
-
-  if (phase === 'unauthenticated') {
-    return (
-      <ToastProvider>
-        <OnboardingScreen />
-      </ToastProvider>
-    );
-  }
-
-  const uid = user?.uid ?? fallbackUid;
-  if (!uid) {
-    return (
-      <ToastProvider>
-        <OnboardingScreen />
-      </ToastProvider>
-    );
-  }
 
   return (
     <ToastProvider>
-      <AppDataProvider key={uid}>
+      <AppDataProvider key={localProfileId}>
         <AppLayout />
       </AppDataProvider>
     </ToastProvider>

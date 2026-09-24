@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { act, render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { SettingsScreen } from './SettingsScreen';
@@ -37,8 +37,7 @@ const PREFS_KEY = 'lift_prefs_v1';
 
 const services: ApplicationServices = {
   authentication: {
-    signInWithGoogle: async () => ({ user: null, isNewUser: false }),
-    continueAsGuest: async () => ({ success: false }),
+    signInWithGoogle: vi.fn(async () => ({ user: null, isNewUser: false })),
     signOut: async () => undefined,
     subscribe: (listener) => { listener(null, null); return () => undefined; },
   },
@@ -66,6 +65,16 @@ describe('SettingsScreen selectors', () => {
     cleanup();
     vi.restoreAllMocks();
     localStorage.clear();
+  });
+
+  it('offers Google only as an optional sync action', async () => {
+    renderWithRouter(<SettingsScreen {...defaultProps} />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Sign in with Google/i }));
+    });
+
+    expect(services.authentication.signInWithGoogle).toHaveBeenCalledOnce();
   });
 
   it('renders selectors with persisted language and default screen values', () => {

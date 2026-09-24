@@ -18,6 +18,7 @@ function createPreferences(lastUid: string | null): PreferencesRepository {
     markOnboardingDone: vi.fn(),
     getLastUid: () => lastUid,
     setLastUid: vi.fn(),
+    getLocalProfileId: () => 'local_test_profile',
     subscribe: () => () => undefined,
   };
 }
@@ -37,14 +38,13 @@ function wrapper(authentication: Authentication, preferences: PreferencesReposit
 }
 
 describe('useAuth', () => {
-  it('falls back to the last local user after a Google error', async () => {
+  it('keeps the local profile after a Google sync error', async () => {
     const authentication: Authentication = {
       signInWithGoogle: vi.fn(async () => ({
         user: null,
         isNewUser: false,
         error: { code: 'auth/network-request-failed', message: 'Offline' },
       })),
-      continueAsGuest: vi.fn(),
       signOut: vi.fn(),
       subscribe: vi.fn(() => () => undefined),
     };
@@ -52,15 +52,44 @@ describe('useAuth', () => {
 
     await act(async () => { await result.current.signInWithGoogle(); });
 
-    expect(result.current.phase).toBe('fallback');
-    expect(result.current.fallbackUid).toBe('cached-user');
+    expect(result.current.phase).toBe('authenticated');
+    expect(result.current.localProfileId).toBe('local_test_profile');
+    expect(result.current.user).toBeNull();
+  });
+
+  it('starts with a durable local profile when Firebase has no session', async () => {
+    const authentication: Authentication = {
+      signInWithGoogle: vi.fn(),
+      signOut: vi.fn(),
+      subscribe: vi.fn((callback) => { callback(null, null); return () => undefined; }),
+    };
+    const { result } = renderHook(() => useAuth(), { wrapper: wrapper(authentication, createPreferences(null)) });
+
+    await act(async () => { await Promise.resolve(); });
+
+    expect(result.current.localProfileId).toBe('local_test_profile');
+    expect(result.current.phase).not.toBe('unauthenticated');
+  });
+
+  it('keeps the same local profile when sync is disconnected', async () => {
+    let listener: ((user: import('../../domain/Authentication').AuthUser, mode: import('../../domain/PreferencesRepository').AuthMode) => void) | undefined;
+    const authentication: Authentication = {
+      signInWithGoogle: vi.fn(),
+      signOut: vi.fn(async () => { listener?.(null, null); }),
+      subscribe: vi.fn((callback) => { listener = callback; callback({ uid: 'google-user', email: null, displayName: null, photoURL: null, isAnonymous: false }, 'google'); return () => undefined; }),
+    };
+    const { result } = renderHook(() => useAuth(), { wrapper: wrapper(authentication, createPreferences(null)) });
+
+    await act(async () => { await result.current.signOut(); });
+
+    expect(result.current.user).toBeNull();
+    expect(result.current.localProfileId).toBe('local_test_profile');
   });
 
   it('stops waiting for a stalled Google request after twelve seconds', async () => {
     vi.useFakeTimers();
     const authentication: Authentication = {
       signInWithGoogle: vi.fn(() => new Promise(() => undefined)),
-      continueAsGuest: vi.fn(),
       signOut: vi.fn(),
       subscribe: vi.fn((callback) => {
         callback(null, null);
@@ -77,7 +106,7 @@ describe('useAuth', () => {
     await act(async () => { await Promise.resolve(); });
 
     expect(signInResult?.error?.code).toBe('auth/timeout');
-    expect(result.current.phase).toBe('fallback');
+    expect(result.current.phase).toBe('authenticated');
     vi.useRealTimers();
   });
 });

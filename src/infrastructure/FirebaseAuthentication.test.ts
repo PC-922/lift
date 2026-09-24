@@ -38,7 +38,6 @@ Object.defineProperty(window, 'navigator', {
 vi.mock('firebase/auth', () => ({
   GoogleAuthProvider: vi.fn(),
   signInWithPopup: vi.fn(),
-  signInAnonymously: vi.fn(),
   getRedirectResult: vi.fn(() => Promise.resolve(null)),
   signOut: vi.fn(),
   onAuthStateChanged: vi.fn((_auth, cb) => {
@@ -96,16 +95,6 @@ describe('authentication', () => {
     await authentication.signInWithGoogle();
 
     expect(localStoragePreferencesRepository.getLastUid()).toBe('google-uid');
-  });
-
-  it('stores the last uid when continuing as guest', async () => {
-    const { signInAnonymously } = await import('firebase/auth');
-    const mockUser = { uid: 'anon-uid', isAnonymous: true };
-    vi.mocked(signInAnonymously).mockResolvedValue({ user: mockUser } as unknown as UserCredential);
-
-    await authentication.continueAsGuest();
-
-    expect(localStoragePreferencesRepository.getLastUid()).toBe('anon-uid');
   });
 
   it('detects new user when creationTime matches lastSignInTime', async () => {
@@ -209,34 +198,8 @@ describe('authentication', () => {
     });
   });
 
-  it('notifies listeners when continuing as guest', async () => {
-    const { signInAnonymously } = await import('firebase/auth');
-    const mockUser = { uid: 'anon-1', isAnonymous: true };
-    vi.mocked(signInAnonymously).mockResolvedValue({ user: mockUser } as unknown as UserCredential);
-
-    const listener = vi.fn();
-    authentication.subscribe(listener);
-    await authentication.continueAsGuest();
-
-    expect(signInAnonymously).toHaveBeenCalled();
-    expect(listener).toHaveBeenLastCalledWith(mockUser, 'guest');
-  });
-
-  it('returns needsNetwork when continuing as guest offline', async () => {
-    Object.defineProperty(window, 'navigator', { value: { onLine: false }, configurable: true });
-
-    const result = await authentication.continueAsGuest();
-
-    expect(result.success).toBe(false);
-    expect(result.needsNetwork).toBe(true);
-
-    Object.defineProperty(window, 'navigator', { value: { onLine: true }, configurable: true });
-  });
-
-  it('returns to guest mode after signing out', async () => {
-    const { signOut, signInAnonymously } = await import('firebase/auth');
-    const mockUser = { uid: 'guest-uid', isAnonymous: true };
-    vi.mocked(signInAnonymously).mockResolvedValue({ user: mockUser } as unknown as UserCredential);
+  it('returns to local-only mode after signing out without anonymous Firebase auth', async () => {
+    const { signOut } = await import('firebase/auth');
 
     const listener = vi.fn();
     authentication.subscribe(listener);
@@ -244,8 +207,7 @@ describe('authentication', () => {
     await authentication.signOut();
 
     expect(signOut).toHaveBeenCalled();
-    expect(signInAnonymously).toHaveBeenCalled();
-    expect(localStoragePreferencesRepository.getPrefs().authMode).toBe('guest');
-    expect(listener).toHaveBeenLastCalledWith(mockUser, 'guest');
+    expect(localStoragePreferencesRepository.getPrefs().authMode).toBeNull();
+    expect(listener).toHaveBeenLastCalledWith(null, null);
   });
 });

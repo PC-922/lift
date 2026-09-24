@@ -53,9 +53,15 @@ vi.mock('./hooks/useAppData', () => ({
   }),
 }));
 
+const authState = {
+  user: { uid: 'test_uid' } as { uid: string } | null,
+  phase: 'authenticated',
+  localProfileId: 'local_test',
+};
+
 vi.mock('./hooks/useAuth', () => ({
   AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  useAuth: () => ({ user: { uid: 'test_uid' }, phase: 'authenticated', fallbackUid: null }),
+  useAuth: () => authState,
 }));
 
 vi.mock('./hooks/useToast', () => ({
@@ -132,6 +138,20 @@ vi.mock('./components/PromptModal', () => ({
 describe('App home layout', () => {
   afterEach(() => {
     workoutSession.activeWorkout = null;
+    authState.user = { uid: 'test_uid' };
+    authState.localProfileId = 'local_test';
+  });
+
+  it('opens the local app when Firebase has no signed-in user', async () => {
+    authState.user = null;
+    authState.localProfileId = 'local_device';
+
+    window.innerWidth = 390;
+    window.innerHeight = 844;
+    render(<BrowserRouter><App /></BrowserRouter>);
+
+    expect(await screen.findByRole('button', { name: /New Exercise/i })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Continue without signing in/i })).toBeNull();
   });
 
   it('renders the home actions before the list', async () => {

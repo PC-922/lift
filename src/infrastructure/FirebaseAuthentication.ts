@@ -2,7 +2,6 @@ import {
   GoogleAuthProvider,
   getRedirectResult,
   onAuthStateChanged,
-  signInAnonymously,
   signInWithPopup,
   signOut,
   type AuthError,
@@ -11,7 +10,6 @@ import {
 import type {
   Authentication,
   AuthUser,
-  GuestResult,
   SignInResult,
 } from '../domain/Authentication';
 import type { AuthMode, PreferencesRepository } from '../domain/PreferencesRepository';
@@ -61,40 +59,15 @@ export class FirebaseAuthentication implements Authentication {
     }
   }
 
-  async continueAsGuest(): Promise<GuestResult> {
-    if (!isFirebaseAvailable() || !auth) return { success: false };
-    if (typeof navigator === 'undefined' || !navigator.onLine) {
-      return { success: false, needsNetwork: true };
-    }
-
-    try {
-      const result = await signInAnonymously(auth);
-      this.setMode('guest');
-      this.preferences.setLastUid(result.user.uid);
-      this.notify(result.user, 'guest');
-      return { success: true };
-    } catch (error) {
-      console.error('Anonymous sign-in failed', error);
-      return { success: false };
-    }
-  }
-
   async signOut(): Promise<void> {
-    if (!isFirebaseAvailable() || !auth) {
-      this.setMode(null);
-      this.notify(null, null);
-      return;
-    }
-
-    await signOut(auth);
-    try {
-      const result = await signInAnonymously(auth);
-      this.setMode('guest');
-      this.notify(result.user, 'guest');
-    } catch (error) {
-      console.error('Failed to return to guest mode after sign-out', error);
-      this.setMode(null);
-      this.notify(null, null);
+    this.setMode(null);
+    this.notify(null, null);
+    if (isFirebaseAvailable() && auth) {
+      try {
+        await signOut(auth);
+      } catch (error) {
+        console.error('Failed to sign out from Firebase', error);
+      }
     }
   }
 
@@ -108,14 +81,15 @@ export class FirebaseAuthentication implements Authentication {
     this.handleRedirect();
     let resolved = false;
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      const mode = user ? user.isAnonymous ? 'guest' : 'google' : this.getMode();
+      const mode = user ? 'google' : null;
       if (user) {
         resolved = true;
         this.setMode(mode);
         this.preferences.setLastUid(user.uid);
         callback(user, mode);
-      } else if (resolved || mode !== 'google') {
+      } else if (resolved || this.getMode() !== 'google') {
         resolved = true;
+        this.setMode(null);
         callback(null, mode);
       }
     });
