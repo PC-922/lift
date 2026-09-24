@@ -1,5 +1,5 @@
 import React, {forwardRef, useCallback, useEffect, useMemo, useState} from 'react';
-import {GripVertical, MoreVertical, Pencil, Play, Plus, Trash2, Upload, X} from 'lucide-react';
+import {Copy, GripVertical, MoreVertical, Pencil, Play, Plus, Trash2, Upload, X} from 'lucide-react';
 import {Exercise, ExerciseLog, Routine, RoutineDay, RoutineExercise} from '../../domain';
 import {getTranslatedGroupName, useTranslations} from '../utils/translations';
 import {getLatestLog, getLogFeedback} from '../utils/progression';
@@ -54,6 +54,7 @@ interface LogFormState {
 }
 
 interface ExerciseDayRef {
+  blockId: string;
   exerciseId: string;
   dayId: string;
 }
@@ -174,7 +175,7 @@ export const RoutinesScreen: React.FC<Props> = ({
   const openEdit = (routine: Routine) => {
     setFormName(routine.name);
     setFormDays(routine.days.map((day) => ({ ...day, exercises: day.exercises.map((re) => ({ ...re })) })));
-    setActiveDayIndex(0);
+    setActiveDayIndex(Math.max(0, routine.days.findIndex((day) => day.id === selectedDayId)));
     setFormSearch('');
     setEditingRoutine(routine);
     setModalMode('edit');
@@ -203,82 +204,76 @@ export const RoutinesScreen: React.FC<Props> = ({
     setFormDays((prev) => prev.map((day, i) => (i === index ? { ...day, name } : day)));
   };
 
-  const toggleExercise = (exerciseId: string) => {
+  const addExerciseBlock = (exerciseId: string) => {
     if (!activeFormDay) return;
-    setFormDays((prev) => prev.map((day, i) => {
-      if (i !== activeDayIndex) return day;
-      const exists = day.exercises.find((re) => re.exerciseId === exerciseId);
-      if (exists) {
-        return { ...day, exercises: day.exercises.filter((re) => re.exerciseId !== exerciseId) };
-      }
-      return {
-        ...day,
-        exercises: [...day.exercises, {
-          blockId: ids.generate('block'),
-          exerciseId,
-          sets: DEFAULT_SETS,
-          reps: DEFAULT_REPS,
-          dropset: false,
-          toFailure: false,
-          restSeconds: DEFAULT_REST_SECONDS,
-        }],
-      };
+    setFormDays((days) => days.map((day, index) => index !== activeDayIndex ? day : {
+      ...day,
+      exercises: [...day.exercises, {
+        blockId: ids.generate('block'),
+        exerciseId,
+        sets: DEFAULT_SETS,
+        reps: DEFAULT_REPS,
+        dropset: false,
+        toFailure: false,
+        restSeconds: DEFAULT_REST_SECONDS,
+      }],
     }));
   };
 
-  const updateFormExerciseField = (exerciseId: string, field: 'sets' | 'reps' | 'restSeconds', value: string) => {
+  const updateFormExerciseField = (blockId: string, field: 'sets' | 'reps' | 'restSeconds', value: string) => {
     if (!activeFormDay) return;
-    setFormDays((prev) => prev.map((day, i) => {
-      if (i !== activeDayIndex) return day;
-      return {
-        ...day,
-        exercises: day.exercises.map((re) => (re.exerciseId === exerciseId ? { ...re, [field]: value } : re)),
-      };
+    setFormDays((days) => days.map((day, index) => index !== activeDayIndex ? day : {
+      ...day,
+      exercises: day.exercises.map((block) => block.blockId === blockId ? { ...block, [field]: value } : block),
     }));
   };
 
-  const commitSetsField = (exerciseId: string, value: string) => {
-    if (!activeFormDay) return;
+  const commitSetsField = (blockId: string, value: string) => {
     const parsed = parseInt(value, 10);
-    const num = Number.isNaN(parsed) || parsed < 1 ? 1 : parsed;
-    setFormDays((prev) => prev.map((day, i) => {
-      if (i !== activeDayIndex) return day;
-      return { ...day, exercises: day.exercises.map((re) => (re.exerciseId === exerciseId ? { ...re, sets: num } : re)) };
-    }));
+    const sets = Number.isNaN(parsed) || parsed < 1 ? 1 : parsed;
+    updateBlock(blockId, (block) => ({ ...block, sets }));
   };
 
-  const commitRestField = (exerciseId: string, value: string) => {
-    if (!activeFormDay) return;
+  const commitRestField = (blockId: string, value: string) => {
     const parsed = parseInt(value, 10);
-    const num = Number.isNaN(parsed) || parsed < 0 ? 0 : parsed;
-    setFormDays((prev) => prev.map((day, i) => {
-      if (i !== activeDayIndex) return day;
-      return { ...day, exercises: day.exercises.map((re) => (re.exerciseId === exerciseId ? { ...re, restSeconds: num } : re)) };
+    const restSeconds = Number.isNaN(parsed) || parsed < 0 ? 0 : parsed;
+    updateBlock(blockId, (block) => ({ ...block, restSeconds }));
+  };
+
+  const updateBlock = (blockId: string, updater: (block: RoutineExercise) => RoutineExercise) => {
+    setFormDays((days) => days.map((day, index) => index !== activeDayIndex ? day : {
+      ...day,
+      exercises: day.exercises.map((block) => block.blockId === blockId ? updater(block) : block),
     }));
   };
 
-  const toggleDropset = (exerciseId: string) => {
-    if (!activeFormDay) return;
-    setFormDays((prev) => prev.map((day, i) => {
-      if (i !== activeDayIndex) return day;
-      return { ...day, exercises: day.exercises.map((re) => (re.exerciseId === exerciseId ? { ...re, dropset: !re.dropset } : re)) };
+  const duplicateBlock = (blockId: string) => {
+    setFormDays((days) => days.map((day, index) => {
+      if (index !== activeDayIndex) return day;
+      const blockIndex = day.exercises.findIndex((block) => block.blockId === blockId);
+      if (blockIndex < 0) return day;
+      const copied = { ...day.exercises[blockIndex], blockId: ids.generate('block') };
+      return { ...day, exercises: [...day.exercises.slice(0, blockIndex + 1), copied, ...day.exercises.slice(blockIndex + 1)] };
     }));
   };
 
-  const toggleToFailure = (exerciseId: string) => {
-    if (!activeFormDay) return;
-    setFormDays((prev) => prev.map((day, i) => {
-      if (i !== activeDayIndex) return day;
-      return {
-        ...day,
-        exercises: day.exercises.map((re) => {
-          if (re.exerciseId !== exerciseId) return re;
-          const next = !re.toFailure;
-          return { ...re, toFailure: next, reps: next ? '' : DEFAULT_REPS };
-        }),
-      };
+  const removeBlock = (blockId: string) => {
+    setFormDays((days) => days.map((day, index) => index !== activeDayIndex ? day : {
+      ...day,
+      exercises: day.exercises.filter((block) => block.blockId !== blockId),
     }));
   };
+
+  const replaceBlockExercise = (blockId: string, exerciseId: string) => {
+    updateBlock(blockId, (block) => ({ ...block, exerciseId }));
+  };
+
+  const toggleDropset = (blockId: string) => updateBlock(blockId, (block) => ({ ...block, dropset: !block.dropset }));
+
+  const toggleToFailure = (blockId: string) => updateBlock(blockId, (block) => {
+    const toFailure = !block.toFailure;
+    return { ...block, toFailure, reps: toFailure ? '' : DEFAULT_REPS };
+  });
 
   const handleSave = () => {
     const name = formName.trim();
@@ -373,7 +368,7 @@ export const RoutinesScreen: React.FC<Props> = ({
       ...activeRoutine,
       days: activeRoutine.days.map((day) =>
         day.id === ref.dayId
-          ? { ...day, exercises: day.exercises.filter((re) => re.exerciseId !== ref.exerciseId) }
+          ? { ...day, exercises: day.exercises.filter((re) => re.blockId !== ref.blockId) }
           : day
       ),
     });
@@ -382,9 +377,10 @@ export const RoutinesScreen: React.FC<Props> = ({
 
   const filteredFormExercises = useMemo(() => {
     const q = formSearch.toLowerCase();
-    const selectedOrder = new Map<string, number>(
-      (activeFormDay?.exercises.map((re, index) => [re.exerciseId, index] as const) ?? [])
-    );
+    const selectedOrder = new Map<string, number>();
+    activeFormDay?.exercises.forEach((block, index) => {
+      if (!selectedOrder.has(block.exerciseId)) selectedOrder.set(block.exerciseId, index);
+    });
     return exercises
       .filter((ex) => !q || ex.name.toLowerCase().includes(q))
       .sort((a, b) => {
@@ -414,11 +410,9 @@ export const RoutinesScreen: React.FC<Props> = ({
           )}
           <div className="mb-2 flex items-center justify-between">
             <h1 className="text-xl font-bold text-app-text">{selectedDay ? selectedDay.name : activeRoutine.name}</h1>
-            {!selectedDay && (
-              <button onClick={() => openEdit(activeRoutine)} className="p-1 text-app-text active:opacity-70" aria-label={t.actions.edit}>
+            <button onClick={() => openEdit(activeRoutine)} className="p-1 text-app-text active:opacity-70" aria-label={t.actions.edit}>
                 <Pencil size={18} />
               </button>
-            )}
           </div>
 
           {selectedDay && onStartWorkout && (
@@ -456,7 +450,7 @@ export const RoutinesScreen: React.FC<Props> = ({
                       form={form}
                       onUpdateForm={(field, value) => updateLogForm(exercise.id, field, value)}
                       onLog={() => handleLog(exercise.id)}
-                      onMenu={() => setActionSheetExercise({ exerciseId, dayId: selectedDay.id })}
+                      onMenu={() => setActionSheetExercise({ blockId, exerciseId, dayId: selectedDay.id })}
                       onDragHandlePointerDown={exercisesDrag.handleStart(blockId)}
                       onTap={() => onNavigateToExercise(exercise.id, activeRoutine.id)}
                     />
@@ -616,62 +610,71 @@ export const RoutinesScreen: React.FC<Props> = ({
                 />
               </div>
 
-              {filteredFormExercises.length === 0 ? (
-                <p className="py-4 text-center text-sm text-app-text-muted">{t.labels.noExercisesFound}</p>
-              ) : (
-                <div className="space-y-3 pb-2">
-                  {filteredFormExercises.map((exercise) => {
-                    const routineEx = activeFormDay?.exercises.find((re) => re.exerciseId === exercise.id);
-                    const selected = routineEx !== undefined;
+              {activeFormDay && activeFormDay.exercises.length > 0 && (
+                <div className="space-y-3" aria-label="Routine blocks">
+                  {activeFormDay.exercises.map((block) => {
+                    const exercise = exerciseById.get(block.exerciseId);
+                    const exerciseName = exercise?.name ?? block.exerciseId;
                     return (
-                      <div key={exercise.id} className="space-y-2">
-                        <button
-                          onClick={() => toggleExercise(exercise.id)}
-                          className={cn(
-                            'w-full rounded-xl border p-4 text-left transition-colors active:opacity-70',
-                            selected ? 'border-app-text bg-app-surface-muted' : 'border-app-border bg-app-surface'
-                          )}
-                        >
-                          <p className="text-sm font-semibold text-app-text">{exercise.name}</p>
-                          <p className="mt-0.5 text-xs text-app-text-muted">{getTranslatedGroupName(exercise.muscleGroup)}</p>
-                        </button>
-
-                        {selected && routineEx && (
-                          <div className="rounded-2xl border border-app-border bg-app-surface-muted px-4 py-4">
-                            <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-                              <div className="space-y-1">
-                                <label className="block text-xs font-medium text-app-text-muted">{t.labels.sets}</label>
-                                <Input compact type="text" inputMode="numeric" value={routineEx.sets} onChange={(e) => updateFormExerciseField(exercise.id, 'sets', e.target.value)} onBlur={(e) => commitSetsField(exercise.id, e.target.value)} className="text-center" />
-                              </div>
-                              <div className="space-y-1">
-                                <label className="block text-xs font-medium text-app-text-muted">{t.labels.reps}</label>
-                                <Input compact type="text" inputMode="text" value={routineEx.reps} onChange={(e) => updateFormExerciseField(exercise.id, 'reps', e.target.value)} disabled={routineEx.toFailure} className="text-center disabled:opacity-30" placeholder="10" />
-                              </div>
-                              <div className="space-y-1">
-                                <label className="block text-xs font-medium text-app-text-muted">{t.labels.rest}</label>
-                                <Input compact type="text" inputMode="numeric" value={routineEx.restSeconds ?? ''} onChange={(e) => updateFormExerciseField(exercise.id, 'restSeconds', e.target.value)} onBlur={(e) => commitRestField(exercise.id, e.target.value)} className="text-center" placeholder="90" />
-                              </div>
-                              <div className="space-y-1">
-                                <label className="block text-xs font-medium text-app-text-muted">{t.labels.dropset}</label>
-                                <button onClick={() => toggleDropset(exercise.id)} className={cn('w-full rounded-xl border px-3 py-3 text-sm font-semibold transition-colors active:opacity-70', routineEx.dropset ? 'border-app-warning bg-app-warning text-app-text' : 'border-app-border bg-app-surface text-app-text-muted')}>
-                                  {routineEx.dropset ? 'Yes' : 'No'}
-                                </button>
-                              </div>
-                              <div className="space-y-1">
-                                <label className="block text-xs font-medium text-app-text-muted">{t.labels.toFailure}</label>
-                                <button onClick={() => toggleToFailure(exercise.id)} className={cn('w-full rounded-xl border px-3 py-3 text-sm font-semibold transition-colors active:opacity-70', routineEx.toFailure ? 'border-app-danger bg-app-danger text-white' : 'border-app-border bg-app-surface text-app-text-muted')}>
-                                  {routineEx.toFailure ? 'Yes' : 'No'}
-                                </button>
-                              </div>
-                            </div>
-
+                      <div key={block.blockId} className="rounded-2xl border border-app-border bg-app-surface-muted p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <h3 className="truncate text-sm font-bold text-app-text">{exerciseName}</h3>
+                            <p className="mt-0.5 text-xs text-app-text-muted">{t.labels.exercise}</p>
                           </div>
-                        )}
+                          <div className="flex shrink-0 gap-1">
+                            <IconButton onClick={() => duplicateBlock(block.blockId)} aria-label={`Duplicate ${exerciseName}`}>
+                              <Copy size={16} />
+                            </IconButton>
+                            <IconButton onClick={() => removeBlock(block.blockId)} aria-label={`Remove ${exerciseName}`} className="text-app-danger">
+                              <Trash2 size={16} />
+                            </IconButton>
+                          </div>
+                        </div>
+                        <label className="mt-3 block text-xs font-medium text-app-text-muted">
+                          {t.labels.changeExercise}
+                          <select
+                            aria-label={`Replace ${exerciseName}`}
+                            value={block.exerciseId}
+                            onChange={(event) => replaceBlockExercise(block.blockId, event.target.value)}
+                            className="mt-1 w-full rounded-xl border border-app-border bg-app-surface px-3 py-2 text-sm text-app-text"
+                          >
+                            {exercises.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}
+                          </select>
+                        </label>
+                        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-5">
+                          <div className="space-y-1"><label className="block text-xs font-medium text-app-text-muted">{t.labels.sets}</label><Input compact type="text" inputMode="numeric" value={block.sets} onChange={(event) => updateFormExerciseField(block.blockId, 'sets', event.target.value)} onBlur={(event) => commitSetsField(block.blockId, event.target.value)} className="text-center" /></div>
+                          <div className="space-y-1"><label className="block text-xs font-medium text-app-text-muted">{t.labels.reps}</label><Input compact type="text" value={block.reps} onChange={(event) => updateFormExerciseField(block.blockId, 'reps', event.target.value)} disabled={block.toFailure} className="text-center disabled:opacity-30" placeholder="10" /></div>
+                          <div className="space-y-1"><label className="block text-xs font-medium text-app-text-muted">{t.labels.rest}</label><Input compact type="text" inputMode="numeric" value={block.restSeconds ?? ''} onChange={(event) => updateFormExerciseField(block.blockId, 'restSeconds', event.target.value)} onBlur={(event) => commitRestField(block.blockId, event.target.value)} className="text-center" placeholder="90" /></div>
+                          <div className="space-y-1"><label className="block text-xs font-medium text-app-text-muted">{t.labels.dropset}</label><button onClick={() => toggleDropset(block.blockId)} className={cn('w-full rounded-xl border px-3 py-3 text-sm font-semibold transition-colors active:opacity-70', block.dropset ? 'border-app-warning bg-app-warning text-app-text' : 'border-app-border bg-app-surface text-app-text-muted')}>{block.dropset ? 'Yes' : 'No'}</button></div>
+                          <div className="space-y-1"><label className="block text-xs font-medium text-app-text-muted">{t.labels.toFailure}</label><button onClick={() => toggleToFailure(block.blockId)} className={cn('w-full rounded-xl border px-3 py-3 text-sm font-semibold transition-colors active:opacity-70', block.toFailure ? 'border-app-danger bg-app-danger text-white' : 'border-app-border bg-app-surface text-app-text-muted')}>{block.toFailure ? 'Yes' : 'No'}</button></div>
+                        </div>
                       </div>
                     );
                   })}
                 </div>
               )}
+
+              <div className="pt-2">
+                <p className="mb-2 text-sm font-semibold text-app-text">{t.labels.addExercise}</p>
+                {filteredFormExercises.length === 0 ? (
+                  <p className="py-4 text-center text-sm text-app-text-muted">{t.labels.noExercisesFound}</p>
+                ) : (
+                  <div className="space-y-2 pb-2">
+                    {filteredFormExercises.map((exercise) => (
+                      <button
+                        key={exercise.id}
+                        onClick={() => addExerciseBlock(exercise.id)}
+                        aria-label={`Add ${exercise.name}`}
+                        className="w-full rounded-xl border border-app-border bg-app-surface p-4 text-left transition-colors active:opacity-70"
+                      >
+                        <p className="text-sm font-semibold text-app-text">{exercise.name}</p>
+                        <p className="mt-0.5 text-xs text-app-text-muted">{getTranslatedGroupName(exercise.muscleGroup)}</p>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 

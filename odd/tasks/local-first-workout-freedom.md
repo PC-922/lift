@@ -41,9 +41,15 @@ Exercise creation currently waits on Firestore, exercise occurrences are identif
 - [x] LF-01 Add stable exercise block IDs and backward-compatible migration.
   - Route: delegated; touches domain types, serializers, services, UI consumers, and tests.
   - Acceptance: old data normalizes; all block lists use `blockId`; no visible behavior changes.
-- [ ] LF-02 Support independent exercise blocks in routine editing.
+- [x] LF-02 Support independent exercise blocks in routine editing.
   - Route: delegated; multi-file UI/domain behavior.
   - Acceptance: add/duplicate/edit/replace/remove; replacement preserves block configuration; selected day remains selected.
+  - RED: `npm test -- --run src/UI/components/RoutinesScreen.test.tsx` — 35 tests ran; 5 new behavior tests failed before implementation because add/replace/duplicate/remove controls and day-detail edit access did not exist.
+  - GREEN: `npm test -- --run src/UI/components/RoutinesScreen.test.tsx` — 1 file, 35 tests passed.
+  - Full checks: `npm test -- --run` — 40 files, 226 tests passed; `npm run build` passed; `git diff --check` passed.
+  - Runtime: N/A — no browser automation surface was available; the focused integration test explicitly exercised the 375×667 compact viewport and the production build passed.
+  - Rollback boundary: revert `b568f94` to remove routine-editor block add/duplicate/replace/remove behavior and selected-day editor retention, without changing the LF-01 identity migration.
+  - Commit: `b568f94` (`feat(routines): support independent blocks`).
 - [ ] LF-03 Support repeated exercise blocks in active and historical workouts.
   - Route: delegated; multi-file domain/UI behavior.
   - Acceptance: duplicate exercise IDs are allowed as independent blocks and remain editable after completion.
@@ -82,8 +88,9 @@ Exercise creation currently waits on Firestore, exercise occurrences are identif
 - LF-01 runtime: N/A — this model/data migration has no isolated browser interaction; the build exercised the production bundle. Existing tests still print pre-existing React key warnings for legacy test fixtures in `RoutinesScreen` and `WorkoutEditorModal`.
 - LF-01 rollback boundary: revert this work-unit commit to remove only stable block identities and legacy normalization, restoring the previous exercise-ID-only data shape.
 - LF-01 commit: this work-unit commit (recorded in the local Git history).
-- Next task: LF-02.
+- LF-02 complete: routine editing now treats each exercise occurrence as an independent block. Replacing preserves the block ID and configuration; repeated exercise IDs are allowed.
+- Next task: LF-03.
 
 ## Next step
 
-Implement LF-02 under strict TDD. Do not push, open a pull request, or select a remote chain until the user authorizes remote delivery.
+Implement LF-03 under strict TDD. Do not push, open a pull request, or select a remote chain until the user authorizes remote delivery.

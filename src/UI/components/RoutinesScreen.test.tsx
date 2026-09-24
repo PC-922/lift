@@ -563,3 +563,103 @@ describe('RoutinesScreen', () => {
     expect(saved.days[0].exercises[0].restSeconds).toBe(120);
   });
 });
+
+describe('routine exercise blocks', () => {
+  beforeEach(() => vi.useFakeTimers());
+
+  afterEach(() => vi.useRealTimers());
+
+  const blockRoutine: Routine = {
+    id: 'blocks',
+    name: 'Blocks',
+    days: [{
+      id: 'day-blocks',
+      name: 'Day 1',
+      exercises: [{ blockId: 'block-bench', exerciseId: 'ex1', sets: 4, reps: '8', restSeconds: 120, dropset: true, toFailure: false }],
+    }],
+  };
+
+  it('adds repeated exercises as independent blocks', async () => {
+    const onSaveRoutine = vi.fn();
+    renderWithToast(<RoutinesScreen {...defaultProps} routines={[blockRoutine]} onSaveRoutine={onSaveRoutine} />);
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Menu' })[0]);
+    await act(() => vi.runAllTimersAsync());
+    fireEvent.click(screen.getByText(t.actions.edit));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add Bench Press' }));
+    fireEvent.click(screen.getByRole('button', { name: t.actions.save }));
+    await act(() => vi.runAllTimersAsync());
+
+    const saved = onSaveRoutine.mock.calls[0][0] as Routine;
+    expect(saved.days[0].exercises).toHaveLength(2);
+    expect(saved.days[0].exercises.map((block) => block.exerciseId)).toEqual(['ex1', 'ex1']);
+    expect(new Set(saved.days[0].exercises.map((block) => block.blockId)).size).toBe(2);
+  });
+
+  it('replaces one block while preserving its configuration and block id', async () => {
+    const onSaveRoutine = vi.fn();
+    renderWithToast(<RoutinesScreen {...defaultProps} routines={[blockRoutine]} onSaveRoutine={onSaveRoutine} />);
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Menu' })[0]);
+    await act(() => vi.runAllTimersAsync());
+    fireEvent.click(screen.getByText(t.actions.edit));
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Replace Bench Press' }), { target: { value: 'ex2' } });
+    fireEvent.click(screen.getByRole('button', { name: t.actions.save }));
+    await act(() => vi.runAllTimersAsync());
+
+    expect(onSaveRoutine).toHaveBeenCalledWith(expect.objectContaining({
+      days: [expect.objectContaining({
+        exercises: [expect.objectContaining({
+          blockId: 'block-bench', exerciseId: 'ex2', sets: 4, reps: '8', restSeconds: 120, dropset: true, toFailure: false,
+        })],
+      })],
+    }));
+  });
+
+  it('duplicates and removes a single block without affecting matching exercises', async () => {
+    const onSaveRoutine = vi.fn();
+    renderWithToast(<RoutinesScreen {...defaultProps} routines={[blockRoutine]} onSaveRoutine={onSaveRoutine} />);
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Menu' })[0]);
+    await act(() => vi.runAllTimersAsync());
+    fireEvent.click(screen.getByText(t.actions.edit));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Duplicate Bench Press' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Remove Bench Press' })[0]);
+    fireEvent.click(screen.getByRole('button', { name: t.actions.save }));
+    await act(() => vi.runAllTimersAsync());
+
+    const saved = onSaveRoutine.mock.calls[0][0] as Routine;
+    expect(saved.days[0].exercises).toHaveLength(1);
+    expect(saved.days[0].exercises[0].blockId).not.toBe('block-bench');
+  });
+
+  it('keeps the selected routine day active when opening the editor', async () => {
+    const twoDayRoutine: Routine = {
+      ...blockRoutine,
+      days: [blockRoutine.days[0], { id: 'day-two', name: 'Day 2', exercises: [] }],
+    };
+    renderWithToast(<RoutinesScreen {...defaultProps} routines={[twoDayRoutine]} activeRoutineId="blocks" onActiveRoutineChange={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('heading', { name: 'Day 2' }));
+    fireEvent.click(screen.getByRole('button', { name: t.actions.edit }));
+
+    expect(screen.getByDisplayValue('Day 2')).toBeTruthy();
+  });
+
+  it('keeps block controls usable at a compact mobile viewport', async () => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 375 });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 667 });
+    window.dispatchEvent(new Event('resize'));
+    renderWithToast(<RoutinesScreen {...defaultProps} routines={[blockRoutine]} />);
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Menu' })[0]);
+    await act(() => vi.runAllTimersAsync());
+    fireEvent.click(screen.getByText(t.actions.edit));
+
+    expect(screen.getByRole('button', { name: 'Duplicate Bench Press' })).toBeTruthy();
+    expect(screen.getByRole('combobox', { name: 'Replace Bench Press' })).toBeTruthy();
+  });
+});
