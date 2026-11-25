@@ -8,7 +8,8 @@ on:
         required: true
         type: string
 
-permissions: {}
+permissions:
+  contents: read
 
 concurrency:
   group: github-pages
@@ -22,21 +23,32 @@ jobs:
         env:
           SOURCE_RUN_ID: ${{ inputs.source_run_id }}
         run: '[[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]'
+      - uses: actions/checkout@v4
+        with:
+          repository: PC-922/lift-landing
+          ref: main
+          path: landing
+          persist-credentials: false
       - uses: actions/download-artifact@v4
         with:
           name: lift-web-production
-          path: dist
+          path: _site/web
           repository: PC-922/lift-web
           run-id: ${{ inputs.source_run_id }}
           github-token: ${{ secrets.LIFT_WEB_ARTIFACT_TOKEN }}
       - name: Verify Pages entry points
         run: |
-          test -s dist/index.html
-          test -s dist/manifest.webmanifest
-          test -s dist/sw.js
+          test -s _site/web/index.html
+          test -s _site/web/manifest.webmanifest
+          test -s _site/web/sw.js
+      - name: Assemble landing and web
+        run: |
+          node -e "const m = require('node:fs').readFileSync('_site/web/manifest.webmanifest'); if (JSON.parse(m).scope !== '/lift/web/') process.exit(1)"
+          cp landing/index.html landing/styles.css landing/legal.css _site/
+          cp -R landing/assets landing/src landing/privacy landing/privacy-web landing/support _site/
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: _site
   deploy:
     needs: package
     runs-on: ubuntu-latest

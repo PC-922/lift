@@ -1,18 +1,5 @@
-# Lift Web Pages
+# Publicación de LIFT
 
-GitHub Pages publishes the Lift Web production bundle at
-https://pc-922.github.io/lift-web-pages/.
+GitHub Pages publica la landing en https://pc-922.github.io/lift/ y el artefacto de la app en https://pc-922.github.io/lift/web/.
 
-To publish a release:
-
-1. Run **Build Lift Web for Pages** on `main` in the source repository. The
-   workflow builds and checks the production bundle, then uploads
-   `lift-web-production` as a short-lived Actions artifact.
-2. Run **Publish Lift Web** in this repository with the source workflow run ID.
-   GitHub Pages deploys the bundle from an artifact.
-
-The publishing workflow uses the `LIFT_WEB_ARTIFACT_TOKEN` Actions secret.
-Use a fine-grained GitHub token restricted to the source repository with
-**Actions: Read** and no source-code permissions.
-
-This release publishes the local-only edition of Lift Web.
+Ejecuta **Build Lift Web for Pages** en `PC-922/lift-web` y pasa su ID de ejecución a **Publish Lift Web**. El workflow combina la landing pública con el build de producción. El secreto `LIFT_WEB_ARTIFACT_TOKEN` usa **Actions: Read** en el repo fuente.
