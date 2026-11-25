@@ -15,6 +15,4 @@ The publishing workflow uses the `LIFT_WEB_ARTIFACT_TOKEN` Actions secret.
 Use a fine-grained GitHub token restricted to the source repository with
 **Actions: Read** and no source-code permissions.
 
-The source repository's build job expects the six `VITE_FIREBASE_*` Actions
-variables referenced by its workflow. Use the Firebase web app configuration
-for the existing Lift project.
+This release publishes the local-only edition of Lift Web.
