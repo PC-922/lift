@@ -1,0 +1,51 @@
+name: Publish Lift Web
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: Run ID from Build Lift Web for Pages in lift-web
+        required: true
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate source run ID
+        env:
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+        run: '[[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]'
+      - uses: actions/download-artifact@v4
+        with:
+          name: lift-web-production
+          path: dist
+          repository: PC-922/lift-web
+          run-id: ${{ inputs.source_run_id }}
+          github-token: ${{ secrets.LIFT_WEB_ARTIFACT_TOKEN }}
+      - name: Verify Pages entry points
+        run: |
+          test -s dist/index.html
+          test -s dist/manifest.webmanifest
+          test -s dist/sw.js
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+  deploy:
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@v4
+        id: deployment
